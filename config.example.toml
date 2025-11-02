@@ -1,0 +1,43 @@
+# ============================================================================
+# API PROVIDERS (REQUIRED)
+# ============================================================================
+# You MUST specify at least one provider. Add multiple providers for faster
+# translation. Even if using the same API, each key should be listed separately.
+#
+# Use ${API_KEY_1}, ${API_KEY_2}, ${API_KEY_3}, etc. to reference them.
+
+# Example 1: Multiple API keys (recommended for speed)
+[[api.providers]]
+provider = "{provider}"
+api_key = "${API_KEY_1}"  # References API_KEY_1 from .env file
+model = "{model_name}"
+rpm_limit = 100
+# workers_per_key = 2  # Optional: auto-calculated if omitted
+
+# Example 2: Mix different providers (uncomment to use)
+# [[api.providers]]
+# provider = "openai"
+# api_key = "${API_KEY_OPENAI}"  # Add API_KEY_OPENAI to your .env file
+# model = "gpt-4o-mini"
+# rpm_limit = 500
+
+# [[api.providers]]
+# provider = "local"
+# api_key = "not-needed"  # Local LLM doesn't need API key
+# model = "llama-3.3-70b"
+# rpm_limit = 999  # No rate limit for local
+
+
+[translation]
+batch_size = 20  # Subtitles per API request (15-25 recommended)
+
+
+[output]
+filename_pattern = "{input_name}.{language}.srt"
+resume_on_restart = true
+
+
+[advanced]
+request_timeout_seconds = 30
+max_retries = 3
+fallback_to_single = true

@@ -1,0 +1,18 @@
+[package]
+name = "srt-parser"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "Fast and reliable SRT (SubRip) subtitle file parser"
+license = "MIT"
+repository = "https://github.com/pierspad/auto_sub_srt"
+keywords = ["srt", "subtitles", "parser", "subrip"]
+categories = ["multimedia", "parser-implementations"]
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+
+[lib]
+name = "srt_parser"
+path = "src/lib.rs"

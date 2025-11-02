@@ -1,0 +1,22 @@
+[package]
+name = "srt-translate-lib"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "Library for translating SRT subtitle files using LLM APIs (Gemini, OpenAI, local)"
+license = "MIT"
+repository = "https://github.com/pierspad/auto_sub_srt"
+keywords = ["srt", "subtitles", "translation", "llm", "ai"]
+categories = ["multimedia", "localization"]
+
+[dependencies]
+srt-parser = { path = "../srt-parser", version = "0.1.0" }
+anyhow.workspace = true
+tokio.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lib]
+name = "srt_translate_lib"
+path = "src/lib.rs"

@@ -1,0 +1,14 @@
+[package]
+name = "srt-extract"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "srt-extract"
+path = "src/main.rs"
+
+[dependencies]
+srt-parser = { path = "../srt-parser" }
+srt-extract-lib = { path = "../srt-extract-lib" }
+anyhow.workspace = true
+clap.workspace = true

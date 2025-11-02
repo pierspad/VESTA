@@ -1,0 +1,27 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+*.srt
+!example.srt
+
+# Configuration files with sensitive data
+.env
+*.key
+config.toml 
+
+Pulp_Fiction.it.srt.backup
