@@ -1,10 +1,15 @@
 <script lang="ts">
+  import { locale } from "./i18n";
+
   interface Props {
     activeTab: "translate" | "sync" | "settings" | "shortcuts";
     onTabChange: (tab: "translate" | "sync" | "settings" | "shortcuts") => void;
   }
 
   let { activeTab, onTabChange }: Props = $props();
+  
+  // Reactive translation
+  let t = $derived($locale);
 </script>
 
 <aside class="w-72 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-950 border-r border-white/10 flex flex-col">
@@ -18,9 +23,9 @@
       </div>
       <div>
         <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-          SRT Tools
+          {t("app.title")}
         </h1>
-        <p class="text-xs text-gray-500">Traduzione & Sincronizzazione</p>
+        <p class="text-xs text-gray-500">{t("app.subtitle")}</p>
       </div>
     </div>
   </div>
@@ -50,8 +55,8 @@
         </svg>
       </div>
       <div class="text-left">
-        <span class="block font-medium">Traduzione</span>
-        <span class="text-xs {activeTab === 'translate' ? 'text-white/70' : 'text-gray-500'}">Traduci sottotitoli con AI</span>
+        <span class="block font-medium">{t("nav.translate")}</span>
+        <span class="text-xs {activeTab === 'translate' ? 'text-white/70' : 'text-gray-500'}">{t("nav.translate.desc")}</span>
       </div>
     </button>
 
@@ -78,8 +83,8 @@
         </svg>
       </div>
       <div class="text-left">
-        <span class="block font-medium">Sincronizzazione</span>
-        <span class="text-xs {activeTab === 'sync' ? 'text-white/70' : 'text-gray-500'}">Allinea con il video</span>
+        <span class="block font-medium">{t("nav.sync")}</span>
+        <span class="text-xs {activeTab === 'sync' ? 'text-white/70' : 'text-gray-500'}">{t("nav.sync.desc")}</span>
       </div>
     </button>
 
@@ -112,8 +117,8 @@
         </svg>
       </div>
       <div class="text-left">
-        <span class="block font-medium">Impostazioni</span>
-        <span class="text-xs {activeTab === 'settings' ? 'text-white/70' : 'text-gray-500'}">API Keys e modelli</span>
+        <span class="block font-medium">{t("nav.settings")}</span>
+        <span class="text-xs {activeTab === 'settings' ? 'text-white/70' : 'text-gray-500'}">{t("nav.settings.desc")}</span>
       </div>
     </button>
 
@@ -140,8 +145,8 @@
         </svg>
       </div>
       <div class="text-left">
-        <span class="block font-medium">Shortcut</span>
-        <span class="text-xs {activeTab === 'shortcuts' ? 'text-white/70' : 'text-gray-500'}">Scorciatoie tastiera</span>
+        <span class="block font-medium">{t("nav.shortcuts")}</span>
+        <span class="text-xs {activeTab === 'shortcuts' ? 'text-white/70' : 'text-gray-500'}">{t("nav.shortcuts.desc")}</span>
       </div>
     </button>
   </nav>
@@ -151,9 +156,9 @@
     <div class="glass-card p-3">
       <div class="flex items-center gap-2 text-xs text-gray-400">
         <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-        <span>Sistema pronto</span>
+        <span>{t("app.status.ready")}</span>
       </div>
-      <p class="text-xs text-gray-500 mt-1">v0.1.0 • Tauri + Svelte</p>
+      <p class="text-xs text-gray-500 mt-1">{t("app.version")}</p>
     </div>
   </div>
 </aside>

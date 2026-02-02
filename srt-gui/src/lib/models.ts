@@ -33,8 +33,36 @@ export interface ProviderInfo {
   defaultApiUrl?: string;
 }
 
-// Definizione provider
+// Definizione provider (ordinati: Local, OpenRouter, Mistral, Google, OpenAI, Anthropic)
 export const providers: Record<string, ProviderInfo> = {
+  local: {
+    id: "local",
+    name: "Local LLM",
+    icon: "⬡",
+    color: "from-purple-500 to-pink-500",
+    description: "Ollama, LM Studio, modelli locali",
+    requiresApiKey: false,
+    requiresApiUrl: true,
+    defaultApiUrl: "http://localhost:11434",
+  },
+  openrouter: {
+    id: "openrouter",
+    name: "OpenRouter",
+    icon: "◇",
+    color: "from-red-500 to-rose-500",
+    description: "Accesso unificato a molti modelli",
+    requiresApiKey: true,
+    requiresApiUrl: false,
+  },
+  mistral: {
+    id: "mistral",
+    name: "Mistral AI",
+    icon: "◆",
+    color: "from-amber-500 to-orange-500",
+    description: "Modelli Mistral, veloci e potenti",
+    requiresApiKey: true,
+    requiresApiUrl: false,
+  },
   gemini: {
     id: "gemini",
     name: "Google Gemini",
@@ -57,31 +85,15 @@ export const providers: Record<string, ProviderInfo> = {
     id: "anthropic",
     name: "Anthropic Claude",
     icon: "◈",
-    color: "from-orange-500 to-amber-500",
+    color: "from-orange-600 to-amber-600",
     description: "Claude, eccellente per testi lunghi",
     requiresApiKey: true,
     requiresApiUrl: false,
   },
-  local: {
-    id: "local",
-    name: "Local LLM",
-    icon: "⬡",
-    color: "from-purple-500 to-pink-500",
-    description: "Ollama, LM Studio, modelli locali",
-    requiresApiKey: false,
-    requiresApiUrl: true,
-    defaultApiUrl: "http://localhost:11434",
-  },
-  openrouter: {
-    id: "openrouter",
-    name: "OpenRouter",
-    icon: "◇",
-    color: "from-red-500 to-rose-500",
-    description: "Accesso unificato a molti modelli",
-    requiresApiKey: true,
-    requiresApiUrl: false,
-  },
 };
+
+// Array ordinato dei provider IDs per iterazione ordinata
+export const providerOrder = ["local", "openrouter", "mistral", "gemini", "openai", "anthropic"];
 
 // Modelli per provider
 export const modelsByProvider: Record<string, ModelInfo[]> = {
@@ -266,6 +278,45 @@ export const modelsByProvider: Record<string, ModelInfo[]> = {
       description: "Via OpenRouter",
     },
   ],
+
+  mistral: [
+    {
+      id: "mistral-large-latest",
+      name: "Mistral Large",
+      provider: "mistral",
+      contextWindow: 128000,
+      description: "Il più potente, ottimo per traduzioni",
+      recommended: true,
+    },
+    {
+      id: "mistral-medium-latest",
+      name: "Mistral Medium",
+      provider: "mistral",
+      contextWindow: 32000,
+      description: "Bilanciato tra qualità e velocità",
+    },
+    {
+      id: "mistral-small-latest",
+      name: "Mistral Small",
+      provider: "mistral",
+      contextWindow: 32000,
+      description: "Veloce ed economico",
+    },
+    {
+      id: "open-mistral-nemo",
+      name: "Mistral Nemo",
+      provider: "mistral",
+      contextWindow: 128000,
+      description: "Modello open, alta qualità",
+    },
+    {
+      id: "codestral-latest",
+      name: "Codestral",
+      provider: "mistral",
+      contextWindow: 32000,
+      description: "Ottimizzato per codice",
+    },
+  ],
 };
 
 // Modelli personalizzati (salvati in localStorage)
@@ -398,11 +449,12 @@ export interface ShortcutDefinition {
 }
 
 export const defaultShortcuts: ShortcutDefinition[] = [
-  // Globali
+  // Globali (include anche Aggiungi chiave API)
   { id: "tab-translate", action: "switchToTranslate", description: "Vai a Traduzione", defaultKey: "Alt+1", category: "global" },
   { id: "tab-sync", action: "switchToSync", description: "Vai a Sincronizzazione", defaultKey: "Alt+2", category: "global" },
   { id: "tab-settings", action: "switchToSettings", description: "Vai a Impostazioni", defaultKey: "Alt+3", category: "global" },
-  { id: "tab-shortcuts", action: "switchToShortcuts", description: "Vai a Shortcut", defaultKey: "Alt+4", category: "global" },
+  { id: "tab-shortcuts", action: "switchToShortcuts", description: "Vai a Shortcuts", defaultKey: "Alt+4", category: "global" },
+  { id: "settings-add-key", action: "addApiKey", description: "Aggiungi chiave API", defaultKey: "Ctrl+N", category: "global" },
   
   // Traduzione
   { id: "translate-open-file", action: "openInputFile", description: "Apri file SRT", defaultKey: "Ctrl+O", category: "translate" },
@@ -410,7 +462,7 @@ export const defaultShortcuts: ShortcutDefinition[] = [
   { id: "translate-cancel", action: "cancelTranslation", description: "Annulla traduzione", defaultKey: "Escape", category: "translate" },
   { id: "translate-clear-logs", action: "clearLogs", description: "Cancella log", defaultKey: "Ctrl+L", category: "translate" },
   
-  // Sincronizzazione
+  // Sincronizzazione (divise in 2 gruppi nella visualizzazione)
   { id: "sync-play-pause", action: "playPause", description: "Play/Pausa video", defaultKey: "Space", category: "sync" },
   { id: "sync-seek-back", action: "seekBack", description: "Indietro 0.1s", defaultKey: "ArrowLeft", category: "sync" },
   { id: "sync-seek-forward", action: "seekForward", description: "Avanti 0.1s", defaultKey: "ArrowRight", category: "sync" },
@@ -425,9 +477,6 @@ export const defaultShortcuts: ShortcutDefinition[] = [
   { id: "sync-prev-sub", action: "prevSubtitle", description: "Sottotitolo precedente", defaultKey: "Shift+Tab", category: "sync" },
   { id: "sync-go-suggested", action: "goToSuggested", description: "Vai al suggerito", defaultKey: "Ctrl+G", category: "sync" },
   { id: "sync-save", action: "saveFile", description: "Salva SRT", defaultKey: "Ctrl+S", category: "sync" },
-  
-  // Impostazioni
-  { id: "settings-add-key", action: "addApiKey", description: "Aggiungi chiave API", defaultKey: "Ctrl+N", category: "settings" },
 ];
 
 // Funzione per ottenere le shortcut (con override utente)

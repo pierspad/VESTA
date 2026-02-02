@@ -7,6 +7,7 @@
     resetShortcuts,
     type ShortcutDefinition,
   } from "./models";
+  import { locale } from "./i18n";
 
   // State
   let shortcuts = $state<ShortcutDefinition[]>([]);
@@ -14,20 +15,22 @@
   let recordingKey = $state(false);
   let success = $state<string | null>(null);
   let error = $state<string | null>(null);
-  let filter = $state<"all" | "global" | "translate" | "sync" | "settings">("all");
+  let filter = $state<"all" | "global" | "translate" | "sync">("all");
+
+  // Reactive translation
+  let t = $derived($locale);
 
   // Filtered shortcuts
   let filteredShortcuts = $derived(
     filter === "all" ? shortcuts : shortcuts.filter((s) => s.category === filter)
   );
 
-  // Group by category
+  // Group by category (senza settings, spostate in global)
   let groupedShortcuts = $derived(() => {
     const groups: Record<string, ShortcutDefinition[]> = {
       global: [],
       translate: [],
       sync: [],
-      settings: [],
     };
     filteredShortcuts.forEach((s) => {
       if (groups[s.category]) {
@@ -37,18 +40,27 @@
     return groups;
   });
 
+  // Split sync shortcuts in two columns
+  let syncShortcutsLeft = $derived(() => {
+    const syncShorts = groupedShortcuts().sync;
+    return syncShorts.slice(0, Math.ceil(syncShorts.length / 2));
+  });
+
+  let syncShortcutsRight = $derived(() => {
+    const syncShorts = groupedShortcuts().sync;
+    return syncShorts.slice(Math.ceil(syncShorts.length / 2));
+  });
+
   const categoryLabels: Record<string, string> = {
-    global: "🌐 Globali",
-    translate: "🌍 Traduzione",
-    sync: "⏱️ Sincronizzazione",
-    settings: "⚙️ Impostazioni",
+    global: "shortcuts.category.global",
+    translate: "shortcuts.category.translate",
+    sync: "shortcuts.category.sync",
   };
 
   const categoryDescriptions: Record<string, string> = {
-    global: "Shortcut disponibili ovunque nell'applicazione",
-    translate: "Shortcut per la tab di traduzione",
-    sync: "Shortcut per la sincronizzazione video",
-    settings: "Shortcut per le impostazioni",
+    global: "shortcuts.category.global.desc",
+    translate: "shortcuts.category.translate.desc",
+    sync: "shortcuts.category.sync.desc",
   };
 
   onMount(() => {
@@ -86,12 +98,12 @@
         );
         
         if (conflict) {
-          error = `Conflitto: "${newKey}" è già usata per "${conflict.description}"`;
+          error = t("shortcuts.conflict", { key: newKey, action: conflict.description });
           setTimeout(() => (error = null), 3000);
         } else {
           saveShortcutOverride(editingShortcut!, newKey);
           shortcuts = getShortcuts();
-          success = `Shortcut aggiornata: ${newKey}`;
+          success = t("shortcuts.updated", { key: newKey });
           setTimeout(() => (success = null), 3000);
         }
         
@@ -110,10 +122,10 @@
   }
 
   function resetToDefaults() {
-    if (!confirm("Sei sicuro di voler ripristinare tutte le shortcut predefinite?")) return;
+    if (!confirm(t("shortcuts.confirmReset"))) return;
     resetShortcuts();
     shortcuts = getShortcuts();
-    success = "Shortcut ripristinate ai valori predefiniti";
+    success = t("shortcuts.reset");
     setTimeout(() => (success = null), 3000);
   }
 
@@ -130,7 +142,7 @@
     const defaultKey = getDefaultKey(shortcutId);
     saveShortcutOverride(shortcutId, defaultKey);
     shortcuts = getShortcuts();
-    success = "Shortcut ripristinata";
+    success = t("shortcuts.resetSingle");
     setTimeout(() => (success = null), 3000);
   }
 
@@ -143,10 +155,10 @@
   <!-- Header -->
   <div class="mb-6">
     <h2 class="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-      Scorciatoie da Tastiera
+      {t("shortcuts.title")}
     </h2>
     <p class="text-gray-400 mt-1">
-      Personalizza le shortcut per velocizzare il tuo workflow
+      {t("shortcuts.subtitle")}
     </p>
   </div>
 
@@ -179,7 +191,7 @@
         class="px-4 py-2 rounded-lg text-sm font-medium transition-all
           {filter === 'all' ? 'bg-indigo-500 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}"
       >
-        Tutte
+        {t("shortcuts.filter.all")}
       </button>
       {#each Object.keys(categoryLabels) as cat}
         <button
@@ -187,7 +199,7 @@
           class="px-4 py-2 rounded-lg text-sm font-medium transition-all
             {filter === cat ? 'bg-indigo-500 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}"
         >
-          {categoryLabels[cat].split(' ')[0]}
+          {t(categoryLabels[cat]).split(' ')[0]}
         </button>
       {/each}
     </div>
@@ -198,18 +210,18 @@
       <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
       </svg>
-      Ripristina Tutte
+      {t("shortcuts.resetAll")}
     </button>
   </div>
 
-  <!-- Shortcuts Grid -->
+  <!-- Shortcuts Grid - Global and Translate -->
   <div class="grid grid-cols-2 gap-6 flex-1 overflow-auto">
-    {#each Object.entries(groupedShortcuts()) as [category, categoryShortcuts]}
+    {#each Object.entries(groupedShortcuts()).filter(([cat]) => cat !== 'sync') as [category, categoryShortcuts]}
       {#if categoryShortcuts.length > 0}
         <div class="glass-card p-5">
           <div class="mb-4">
-            <h3 class="text-lg font-semibold text-white">{categoryLabels[category]}</h3>
-            <p class="text-xs text-gray-500 mt-1">{categoryDescriptions[category]}</p>
+            <h3 class="text-lg font-semibold text-white">{t(categoryLabels[category])}</h3>
+            <p class="text-xs text-gray-500 mt-1">{t(categoryDescriptions[category])}</p>
           </div>
 
           <div class="space-y-2">
@@ -222,7 +234,7 @@
                   <p class="text-sm text-white">{shortcut.description}</p>
                   {#if isModified(shortcut)}
                     <p class="text-xs text-amber-400 mt-1">
-                      Modificata (default: {getDefaultKey(shortcut.id)})
+                      {t("shortcuts.modified", { key: getDefaultKey(shortcut.id) })}
                     </p>
                   {/if}
                 </div>
@@ -230,7 +242,7 @@
                 <div class="flex items-center gap-2">
                   {#if editingShortcut === shortcut.id}
                     <div class="flex items-center gap-2 text-indigo-300 animate-pulse">
-                      <span class="text-sm">Premi i tasti...</span>
+                      <span class="text-sm">{t("shortcuts.pressKeys")}</span>
                       <button
                         onclick={cancelEditing}
                         class="text-gray-400 hover:text-white p-1"
@@ -241,9 +253,12 @@
                       </button>
                     </div>
                   {:else}
-                    <!-- Key Display -->
-                    <div class="flex gap-1">
-                      {#each formatKey(shortcut.defaultKey) as keyPart}
+                    <!-- Key Display with + separator -->
+                    <div class="flex items-center gap-1">
+                      {#each formatKey(shortcut.defaultKey) as keyPart, i}
+                        {#if i > 0}
+                          <span class="text-gray-500 text-xs font-bold">+</span>
+                        {/if}
                         <kbd class="px-2 py-1 bg-gray-800 border border-gray-600 rounded text-xs text-gray-300 font-mono shadow-md">
                           {keyPart}
                         </kbd>
@@ -282,14 +297,133 @@
     {/each}
   </div>
 
-  <!-- Help Info -->
-  <div class="mt-6 p-4 bg-white/5 rounded-xl border border-white/10">
-    <h4 class="text-sm font-semibold text-white mb-2">💡 Come funziona</h4>
-    <ul class="text-sm text-gray-400 space-y-1">
-      <li>• Clicca sull'icona ✏️ per modificare una shortcut</li>
-      <li>• Premi la combinazione di tasti desiderata</li>
-      <li>• Le shortcut modificate sono evidenziate in giallo</li>
-      <li>• Usa "Ripristina Tutte" per tornare ai valori predefiniti</li>
-    </ul>
-  </div>
+  <!-- Sync Shortcuts - Split in 2 columns -->
+  {#if groupedShortcuts().sync.length > 0}
+    <div class="mt-6">
+      <div class="glass-card p-5">
+        <div class="mb-4">
+          <h3 class="text-lg font-semibold text-white">{t("shortcuts.category.sync")}</h3>
+          <p class="text-xs text-gray-500 mt-1">{t("shortcuts.category.sync.desc")}</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Left column -->
+          <div class="space-y-2">
+            {#each syncShortcutsLeft() as shortcut}
+              <div
+                class="flex items-center justify-between p-3 rounded-lg transition-all
+                  {editingShortcut === shortcut.id ? 'bg-indigo-500/20 ring-1 ring-indigo-500' : 'bg-white/5 hover:bg-white/10'}"
+              >
+                <div class="flex-1">
+                  <p class="text-sm text-white">{shortcut.description}</p>
+                  {#if isModified(shortcut)}
+                    <p class="text-xs text-amber-400 mt-1">
+                      {t("shortcuts.modified", { key: getDefaultKey(shortcut.id) })}
+                    </p>
+                  {/if}
+                </div>
+
+                <div class="flex items-center gap-2">
+                  {#if editingShortcut === shortcut.id}
+                    <div class="flex items-center gap-2 text-indigo-300 animate-pulse">
+                      <span class="text-sm">{t("shortcuts.pressKeys")}</span>
+                      <button onclick={cancelEditing} class="text-gray-400 hover:text-white p-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  {:else}
+                    <div class="flex items-center gap-1">
+                      {#each formatKey(shortcut.defaultKey) as keyPart, i}
+                        {#if i > 0}
+                          <span class="text-gray-500 text-xs font-bold">+</span>
+                        {/if}
+                        <kbd class="px-2 py-1 bg-gray-800 border border-gray-600 rounded text-xs text-gray-300 font-mono shadow-md">
+                          {keyPart}
+                        </kbd>
+                      {/each}
+                    </div>
+                    <button
+                      onclick={() => startEditing(shortcut.id)}
+                      class="p-1.5 text-gray-500 hover:text-indigo-400 hover:bg-white/5 rounded transition-colors"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    {#if isModified(shortcut)}
+                      <button onclick={() => resetSingle(shortcut.id)} class="p-1.5 text-gray-500 hover:text-amber-400 hover:bg-white/5 rounded transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </button>
+                    {/if}
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          </div>
+
+          <!-- Right column -->
+          <div class="space-y-2">
+            {#each syncShortcutsRight() as shortcut}
+              <div
+                class="flex items-center justify-between p-3 rounded-lg transition-all
+                  {editingShortcut === shortcut.id ? 'bg-indigo-500/20 ring-1 ring-indigo-500' : 'bg-white/5 hover:bg-white/10'}"
+              >
+                <div class="flex-1">
+                  <p class="text-sm text-white">{shortcut.description}</p>
+                  {#if isModified(shortcut)}
+                    <p class="text-xs text-amber-400 mt-1">
+                      {t("shortcuts.modified", { key: getDefaultKey(shortcut.id) })}
+                    </p>
+                  {/if}
+                </div>
+
+                <div class="flex items-center gap-2">
+                  {#if editingShortcut === shortcut.id}
+                    <div class="flex items-center gap-2 text-indigo-300 animate-pulse">
+                      <span class="text-sm">{t("shortcuts.pressKeys")}</span>
+                      <button onclick={cancelEditing} class="text-gray-400 hover:text-white p-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  {:else}
+                    <div class="flex items-center gap-1">
+                      {#each formatKey(shortcut.defaultKey) as keyPart, i}
+                        {#if i > 0}
+                          <span class="text-gray-500 text-xs font-bold">+</span>
+                        {/if}
+                        <kbd class="px-2 py-1 bg-gray-800 border border-gray-600 rounded text-xs text-gray-300 font-mono shadow-md">
+                          {keyPart}
+                        </kbd>
+                      {/each}
+                    </div>
+                    <button
+                      onclick={() => startEditing(shortcut.id)}
+                      class="p-1.5 text-gray-500 hover:text-indigo-400 hover:bg-white/5 rounded transition-colors"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    {#if isModified(shortcut)}
+                      <button onclick={() => resetSingle(shortcut.id)} class="p-1.5 text-gray-500 hover:text-amber-400 hover:bg-white/5 rounded transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </button>
+                    {/if}
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
 </div>

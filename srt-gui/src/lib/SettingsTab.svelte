@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import {
     providers,
+    providerOrder,
     modelsByProvider,
     getModelsForProvider,
     saveCustomModel,
@@ -12,14 +13,16 @@
     type CustomModel,
     type ProviderInfo,
   } from "./models";
+  import { locale, currentLanguage, availableUILanguages, setLanguage } from "./i18n";
 
   // Types
   interface ApiKeyConfig {
     id: string;
     name: string;
-    apiType: "gemini" | "openai" | "local" | "anthropic" | "openrouter";
+    apiType: "gemini" | "openai" | "local" | "anthropic" | "openrouter" | "mistral";
     apiKey: string;
     apiUrl?: string;
+    modelName?: string;  // Nome modello preferito
     isDefault: boolean;
   }
 
@@ -31,11 +34,15 @@
   let error = $state<string | null>(null);
   let success = $state<string | null>(null);
 
+  // Reactive translation
+  let t = $derived($locale);
+
   // New key form
   let newKeyName = $state("");
   let newKeyType = $state<ApiKeyConfig["apiType"]>("gemini");
   let newKeyValue = $state("");
   let newKeyUrl = $state("");
+  let newKeyModelName = $state("");
 
   // New custom model form
   let customModelName = $state("");
@@ -51,7 +58,7 @@
   // Count keys per provider
   let keysPerProvider = $derived(() => {
     const counts: Record<string, number> = {};
-    Object.keys(providers).forEach((p) => {
+    providerOrder.forEach((p) => {
       counts[p] = apiKeys.filter((k) => k.apiType === p).length;
     });
     return counts;
@@ -81,15 +88,26 @@
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   }
 
+  function openAddKeyModal(providerId?: string, modelName?: string) {
+    if (providerId) {
+      newKeyType = providerId as ApiKeyConfig["apiType"];
+      newKeyName = providers[providerId]?.name || "";
+    }
+    if (modelName) {
+      newKeyModelName = modelName;
+    }
+    showAddKey = true;
+  }
+
   function addApiKey() {
     if (!newKeyName.trim()) {
-      error = "Il nome è obbligatorio";
+      error = t("settings.errorNameRequired");
       return;
     }
 
     // Per provider locali, la chiave può essere vuota
     if (newKeyType !== "local" && !newKeyValue.trim()) {
-      error = "La chiave API è obbligatoria";
+      error = t("settings.errorKeyRequired");
       return;
     }
 
@@ -99,6 +117,7 @@
       apiType: newKeyType,
       apiKey: newKeyValue.trim(),
       apiUrl: newKeyUrl.trim() || undefined,
+      modelName: newKeyModelName.trim() || undefined,
       isDefault: apiKeys.filter((k) => k.apiType === newKeyType).length === 0,
     };
 
@@ -109,9 +128,10 @@
     newKeyName = "";
     newKeyValue = "";
     newKeyUrl = "";
+    newKeyModelName = "";
     showAddKey = false;
 
-    success = "Chiave API aggiunta con successo";
+    success = t("settings.keyAdded");
     setTimeout(() => (success = null), 3000);
   }
 
@@ -119,7 +139,7 @@
     const key = apiKeys.find((k) => k.id === id);
     if (!key) return;
 
-    if (!confirm(`Sei sicuro di voler eliminare la chiave "${key.name}"?`)) return;
+    if (!confirm(t("settings.confirmDeleteKey", { name: key.name }))) return;
 
     const wasDefault = key.isDefault;
     const keyType = key.apiType;
@@ -134,7 +154,7 @@
     }
 
     saveApiKeys();
-    success = "Chiave API eliminata";
+    success = t("settings.keyDeleted");
     setTimeout(() => (success = null), 3000);
   }
 
@@ -159,9 +179,14 @@
     selectedProvider = selectedProvider === providerId ? null : providerId;
   }
 
+  function onModelClick(model: ModelInfo) {
+    // Apri modal pre-compilata quando si clicca su un modello
+    openAddKeyModal(model.provider, model.name);
+  }
+
   function addCustomModel() {
     if (!customModelName.trim() || !customModelApiId.trim()) {
-      error = "Nome e ID API sono obbligatori";
+      error = t("settings.errorModelRequired");
       return;
     }
 
@@ -182,15 +207,15 @@
     customModelDescription = "";
     showAddModel = false;
 
-    success = "Modello personalizzato aggiunto";
+    success = t("settings.modelAdded");
     setTimeout(() => (success = null), 3000);
   }
 
   function removeCustomModel(modelId: string) {
-    if (!confirm("Eliminare questo modello personalizzato?")) return;
+    if (!confirm(t("settings.confirmDeleteModel"))) return;
     deleteCustomModel(modelId);
     customModels = getCustomModels();
-    success = "Modello eliminato";
+    success = t("settings.modelDeleted");
     setTimeout(() => (success = null), 3000);
   }
 
@@ -208,10 +233,10 @@
   <!-- Header -->
   <div class="mb-6">
     <h2 class="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-      Impostazioni
+      {t("settings.title")}
     </h2>
     <p class="text-gray-400 mt-1">
-      Gestisci le tue chiavi API e i modelli disponibili
+      {t("settings.subtitle")}
     </p>
   </div>
 
@@ -236,13 +261,14 @@
   {/if}
 
   <div class="grid grid-cols-3 gap-6 flex-1">
-    <!-- Left: Provider Icons -->
+    <!-- Left: Provider Icons + Language Selector -->
     <div class="space-y-4">
       <div class="glass-card p-4">
-        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">Provider</h3>
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">{t("settings.providers")}</h3>
         
         <div class="grid grid-cols-2 gap-3">
-          {#each Object.values(providers) as provider}
+          {#each providerOrder as providerId}
+            {@const provider = providers[providerId]}
             <button
               onclick={() => selectProvider(provider.id)}
               class="provider-card p-4 rounded-xl transition-all duration-300 flex flex-col items-center gap-2
@@ -264,15 +290,30 @@
         </div>
       </div>
 
+      <!-- Language Selector -->
+      <div class="glass-card p-4">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">{t("settings.language")}</h3>
+        <p class="text-xs text-gray-500 mb-3">{t("settings.languageDesc")}</p>
+        <select 
+          class="select-modern w-full"
+          value={$currentLanguage}
+          onchange={(e) => setLanguage((e.target as HTMLSelectElement).value)}
+        >
+          {#each availableUILanguages as lang}
+            <option value={lang.code}>{lang.flag} {lang.nativeName}</option>
+          {/each}
+        </select>
+      </div>
+
       <!-- Add Key Button -->
       <button
-        onclick={() => { showAddKey = true; if (selectedProvider) newKeyType = selectedProvider as any; }}
+        onclick={() => openAddKeyModal(selectedProvider || undefined)}
         class="btn-primary w-full py-3"
       >
         <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
         </svg>
-        Aggiungi Chiave API
+        {t("settings.addApiKey")}
       </button>
 
       <!-- Custom Models Button -->
@@ -283,7 +324,7 @@
         <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
-        Aggiungi Modello Custom
+        {t("settings.addCustomModel")}
       </button>
     </div>
 
@@ -291,9 +332,9 @@
     <div class="glass-card p-4 flex flex-col">
       <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">
         {#if selectedProviderInfo}
-          Modelli {selectedProviderInfo.name}
+          {t("settings.models", { provider: selectedProviderInfo.name })}
         {:else}
-          Seleziona un provider
+          {t("settings.selectProvider")}
         {/if}
       </h3>
 
@@ -302,12 +343,15 @@
         
         <div class="flex-1 overflow-y-auto space-y-2">
           {#each selectedProviderModels as model}
-            <div class="p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-3">
+            <button
+              onclick={() => onModelClick(model)}
+              class="w-full text-left p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors flex items-center gap-3 cursor-pointer"
+            >
               <div class="flex-1">
                 <div class="flex items-center gap-2">
                   <span class="text-white font-medium">{model.name}</span>
                   {#if model.recommended}
-                    <span class="badge badge-success text-xs">Consigliato</span>
+                    <span class="badge badge-success text-xs">{t("settings.recommended")}</span>
                   {/if}
                 </div>
                 {#if model.description}
@@ -317,10 +361,10 @@
               </div>
               {#if model.contextWindow}
                 <span class="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded">
-                  {formatContextWindow(model.contextWindow)} ctx
+                  {formatContextWindow(model.contextWindow)} {t("settings.ctx")}
                 </span>
               {/if}
-            </div>
+            </button>
           {/each}
         </div>
       {:else}
@@ -329,7 +373,7 @@
             <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            <p>Clicca su un provider per vedere i modelli disponibili</p>
+            <p>{t("settings.selectProviderHint")}</p>
           </div>
         </div>
       {/if}
@@ -338,7 +382,7 @@
     <!-- Right: API Keys List -->
     <div class="glass-card p-4 flex flex-col">
       <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">
-        Chiavi API Configurate
+        {t("settings.apiKeys")}
       </h3>
 
       <div class="flex-1 overflow-y-auto space-y-3">
@@ -356,11 +400,14 @@
                 <div class="flex items-center gap-2">
                   <span class="font-medium text-white text-sm truncate">{key.name}</span>
                   {#if key.isDefault}
-                    <span class="badge badge-primary text-xs">Default</span>
+                    <span class="badge badge-primary text-xs">{t("settings.default")}</span>
                   {/if}
                 </div>
                 <p class="text-xs text-gray-500">{providers[key.apiType]?.name || key.apiType}</p>
                 <p class="text-xs text-gray-600 font-mono mt-1">{maskApiKey(key.apiKey)}</p>
+                {#if key.modelName}
+                  <p class="text-xs text-indigo-400 mt-1">Model: {key.modelName}</p>
+                {/if}
               </div>
 
               <div class="flex items-center gap-1">
@@ -368,7 +415,7 @@
                   <button
                     onclick={() => setDefaultKey(key.id)}
                     class="p-1.5 text-gray-500 hover:text-indigo-400 hover:bg-white/5 rounded transition-colors"
-                    title="Imposta come default"
+                    title={t("settings.setAsDefault")}
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
@@ -378,7 +425,7 @@
                 <button
                   onclick={() => removeApiKey(key.id)}
                   class="p-1.5 text-gray-500 hover:text-red-400 hover:bg-white/5 rounded transition-colors"
-                  title="Elimina"
+                  title={t("settings.delete")}
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -395,8 +442,8 @@
               <svg class="w-12 h-12 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
               </svg>
-              <p>Nessuna chiave API</p>
-              <p class="text-sm mt-1">Aggiungi una chiave per iniziare</p>
+              <p>{t("settings.noApiKeys")}</p>
+              <p class="text-sm mt-1">{t("settings.addKeyHint")}</p>
             </div>
           </div>
         {/if}
@@ -405,7 +452,7 @@
       <!-- Custom Models Section -->
       {#if customModels.length > 0}
         <div class="border-t border-white/10 mt-4 pt-4">
-          <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Modelli Personalizzati</h4>
+          <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">{t("settings.customModels")}</h4>
           <div class="space-y-2">
             {#each customModels as model}
               <div class="flex items-center justify-between p-2 bg-white/5 rounded-lg text-sm">
@@ -431,32 +478,33 @@
 
   <!-- Modal: Add API Key -->
   {#if showAddKey}
-    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" onclick={() => (showAddKey = false)}>
-      <div class="glass-card p-6 w-full max-w-md animate-fade-in" onclick={(e) => e.stopPropagation()}>
-        <h3 class="text-xl font-bold text-white mb-4">Nuova Chiave API</h3>
+    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onclick={() => (showAddKey = false)}>
+      <div class="bg-gray-900 border border-white/20 rounded-2xl p-6 w-full max-w-md animate-fade-in shadow-2xl" onclick={(e) => e.stopPropagation()}>
+        <h3 class="text-xl font-bold text-white mb-4">{t("settings.modal.newKey")}</h3>
 
         <div class="space-y-4">
           <div>
-            <label class="block text-sm text-gray-400 mb-2">Nome (identificativo)</label>
+            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.keyName")}</label>
             <input
               type="text"
               bind:value={newKeyName}
-              placeholder="es: Gemini Personale"
+              placeholder={t("settings.modal.keyNamePlaceholder")}
               class="input-modern w-full"
             />
           </div>
 
           <div>
-            <label class="block text-sm text-gray-400 mb-2">Provider</label>
-            <div class="grid grid-cols-5 gap-2">
-              {#each Object.values(providers) as provider}
+            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.provider")}</label>
+            <div class="grid grid-cols-6 gap-2">
+              {#each providerOrder as providerId}
+                {@const provider = providers[providerId]}
                 <button
                   type="button"
                   onclick={() => (newKeyType = provider.id as any)}
                   class="p-3 rounded-lg transition-all flex flex-col items-center gap-1
                     {newKeyType === provider.id 
                       ? 'bg-gradient-to-br ' + provider.color + ' shadow-lg' 
-                      : 'bg-white/5 hover:bg-white/10'}"
+                      : 'bg-white/10 hover:bg-white/15'}"
                 >
                   <span class="text-lg">{provider.icon}</span>
                   <span class="text-xs {newKeyType === provider.id ? 'text-white' : 'text-gray-400'}">
@@ -468,11 +516,11 @@
           </div>
 
           <div>
-            <label class="block text-sm text-gray-400 mb-2">API Key</label>
+            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.apiKey")}</label>
             <input
               type="password"
               bind:value={newKeyValue}
-              placeholder={newKeyType === "local" ? "Lascia vuoto per Ollama" : "Inserisci la tua API key..."}
+              placeholder={newKeyType === "local" ? t("settings.modal.apiKeyPlaceholderLocal") : t("settings.modal.apiKeyPlaceholder")}
               class="input-modern w-full"
             />
           </div>
@@ -480,7 +528,7 @@
           {#if providers[newKeyType]?.requiresApiUrl}
             <div>
               <label class="block text-sm text-gray-400 mb-2">
-                URL API
+                {t("settings.modal.apiUrl")}
               </label>
               <input
                 type="text"
@@ -491,12 +539,23 @@
             </div>
           {/if}
 
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.modelName")} ({t("settings.modal.description").split('(')[0].trim()})</label>
+            <input
+              type="text"
+              bind:value={newKeyModelName}
+              placeholder={t("settings.modal.modelNamePlaceholder")}
+              class="input-modern w-full"
+            />
+            <p class="text-xs text-gray-500 mt-1">{t("settings.modal.modelApiIdHint")}</p>
+          </div>
+
           <div class="flex gap-3 pt-2">
             <button onclick={() => (showAddKey = false)} class="btn-secondary flex-1">
-              Annulla
+              {t("settings.modal.cancel")}
             </button>
             <button onclick={addApiKey} class="btn-success flex-1">
-              Salva
+              {t("settings.modal.save")}
             </button>
           </div>
         </div>
@@ -506,57 +565,58 @@
 
   <!-- Modal: Add Custom Model -->
   {#if showAddModel}
-    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" onclick={() => (showAddModel = false)}>
-      <div class="glass-card p-6 w-full max-w-md animate-fade-in" onclick={(e) => e.stopPropagation()}>
-        <h3 class="text-xl font-bold text-white mb-4">Nuovo Modello Personalizzato</h3>
+    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onclick={() => (showAddModel = false)}>
+      <div class="bg-gray-900 border border-white/20 rounded-2xl p-6 w-full max-w-md animate-fade-in shadow-2xl" onclick={(e) => e.stopPropagation()}>
+        <h3 class="text-xl font-bold text-white mb-4">{t("settings.modal.newModel")}</h3>
 
         <div class="space-y-4">
           <div>
-            <label class="block text-sm text-gray-400 mb-2">Nome visualizzato</label>
+            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.modelName")}</label>
             <input
               type="text"
               bind:value={customModelName}
-              placeholder="es: My Custom Model"
+              placeholder={t("settings.modal.modelNamePlaceholder")}
               class="input-modern w-full"
             />
           </div>
 
           <div>
-            <label class="block text-sm text-gray-400 mb-2">ID Modello API</label>
+            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.modelApiId")}</label>
             <input
               type="text"
               bind:value={customModelApiId}
-              placeholder="es: my-model:latest"
+              placeholder={t("settings.modal.modelApiIdPlaceholder")}
               class="input-modern w-full"
             />
-            <p class="text-xs text-gray-500 mt-1">L'ID usato nelle chiamate API</p>
+            <p class="text-xs text-gray-500 mt-1">{t("settings.modal.modelApiIdHint")}</p>
           </div>
 
           <div>
-            <label class="block text-sm text-gray-400 mb-2">Provider</label>
+            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.provider")}</label>
             <select bind:value={customModelProvider} class="select-modern w-full">
-              {#each Object.values(providers) as provider}
+              {#each providerOrder as providerId}
+                {@const provider = providers[providerId]}
                 <option value={provider.id}>{provider.name}</option>
               {/each}
             </select>
           </div>
 
           <div>
-            <label class="block text-sm text-gray-400 mb-2">Descrizione (opzionale)</label>
+            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.description")}</label>
             <input
               type="text"
               bind:value={customModelDescription}
-              placeholder="es: Modello fine-tuned per traduzioni"
+              placeholder={t("settings.modal.descriptionPlaceholder")}
               class="input-modern w-full"
             />
           </div>
 
           <div class="flex gap-3 pt-2">
             <button onclick={() => (showAddModel = false)} class="btn-secondary flex-1">
-              Annulla
+              {t("settings.modal.cancel")}
             </button>
             <button onclick={addCustomModel} class="btn-success flex-1">
-              Aggiungi
+              {t("settings.modal.add")}
             </button>
           </div>
         </div>
