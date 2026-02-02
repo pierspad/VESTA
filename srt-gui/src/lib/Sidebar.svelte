@@ -4,42 +4,58 @@
   interface Props {
     activeTab: "translate" | "sync" | "settings" | "shortcuts";
     onTabChange: (tab: "translate" | "sync" | "settings" | "shortcuts") => void;
+    collapsed?: boolean;
+    onToggleCollapse?: () => void;
   }
 
-  let { activeTab, onTabChange }: Props = $props();
+  let { activeTab, onTabChange, collapsed = false, onToggleCollapse }: Props = $props();
   
   // Reactive translation
   let t = $derived($locale);
 </script>
 
-<aside class="w-72 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-950 border-r border-white/10 flex flex-col">
+<aside class="{collapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-gray-900 via-gray-900 to-gray-950 border-r border-white/10 flex flex-col transition-all duration-300 relative">
+  <!-- Collapse Toggle Button -->
+  <button
+    onclick={onToggleCollapse}
+    class="absolute -right-3 top-6 w-6 h-6 bg-gray-800 border border-white/20 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-all z-10 shadow-lg"
+    aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+  >
+    <svg class="w-3 h-3 transition-transform {collapsed ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+    </svg>
+  </button>
+
   <!-- Logo / Title -->
   <div class="p-6 border-b border-white/10">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+    <div class="flex items-center gap-3 {collapsed ? 'justify-center' : ''}">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
         </svg>
       </div>
-      <div>
-        <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-          {t("app.title")}
-        </h1>
-        <p class="text-xs text-gray-500">{t("app.subtitle")}</p>
-      </div>
+      {#if !collapsed}
+        <div>
+          <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            {t("app.title")}
+          </h1>
+          <p class="text-xs text-gray-500">{t("app.subtitle")}</p>
+        </div>
+      {/if}
     </div>
   </div>
 
   <!-- Navigation -->
   <nav class="flex-1 p-4 space-y-2">
     <button
-      class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 {activeTab ===
+      class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'translate'
         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("translate")}
+      title={collapsed ? t("nav.translate") : undefined}
     >
-      <div class="w-8 h-8 rounded-lg {activeTab === 'translate' ? 'bg-white/20' : 'bg-white/5'} flex items-center justify-center">
+      <div class="w-8 h-8 rounded-lg {activeTab === 'translate' ? 'bg-white/20' : 'bg-white/5'} flex items-center justify-center flex-shrink-0">
         <svg
           class="w-5 h-5"
           fill="none"
@@ -54,20 +70,23 @@
           />
         </svg>
       </div>
-      <div class="text-left">
-        <span class="block font-medium">{t("nav.translate")}</span>
-        <span class="text-xs {activeTab === 'translate' ? 'text-white/70' : 'text-gray-500'}">{t("nav.translate.desc")}</span>
-      </div>
+      {#if !collapsed}
+        <div class="text-left">
+          <span class="block font-medium">{t("nav.translate")}</span>
+          <span class="text-xs {activeTab === 'translate' ? 'text-white/70' : 'text-gray-500'}">{t("nav.translate.desc")}</span>
+        </div>
+      {/if}
     </button>
 
     <button
-      class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 {activeTab ===
+      class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'sync'
         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("sync")}
+      title={collapsed ? t("nav.sync") : undefined}
     >
-      <div class="w-8 h-8 rounded-lg {activeTab === 'sync' ? 'bg-white/20' : 'bg-white/5'} flex items-center justify-center">
+      <div class="w-8 h-8 rounded-lg {activeTab === 'sync' ? 'bg-white/20' : 'bg-white/5'} flex items-center justify-center flex-shrink-0">
         <svg
           class="w-5 h-5"
           fill="none"
@@ -82,20 +101,23 @@
           />
         </svg>
       </div>
-      <div class="text-left">
-        <span class="block font-medium">{t("nav.sync")}</span>
-        <span class="text-xs {activeTab === 'sync' ? 'text-white/70' : 'text-gray-500'}">{t("nav.sync.desc")}</span>
-      </div>
+      {#if !collapsed}
+        <div class="text-left">
+          <span class="block font-medium">{t("nav.sync")}</span>
+          <span class="text-xs {activeTab === 'sync' ? 'text-white/70' : 'text-gray-500'}">{t("nav.sync.desc")}</span>
+        </div>
+      {/if}
     </button>
 
     <button
-      class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 {activeTab ===
+      class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'settings'
         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("settings")}
+      title={collapsed ? t("nav.settings") : undefined}
     >
-      <div class="w-8 h-8 rounded-lg {activeTab === 'settings' ? 'bg-white/20' : 'bg-white/5'} flex items-center justify-center">
+      <div class="w-8 h-8 rounded-lg {activeTab === 'settings' ? 'bg-white/20' : 'bg-white/5'} flex items-center justify-center flex-shrink-0">
         <svg
           class="w-5 h-5"
           fill="none"
@@ -116,20 +138,23 @@
           />
         </svg>
       </div>
-      <div class="text-left">
-        <span class="block font-medium">{t("nav.settings")}</span>
-        <span class="text-xs {activeTab === 'settings' ? 'text-white/70' : 'text-gray-500'}">{t("nav.settings.desc")}</span>
-      </div>
+      {#if !collapsed}
+        <div class="text-left">
+          <span class="block font-medium">{t("nav.settings")}</span>
+          <span class="text-xs {activeTab === 'settings' ? 'text-white/70' : 'text-gray-500'}">{t("nav.settings.desc")}</span>
+        </div>
+      {/if}
     </button>
 
     <button
-      class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 {activeTab ===
+      class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'shortcuts'
         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("shortcuts")}
+      title={collapsed ? t("nav.shortcuts") : undefined}
     >
-      <div class="w-8 h-8 rounded-lg {activeTab === 'shortcuts' ? 'bg-white/20' : 'bg-white/5'} flex items-center justify-center">
+      <div class="w-8 h-8 rounded-lg {activeTab === 'shortcuts' ? 'bg-white/20' : 'bg-white/5'} flex items-center justify-center flex-shrink-0">
         <svg
           class="w-5 h-5"
           fill="none"
@@ -144,21 +169,27 @@
           />
         </svg>
       </div>
-      <div class="text-left">
-        <span class="block font-medium">{t("nav.shortcuts")}</span>
-        <span class="text-xs {activeTab === 'shortcuts' ? 'text-white/70' : 'text-gray-500'}">{t("nav.shortcuts.desc")}</span>
-      </div>
+      {#if !collapsed}
+        <div class="text-left">
+          <span class="block font-medium">{t("nav.shortcuts")}</span>
+          <span class="text-xs {activeTab === 'shortcuts' ? 'text-white/70' : 'text-gray-500'}">{t("nav.shortcuts.desc")}</span>
+        </div>
+      {/if}
     </button>
   </nav>
 
   <!-- Footer -->
   <div class="p-4 border-t border-white/10">
-    <div class="glass-card p-3">
-      <div class="flex items-center gap-2 text-xs text-gray-400">
+    <div class="glass-card p-3 {collapsed ? 'flex items-center justify-center' : ''}">
+      {#if collapsed}
         <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-        <span>{t("app.status.ready")}</span>
-      </div>
-      <p class="text-xs text-gray-500 mt-1">{t("app.version")}</p>
+      {:else}
+        <div class="flex items-center gap-2 text-xs text-gray-400">
+          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+          <span>{t("app.status.ready")}</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">{t("app.version")}</p>
+      {/if}
     </div>
   </div>
 </aside>

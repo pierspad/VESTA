@@ -261,8 +261,20 @@
   {/if}
 
   <div class="grid grid-cols-3 gap-6 flex-1">
-    <!-- Left: Provider Icons + Language Selector -->
+    <!-- Left: Add API Key + Language Buttons -->
     <div class="space-y-4">
+      <!-- Add Custom API Key Button -->
+      <button
+        onclick={() => openAddKeyModal(selectedProvider || "local")}
+        class="btn-primary w-full py-3"
+      >
+        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        {t("settings.addCustomApiKey")}
+      </button>
+
+      <!-- Provider Selection -->
       <div class="glass-card p-4">
         <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">{t("settings.providers")}</h3>
         
@@ -290,49 +302,24 @@
         </div>
       </div>
 
-      <!-- Language Selector -->
+      <!-- Language Selector - Button Grid -->
       <div class="glass-card p-4">
-        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">{t("settings.language")}</h3>
-        <p class="text-xs text-gray-500 mb-3">{t("settings.languageDesc")}</p>
-        <div class="relative">
-          <select 
-            class="select-modern w-full appearance-none cursor-pointer pr-10"
-            value={$currentLanguage}
-            onchange={(e) => setLanguage((e.target as HTMLSelectElement).value)}
-          >
-            {#each availableUILanguages as lang}
-              <option value={lang.code}>{lang.flag} {lang.nativeName}</option>
-            {/each}
-          </select>
-          <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">{t("settings.language")}</h3>
+        <div class="grid grid-cols-3 gap-2">
+          {#each availableUILanguages as lang}
+            <button
+              onclick={() => setLanguage(lang.code)}
+              class="flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-200
+                {$currentLanguage === lang.code 
+                  ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg' 
+                  : 'bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10'}"
+            >
+              <span class="text-lg">{lang.flag}</span>
+              <span class="text-xs font-medium uppercase">{lang.code}</span>
+            </button>
+          {/each}
         </div>
       </div>
-
-      <!-- Add Key Button -->
-      <button
-        onclick={() => openAddKeyModal(selectedProvider || undefined)}
-        class="btn-primary w-full py-3"
-      >
-        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        {t("settings.addApiKey")}
-      </button>
-
-      <!-- Custom Models Button -->
-      <button
-        onclick={() => (showAddModel = true)}
-        class="btn-secondary w-full py-3"
-      >
-        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-        {t("settings.addCustomModel")}
-      </button>
     </div>
 
     <!-- Center: Models for selected provider -->
@@ -455,31 +442,6 @@
           </div>
         {/if}
       </div>
-
-      <!-- Custom Models Section -->
-      {#if customModels.length > 0}
-        <div class="border-t border-white/10 mt-4 pt-4">
-          <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">{t("settings.customModels")}</h4>
-          <div class="space-y-2">
-            {#each customModels as model}
-              <div class="flex items-center justify-between p-2 bg-white/5 rounded-lg text-sm">
-                <div>
-                  <span class="text-white">{model.name}</span>
-                  <span class="text-gray-500 text-xs ml-2">({providers[model.provider]?.name || model.provider})</span>
-                </div>
-                <button
-                  onclick={() => removeCustomModel(model.id)}
-                  class="text-gray-500 hover:text-red-400 p-1"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            {/each}
-          </div>
-        </div>
-      {/if}
     </div>
   </div>
 
@@ -487,41 +449,61 @@
   {#if showAddKey}
     <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onclick={() => (showAddKey = false)}>
       <div class="bg-gray-900 border border-white/20 rounded-2xl p-6 w-full max-w-lg animate-fade-in shadow-2xl" onclick={(e) => e.stopPropagation()}>
-        <h3 class="text-xl font-bold text-white mb-4">{t("settings.modal.newKey")}</h3>
+        <h3 class="text-xl font-bold text-white mb-4">{t("settings.modal.addCustomApiKey")}</h3>
 
         <div class="space-y-4">
-          <!-- Provider indicator (readonly, shows which provider is selected) -->
-          <div class="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
-            <div class="w-10 h-10 rounded-lg bg-gradient-to-br {providers[newKeyType]?.color || 'from-gray-500 to-gray-600'} flex items-center justify-center">
-              <span class="text-xl">{providers[newKeyType]?.icon || '?'}</span>
-            </div>
-            <div>
-              <p class="text-white font-medium">{providers[newKeyType]?.name || newKeyType}</p>
-              <p class="text-xs text-gray-500">{t("settings.modal.provider")}</p>
+          <!-- Protocol Info Banner -->
+          <div class="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+            <p class="text-xs text-indigo-300">
+              💡 {t("settings.modal.protocolInfo")}
+            </p>
+          </div>
+
+          <!-- Provider Selection -->
+          <div>
+            <label for="provider-select" class="block text-sm text-gray-400 mb-2">{t("settings.modal.provider")}</label>
+            <div class="grid grid-cols-3 gap-2">
+              {#each providerOrder as providerId}
+                {@const provider = providers[providerId]}
+                <button
+                  type="button"
+                  onclick={() => { newKeyType = providerId as ApiKeyConfig["apiType"]; newKeyName = provider.name; }}
+                  class="flex flex-col items-center gap-1 p-3 rounded-lg transition-all duration-200
+                    {newKeyType === providerId 
+                      ? 'bg-gradient-to-br ' + provider.color + ' text-white shadow-lg' 
+                      : 'bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10'}"
+                >
+                  <span class="text-xl">{provider.icon}</span>
+                  <span class="text-xs font-medium">{provider.name.split(' ')[0]}</span>
+                </button>
+              {/each}
             </div>
           </div>
 
           <div>
-            <label for="key-name" class="block text-sm text-gray-400 mb-2">{t("settings.modal.keyName")}</label>
+            <label for="key-name" class="block text-sm text-gray-400 mb-2">{t("settings.modal.configName")}</label>
             <input
               id="key-name"
               type="text"
               bind:value={newKeyName}
-              placeholder={t("settings.modal.keyNamePlaceholder")}
+              placeholder={t("settings.modal.configNamePlaceholder")}
               class="input-modern w-full"
             />
           </div>
 
           <div>
-            <label for="model-id" class="block text-sm text-gray-400 mb-2">{t("settings.modal.modelApiId")}</label>
+            <label for="api-url" class="block text-sm text-gray-400 mb-2">
+              {t("settings.modal.apiEndpoint")}
+              <span class="text-gray-600 ml-1">({t("settings.modal.optional")})</span>
+            </label>
             <input
-              id="model-id"
+              id="api-url"
               type="text"
-              bind:value={newKeyModelName}
-              placeholder={t("settings.modal.modelApiIdPlaceholder")}
+              bind:value={newKeyUrl}
+              placeholder={providers[newKeyType]?.defaultApiUrl || "https://api.openai.com/v1"}
               class="input-modern w-full"
             />
-            <p class="text-xs text-gray-500 mt-1">{t("settings.modal.modelApiIdHint")}</p>
+            <p class="text-xs text-gray-500 mt-1">{t("settings.modal.apiEndpointHint")}</p>
           </div>
 
           <div>
@@ -535,18 +517,18 @@
             />
           </div>
 
-          {#if providers[newKeyType]?.requiresApiUrl || newKeyType === "local"}
+          <!-- Model ID for Local/Custom only -->
+          {#if newKeyType === "local"}
             <div>
-              <label for="api-url" class="block text-sm text-gray-400 mb-2">
-                {t("settings.modal.apiUrl")}
-              </label>
+              <label for="model-id" class="block text-sm text-gray-400 mb-2">{t("settings.modal.defaultModel")}</label>
               <input
-                id="api-url"
+                id="model-id"
                 type="text"
-                bind:value={newKeyUrl}
-                placeholder={providers[newKeyType]?.defaultApiUrl || "http://localhost:11434"}
+                bind:value={newKeyModelName}
+                placeholder={t("settings.modal.defaultModelPlaceholder")}
                 class="input-modern w-full"
               />
+              <p class="text-xs text-gray-500 mt-1">{t("settings.modal.defaultModelHint")}</p>
             </div>
           {/if}
 
@@ -556,77 +538,6 @@
             </button>
             <button onclick={addApiKey} class="btn-success flex-1">
               {t("settings.modal.save")}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  {/if}
-
-  <!-- Modal: Add Custom Model -->
-  {#if showAddModel}
-    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onclick={() => (showAddModel = false)}>
-      <div class="bg-gray-900 border border-white/20 rounded-2xl p-6 w-full max-w-lg animate-fade-in shadow-2xl" onclick={(e) => e.stopPropagation()}>
-        <h3 class="text-xl font-bold text-white mb-4">{t("settings.modal.newModel")}</h3>
-
-        <div class="space-y-4">
-          <div>
-            <label for="custom-model-name" class="block text-sm text-gray-400 mb-2">{t("settings.modal.modelName")}</label>
-            <input
-              id="custom-model-name"
-              type="text"
-              bind:value={customModelName}
-              placeholder={t("settings.modal.modelNamePlaceholder")}
-              class="input-modern w-full"
-            />
-          </div>
-
-          <div>
-            <label for="custom-model-api-id" class="block text-sm text-gray-400 mb-2">{t("settings.modal.modelApiId")}</label>
-            <input
-              id="custom-model-api-id"
-              type="text"
-              bind:value={customModelApiId}
-              placeholder={t("settings.modal.modelApiIdPlaceholder")}
-              class="input-modern w-full"
-            />
-            <p class="text-xs text-gray-500 mt-1">{t("settings.modal.modelApiIdHint")}</p>
-          </div>
-
-          <div>
-            <label for="custom-model-provider" class="block text-sm text-gray-400 mb-2">{t("settings.modal.provider")}</label>
-            <div class="relative">
-              <select id="custom-model-provider" bind:value={customModelProvider} class="select-modern w-full appearance-none cursor-pointer pr-10">
-                {#each providerOrder as providerId}
-                  {@const provider = providers[providerId]}
-                  <option value={provider.id}>{provider.icon} {provider.name}</option>
-                {/each}
-              </select>
-              <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label for="custom-model-desc" class="block text-sm text-gray-400 mb-2">{t("settings.modal.description")}</label>
-            <input
-              id="custom-model-desc"
-              type="text"
-              bind:value={customModelDescription}
-              placeholder={t("settings.modal.descriptionPlaceholder")}
-              class="input-modern w-full"
-            />
-          </div>
-
-          <div class="flex gap-3 pt-2">
-            <button onclick={() => (showAddModel = false)} class="btn-secondary flex-1">
-              {t("settings.modal.cancel")}
-            </button>
-            <button onclick={addCustomModel} class="btn-success flex-1">
-              {t("settings.modal.add")}
             </button>
           </div>
         </div>

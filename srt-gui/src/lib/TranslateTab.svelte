@@ -81,6 +81,10 @@
   let logs = $state<string[]>([]);
   let error = $state<string | null>(null);
   let result = $state<TranslateResult | null>(null);
+  
+  // Live subtitle preview
+  let currentSubtitleOriginal = $state<string>("");
+  let currentSubtitleTranslated = $state<string>("");
 
   let apiKeys = $state<ApiKeyConfig[]>([]);
   let availableModels = $state<ModelInfo[]>([]);
@@ -294,111 +298,9 @@
     </div>
   {/if}
 
-  <!-- Main Grid: 2 columns -->
-  <div class="flex-1 grid grid-cols-2 gap-6">
-    <!-- Left Column: File Selection -->
-    <div class="space-y-4">
-      <!-- File Input Card -->
-      <div class="glass-card p-5">
-        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-          <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-          {t("translate.file")}
-        </h3>
-
-        <div class="space-y-3">
-          <div>
-            <label for="input-path" class="block text-sm text-gray-400 mb-1">{t("translate.inputFile")}</label>
-            <div class="flex gap-2">
-              <input
-                id="input-path"
-                type="text"
-                bind:value={inputPath}
-                placeholder={t("translate.selectFile")}
-                class="input-modern flex-1 text-sm"
-                readonly
-              />
-              <button 
-                onclick={selectInputFile} 
-                class="btn-primary py-2 px-3 tooltip"
-                data-tooltip={t("translate.tooltip.upload")}
-                aria-label={t("translate.tooltip.upload")}
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label for="output-path" class="block text-sm text-gray-400 mb-1">{t("translate.outputFile")}</label>
-            <div class="flex gap-2">
-              <input
-                id="output-path"
-                type="text"
-                bind:value={outputPath}
-                placeholder={t("translate.selectDestination")}
-                class="input-modern flex-1 text-sm"
-              />
-              <button 
-                onclick={selectOutputFile} 
-                class="btn-secondary py-2 px-3 tooltip"
-                data-tooltip={t("translate.tooltip.save")}
-                aria-label={t("translate.tooltip.save")}
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {#if fileInfo}
-            <div class="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
-                  <span class="text-xl">📄</span>
-                </div>
-                <div>
-                  <p class="font-medium text-white">{fileInfo.subtitle_count} {t("translate.subtitles")}</p>
-                  <p class="text-sm text-gray-400 truncate max-w-xs">"{fileInfo.first_subtitle}"</p>
-                </div>
-              </div>
-            </div>
-          {/if}
-        </div>
-      </div>
-
-      <!-- Log Panel -->
-      <div class="glass-card p-5 flex-1 flex flex-col">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-lg font-semibold flex items-center gap-2">
-            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-            {t("translate.log")}
-          </h3>
-          {#if logs.length > 0}
-            <button onclick={clearLogs} class="text-xs text-gray-500 hover:text-gray-400">
-              {t("translate.clearLog")}
-            </button>
-          {/if}
-        </div>
-
-        <div class="log-viewer flex-1 min-h-[200px] overflow-y-auto p-3 space-y-1">
-          {#each logs as log}
-            <p class="text-gray-400 text-xs">{log}</p>
-          {/each}
-          {#if logs.length === 0}
-            <p class="text-gray-600 text-center py-8 text-sm">{t("translate.noLog")}</p>
-          {/if}
-        </div>
-      </div>
-    </div>
-
-    <!-- Right Column: Options + Progress -->
+  <!-- Main Grid: 2 columns - Options left, File right -->
+  <div class="grid grid-cols-2 gap-6">
+    <!-- Left Column: Translation Options -->
     <div class="space-y-4">
       <!-- Translation Options Card -->
       <div class="glass-card p-5">
@@ -416,28 +318,41 @@
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label for="api-key-select" class="block text-sm text-gray-400 mb-1">{t("translate.apiKey")}</label>
-                <select id="api-key-select" bind:value={selectedKeyId} class="select-modern w-full text-sm">
-                  {#each apiKeys as key}
-                    <option value={key.id}>
-                      {key.name} ({providers[key.apiType]?.name.split(' ')[0] || key.apiType})
-                      {key.isDefault ? "⭐" : ""}
-                    </option>
-                  {/each}
-                </select>
+                <div class="relative">
+                  <select id="api-key-select" bind:value={selectedKeyId} class="select-modern w-full text-sm appearance-none pr-10">
+                    {#each apiKeys as key}
+                      <option value={key.id}>
+                        {key.name} {key.isDefault ? "⭐" : ""}
+                      </option>
+                    {/each}
+                  </select>
+                  <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
 
               <div>
                 <label for="model-select" class="block text-sm text-gray-400 mb-1">{t("translate.model")}</label>
-                <select id="model-select" bind:value={selectedModel} class="select-modern w-full text-sm">
-                  {#each availableModels as model}
-                    <option value={model.id}>{model.name}</option>
-                  {/each}
-                </select>
+                <div class="relative">
+                  <select id="model-select" bind:value={selectedModel} class="select-modern w-full text-sm appearance-none pr-10">
+                    {#each availableModels as model}
+                      <option value={model.id}>{model.name}</option>
+                    {/each}
+                  </select>
+                  <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
             </div>
           {/if}
 
-          <!-- Language Selection - Custom styled -->
+          <!-- Language Selection -->
           <div>
             <label for="target-lang" class="block text-sm text-gray-400 mb-1">{t("translate.targetLang")}</label>
             <div class="relative">
@@ -463,10 +378,7 @@
             <div class="flex items-center justify-between mb-1">
               <label class="text-sm text-gray-400 flex items-center gap-2">
                 {t("translate.batchSize")}
-                <span 
-                  class="tooltip cursor-help"
-                  data-tooltip={t("translate.batchSizeTooltip")}
-                >
+                <span class="cursor-help" title={t("translate.batchSizeTooltip")}>
                   <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -503,87 +415,80 @@
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Progress Card -->
-      {#if isTranslating || progress}
-        <div class="glass-card p-5 animate-fade-in {isTranslating ? 'animate-pulse-glow' : ''}">
-          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5 text-blue-400 {isTranslating ? 'animate-spin' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            {t("translate.progress")}
-          </h3>
+    <!-- Right Column: File + Start Button -->
+    <div class="space-y-4">
+      <!-- File Input Card -->
+      <div class="glass-card p-5">
+        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          {t("translate.file")}
+        </h3>
 
-          <div class="space-y-3">
-            <div class="progress-modern h-3">
-              <div class="progress-modern-bar" style="width: {progress?.percentage || 0}%"></div>
-            </div>
-
-            <div class="flex justify-between items-center">
-              <span class="text-gray-400 text-sm">
-                {t("translate.batch")} {progress?.current_batch || 0} / {progress?.total_batches || 0}
-              </span>
-              <span class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                {Math.round(progress?.percentage || 0)}%
-              </span>
-            </div>
-
-            {#if progress?.eta_seconds}
-              <div class="flex items-center gap-2 text-gray-400 text-sm">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <div class="space-y-3">
+          <div>
+            <label for="input-path" class="block text-sm text-gray-400 mb-1">{t("translate.inputFile")}</label>
+            <div class="flex gap-2">
+              <input
+                id="input-path"
+                type="text"
+                bind:value={inputPath}
+                placeholder={t("translate.selectFile")}
+                class="input-modern flex-1 text-sm"
+                readonly
+              />
+              <button 
+                onclick={selectInputFile} 
+                class="btn-primary py-2 px-3"
+                title={t("translate.tooltip.upload")}
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
-                <span>{t("translate.timeRemaining")} {formatEta(progress.eta_seconds)}</span>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label for="output-path" class="block text-sm text-gray-400 mb-1">{t("translate.outputFile")}</label>
+            <div class="flex gap-2">
+              <input
+                id="output-path"
+                type="text"
+                bind:value={outputPath}
+                placeholder={t("translate.selectDestination")}
+                class="input-modern flex-1 text-sm"
+              />
+              <button 
+                onclick={selectOutputFile} 
+                class="btn-secondary py-2 px-3"
+                title={t("translate.tooltip.save")}
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {#if fileInfo}
+            <div class="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                  <span class="text-xl">📄</span>
+                </div>
+                <div>
+                  <p class="font-medium text-white">{fileInfo.subtitle_count} {t("translate.subtitles")}</p>
+                  <p class="text-sm text-gray-400 truncate max-w-xs">"{fileInfo.first_subtitle}"</p>
+                </div>
               </div>
-            {/if}
-          </div>
-        </div>
-      {/if}
-
-      <!-- Result Card -->
-      {#if result}
-        <div
-          class="glass-card p-5 border-l-4 animate-fade-in {result.success
-            ? 'border-green-500 bg-green-500/5'
-            : 'border-red-500 bg-red-500/5'}"
-        >
-          <div class="flex items-start gap-4">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center {result.success ? 'bg-green-500/20' : 'bg-red-500/20'}">
-              {#if result.success}
-                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-              {:else}
-                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              {/if}
             </div>
-            <div class="flex-1">
-              <h3 class="text-lg font-semibold {result.success ? 'text-green-400' : 'text-red-400'}">
-                {result.success ? t("translate.completed") : t("translate.error")}
-              </h3>
-              <p class="text-gray-300 text-sm mt-1">{result.message}</p>
-              {#if result.output_path}
-                <p class="text-xs text-gray-500 mt-2 font-mono truncate">📁 {result.output_path}</p>
-              {/if}
-            </div>
-          </div>
+          {/if}
         </div>
-      {/if}
-
-      <!-- Error Card -->
-      {#if error}
-        <div class="glass-card p-4 border border-red-500/30 bg-red-500/10 animate-fade-in">
-          <div class="flex items-center gap-3">
-            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p class="text-red-300 flex-1 text-sm">{error}</p>
-            <button onclick={() => (error = null)} class="text-red-400 hover:text-red-300">✕</button>
-          </div>
-        </div>
-      {/if}
+      </div>
 
       <!-- Action Button -->
       <div class="flex gap-3">
@@ -608,6 +513,118 @@
           </button>
         {/if}
       </div>
+    </div>
+  </div>
+
+  <!-- Bottom Section: Progress + Live Preview -->
+  <div class="mt-6 flex-1 space-y-4">
+    <!-- Progress/Result/Error Cards -->
+    {#if isTranslating || progress}
+      <div class="glass-card p-4 animate-fade-in {isTranslating ? 'animate-pulse-glow' : ''}">
+        <div class="flex items-center gap-6">
+          <div class="flex-1">
+            <div class="progress-modern h-2">
+              <div class="progress-modern-bar" style="width: {progress?.percentage || 0}%"></div>
+            </div>
+          </div>
+          <span class="text-gray-400 text-sm whitespace-nowrap">
+            {t("translate.batch")} {progress?.current_batch || 0}/{progress?.total_batches || 0}
+          </span>
+          <span class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            {Math.round(progress?.percentage || 0)}%
+          </span>
+          {#if progress?.eta_seconds}
+            <span class="text-gray-500 text-sm flex items-center gap-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {formatEta(progress.eta_seconds)}
+            </span>
+          {/if}
+        </div>
+      </div>
+    {/if}
+
+    {#if result}
+      <div class="glass-card p-4 border-l-4 animate-fade-in {result.success ? 'border-green-500 bg-green-500/5' : 'border-red-500 bg-red-500/5'}">
+        <div class="flex items-center gap-3">
+          {#if result.success}
+            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+          {:else}
+            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          {/if}
+          <div class="flex-1">
+            <p class="{result.success ? 'text-green-400' : 'text-red-400'} font-medium">{result.message}</p>
+            {#if result.output_path}
+              <p class="text-xs text-gray-500 mt-1 font-mono truncate">📁 {result.output_path}</p>
+            {/if}
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    {#if error}
+      <div class="glass-card p-4 border border-red-500/30 bg-red-500/10 animate-fade-in">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="text-red-300 flex-1 text-sm">{error}</p>
+          <button onclick={() => (error = null)} class="text-red-400 hover:text-red-300">✕</button>
+        </div>
+      </div>
+    {/if}
+
+    <!-- Live Translation Preview -->
+    <div class="glass-card p-5 flex-1">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold flex items-center gap-2">
+          <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          {t("translate.livePreview")}
+        </h3>
+        {#if logs.length > 0}
+          <button onclick={clearLogs} class="text-xs text-gray-500 hover:text-gray-400">
+            {t("translate.clearLog")}
+          </button>
+        {/if}
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 min-h-32">
+        <!-- Original Subtitle -->
+        <div class="bg-white/5 rounded-xl p-4 overflow-y-auto">
+          <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">{t("translate.original")}</p>
+          {#if progress && currentSubtitleOriginal}
+            <p class="text-gray-300">{currentSubtitleOriginal}</p>
+          {:else}
+            <p class="text-gray-600 text-sm">{t("translate.waitingForTranslation")}</p>
+          {/if}
+        </div>
+        
+        <!-- Translated Subtitle -->
+        <div class="bg-white/5 rounded-xl p-4 overflow-y-auto">
+          <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">{t("translate.translated")}</p>
+          {#if progress && currentSubtitleTranslated}
+            <p class="text-green-300">{currentSubtitleTranslated}</p>
+          {:else}
+            <p class="text-gray-600 text-sm">{t("translate.waitingForTranslation")}</p>
+          {/if}
+        </div>
+      </div>
+
+      <!-- Log messages (compact) -->
+      {#if logs.length > 0}
+        <div class="mt-4 pt-4 border-t border-white/10 max-h-20 overflow-y-auto">
+          {#each logs.slice(-3) as log}
+            <p class="text-gray-500 text-xs">{log}</p>
+          {/each}
+        </div>
+      {/if}
     </div>
   </div>
 </div>

@@ -445,19 +445,19 @@
 
         <!-- Controls Row -->
         <div class="flex items-center gap-4">
+          <!-- Play/Pause Button - Icon only -->
           <button
             onclick={() =>
               videoElement && (isPlaying ? videoElement.pause() : videoElement.play())}
-            class="btn-primary py-2 px-6 relative group"
+            class="btn-primary w-12 h-12 flex items-center justify-center p-0 relative group"
             aria-label={isPlaying ? t("sync.tooltipPause") : t("sync.tooltipPlay")}
           >
-            <span class="tooltip">{isPlaying ? t("sync.tooltipPause") : t("sync.tooltipPlay")}</span>
             {#if isPlaying}
-              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
               </svg>
             {:else}
-              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z"/>
               </svg>
             {/if}
@@ -465,26 +465,28 @@
 
           <div class="flex-1"></div>
 
-          <!-- Offset Adjustment -->
-          <div class="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-2">
-            <span class="text-sm text-gray-400">Offset:</span>
+          <!-- Offset Adjustment - Compact layout -->
+          <div class="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2">
             <button
               onclick={() => (offsetAdjustment -= 100)}
-              class="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors relative group"
+              class="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg text-lg font-medium transition-colors"
               aria-label={t("sync.tooltipOffsetMinus")}
+              title="-100ms"
             >
-              <span class="tooltip">{t("sync.tooltipOffsetMinus")}</span>
-              -
+              −
             </button>
-            <span class="text-lg font-mono w-24 text-center font-medium {offsetAdjustment > 0 ? 'text-green-400' : offsetAdjustment < 0 ? 'text-red-400' : 'text-white'}">
-              {formatOffset(offsetAdjustment)}
-            </span>
+            <div class="flex flex-col items-center min-w-[80px]">
+              <span class="text-xs text-gray-500 uppercase tracking-wide">Offset</span>
+              <span class="text-base font-mono font-medium {offsetAdjustment > 0 ? 'text-green-400' : offsetAdjustment < 0 ? 'text-red-400' : 'text-white'}">
+                {formatOffset(offsetAdjustment)}
+              </span>
+            </div>
             <button
               onclick={() => (offsetAdjustment += 100)}
-              class="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors relative group"
+              class="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg text-lg font-medium transition-colors"
               aria-label={t("sync.tooltipOffsetPlus")}
+              title="+100ms"
             >
-              <span class="tooltip">{t("sync.tooltipOffsetPlus")}</span>
               +
             </button>
           </div>

@@ -6,10 +6,15 @@
   import ShortcutsTab from "./lib/ShortcutsTab.svelte";
 
   let activeTab = $state<"translate" | "sync" | "settings" | "shortcuts">("translate");
+  let sidebarCollapsed = $state(false);
 
   // Expose function to change tab programmatically
   function changeTab(tab: typeof activeTab) {
     activeTab = tab;
+  }
+
+  function toggleSidebar() {
+    sidebarCollapsed = !sidebarCollapsed;
   }
 
   // Make available globally for TranslateTab link
@@ -20,7 +25,7 @@
 
 <main class="flex h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 text-gray-100">
   <!-- Sidebar -->
-  <Sidebar {activeTab} onTabChange={(tab) => (activeTab = tab)} />
+  <Sidebar {activeTab} onTabChange={(tab) => (activeTab = tab)} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
 
   <!-- Main Content -->
   <div class="flex-1 overflow-hidden">

@@ -14,11 +14,11 @@
       {
         "title": "SRT Tools - Traduzione e Sincronizzazione",
         "width": 1400,
-        "height": 900,
+        "height": 1000,
         "resizable": true,
         "fullscreen": false,
-        "minWidth": 800,
-        "minHeight": 600
+        "minWidth": 900,
+        "minHeight": 700
       }
     ],
     "security": {
