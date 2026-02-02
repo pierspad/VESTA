@@ -316,54 +316,67 @@
   });
 </script>
 
-<div class="h-full flex flex-col overflow-hidden">
+<div class="h-full flex flex-col overflow-hidden bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900">
   <!-- Top Bar -->
-  <div
-    class="flex items-center gap-4 p-4 bg-gray-800 border-b border-gray-700 flex-shrink-0"
-  >
+  <div class="flex items-center gap-4 p-4 glass-card m-4 mb-0 flex-shrink-0">
     <button
       onclick={selectSrtFile}
-      class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm"
+      class="btn-primary py-2 px-4 flex items-center gap-2"
     >
-      📄 Carica SRT
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      Carica SRT
     </button>
     <button
       onclick={selectVideoFile}
-      class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm"
+      class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 py-2 px-4 rounded-xl font-medium flex items-center gap-2 transition-all shadow-lg shadow-purple-500/30"
     >
-      🎬 Carica Video
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      </svg>
+      Carica Video
     </button>
 
     <div class="flex-1"></div>
 
     <button
       onclick={loadSession}
-      class="px-3 py-2 bg-gray-600 hover:bg-gray-500 rounded text-sm"
+      class="btn-secondary py-2 px-4 flex items-center gap-2"
     >
-      📂 Carica Sessione
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+      </svg>
+      Carica Sessione
     </button>
     <button
       onclick={saveSession}
       disabled={!status?.is_loaded}
-      class="px-3 py-2 bg-gray-600 hover:bg-gray-500 disabled:opacity-50 rounded text-sm"
+      class="btn-secondary py-2 px-4 flex items-center gap-2 disabled:opacity-50"
     >
-      💾 Salva Sessione
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+      </svg>
+      Salva Sessione
     </button>
     <button
       onclick={saveFile}
       disabled={!status?.is_loaded}
-      class="px-3 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded text-sm"
+      class="btn-success py-2 px-4 flex items-center gap-2 disabled:opacity-50"
     >
-      💾 Esporta SRT
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+      Esporta SRT
     </button>
   </div>
 
   <!-- Main Content -->
-  <div class="flex-1 flex overflow-hidden">
+  <div class="flex-1 flex overflow-hidden p-4 pt-4 gap-4">
     <!-- Left: Video + Controls -->
-    <div class="w-2/3 flex flex-col border-r border-gray-700">
+    <div class="w-2/3 flex flex-col gap-4">
       <!-- Video Player -->
-      <div class="flex-1 bg-black relative flex items-center justify-center">
+      <div class="flex-1 glass-card relative flex items-center justify-center overflow-hidden">
         {#if videoSrc}
           <video
             bind:this={videoElement}
@@ -382,12 +395,8 @@
               (s) => s.id === activeSubtitleId
             )}
             {#if activeSub}
-              <div
-                class="absolute bottom-16 left-0 right-0 text-center px-4"
-              >
-                <p
-                  class="inline-block bg-black/80 px-4 py-2 rounded text-xl text-white"
-                >
+              <div class="absolute bottom-20 left-0 right-0 text-center px-4">
+                <p class="inline-block bg-black/80 backdrop-blur-sm px-6 py-3 rounded-xl text-xl text-white shadow-lg">
                   {activeSub.text}
                 </p>
               </div>
@@ -395,17 +404,22 @@
           {/if}
         {:else}
           <div class="text-gray-500 text-center">
-            <p class="text-4xl mb-4">🎬</p>
-            <p>Carica un video per iniziare</p>
+            <div class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-white/5 flex items-center justify-center">
+              <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <p class="text-lg">Carica un video per iniziare</p>
+            <p class="text-sm text-gray-600 mt-1">Formati supportati: MP4, MKV, AVI, WebM</p>
           </div>
         {/if}
       </div>
 
       <!-- Video Controls -->
-      <div class="bg-gray-800 p-4 space-y-3 flex-shrink-0">
+      <div class="glass-card p-4 space-y-4 flex-shrink-0">
         <!-- Timeline -->
         <div class="flex items-center gap-4">
-          <span class="text-sm text-gray-400 w-20">
+          <span class="text-sm text-gray-400 font-mono w-24">
             {formatTime(currentVideoTime * 1000)}
           </span>
           <input
@@ -418,7 +432,7 @@
             }}
             class="flex-1"
           />
-          <span class="text-sm text-gray-400 w-20 text-right">
+          <span class="text-sm text-gray-400 font-mono w-24 text-right">
             {videoElement ? formatTime(videoElement.duration * 1000) : "--:--"}
           </span>
         </div>
@@ -428,120 +442,152 @@
           <button
             onclick={() =>
               videoElement && (isPlaying ? videoElement.pause() : videoElement.play())}
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+            class="btn-primary py-2 px-6"
           >
-            {isPlaying ? "⏸️ Pausa" : "▶️ Play"}
+            {#if isPlaying}
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+              </svg>
+            {:else}
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            {/if}
           </button>
 
           <div class="flex-1"></div>
 
           <!-- Offset Adjustment -->
-          <div class="flex items-center gap-2 bg-gray-700 rounded px-3 py-2">
+          <div class="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-2">
             <span class="text-sm text-gray-400">Offset:</span>
             <button
               onclick={() => (offsetAdjustment -= 100)}
-              class="px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm"
-              >-100ms</button
-            >
-            <span class="text-lg font-mono w-24 text-center">
+              class="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
+            >-</button>
+            <span class="text-lg font-mono w-24 text-center font-medium {offsetAdjustment > 0 ? 'text-green-400' : offsetAdjustment < 0 ? 'text-red-400' : 'text-white'}">
               {formatOffset(offsetAdjustment)}
             </span>
             <button
               onclick={() => (offsetAdjustment += 100)}
-              class="px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm"
-              >+100ms</button
-            >
+              class="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
+            >+</button>
           </div>
 
           <button
             onclick={confirmAtCurrentTime}
             disabled={activeSubtitleId === null}
-            class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded"
+            class="btn-success py-2 px-4 flex items-center gap-2 disabled:opacity-50"
           >
-            ✅ Conferma Ancora
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Conferma Ancora
           </button>
         </div>
 
         <!-- Shortcuts Help -->
-        <div class="text-xs text-gray-500 flex gap-4">
-          <span><kbd class="bg-gray-700 px-1 rounded">Spazio</kbd> Play/Pausa</span>
-          <span><kbd class="bg-gray-700 px-1 rounded">←/→</kbd> Seek ±0.1s</span>
-          <span><kbd class="bg-gray-700 px-1 rounded">↑/↓</kbd> Offset ±100ms</span>
-          <span><kbd class="bg-gray-700 px-1 rounded">Enter</kbd> Conferma</span>
+        <div class="flex flex-wrap gap-3 text-xs text-gray-500">
+          <div class="flex items-center gap-1">
+            <kbd class="px-2 py-1 bg-white/10 rounded text-gray-400">Spazio</kbd>
+            <span>Play/Pausa</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <kbd class="px-2 py-1 bg-white/10 rounded text-gray-400">←/→</kbd>
+            <span>Seek ±0.1s</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <kbd class="px-2 py-1 bg-white/10 rounded text-gray-400">↑/↓</kbd>
+            <span>Offset ±100ms</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <kbd class="px-2 py-1 bg-white/10 rounded text-gray-400">Enter</kbd>
+            <span>Conferma</span>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Right: Subtitle List + Status -->
-    <div class="w-1/3 flex flex-col bg-gray-800">
-      <!-- Status Bar -->
+    <div class="w-1/3 flex flex-col gap-4">
+      <!-- Status Card -->
       {#if status?.is_loaded}
-        <div class="p-3 border-b border-gray-700 space-y-2 flex-shrink-0">
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-400">Sottotitoli:</span>
-            <span>{status.total_subtitles}</span>
-          </div>
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-400">Ancore:</span>
-            <span class="text-green-400">{status.anchor_count}</span>
-          </div>
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-400">Offset medio:</span>
-            <span>{formatOffset(status.average_offset_ms)}</span>
+        <div class="glass-card p-4 space-y-3 flex-shrink-0">
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white/5 rounded-xl p-3 text-center">
+              <p class="text-2xl font-bold text-white">{status.total_subtitles}</p>
+              <p class="text-xs text-gray-500">Sottotitoli</p>
+            </div>
+            <div class="bg-white/5 rounded-xl p-3 text-center">
+              <p class="text-2xl font-bold text-green-400">{status.anchor_count}</p>
+              <p class="text-xs text-gray-500">Ancore</p>
+            </div>
           </div>
 
-          <!-- Progress -->
-          <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-            <div
-              class="h-full bg-blue-600"
-              style="width: {status.completion_percentage}%"
-            ></div>
+          <div class="space-y-2">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-400">Offset medio:</span>
+              <span class="{status.average_offset_ms > 0 ? 'text-green-400' : status.average_offset_ms < 0 ? 'text-red-400' : 'text-white'}">
+                {formatOffset(status.average_offset_ms)}
+              </span>
+            </div>
+
+            <!-- Progress -->
+            <div class="progress-modern h-2">
+              <div
+                class="progress-modern-bar"
+                style="width: {status.completion_percentage}%"
+              ></div>
+            </div>
+            <p class="text-xs text-gray-500 text-center">
+              {status.completion_percentage.toFixed(1)}% completato
+            </p>
           </div>
-          <p class="text-xs text-gray-500 text-center">
-            {status.completion_percentage.toFixed(1)}% completato
-          </p>
 
           <!-- Suggested Next -->
           {#if status.suggested_next_id}
             <button
               onclick={goToSuggested}
-              class="w-full py-2 bg-yellow-600 hover:bg-yellow-700 rounded text-sm"
+              class="w-full py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-500/30"
             >
-              🎯 Vai al suggerito: #{status.suggested_next_id}
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              Vai al suggerito: #{status.suggested_next_id}
             </button>
           {/if}
 
-          <div class="flex gap-2">
-            <button
-              onclick={resetSync}
-              class="flex-1 py-1 bg-red-600/30 hover:bg-red-600/50 text-red-400 rounded text-sm"
-            >
-              Reset
-            </button>
-          </div>
+          <button
+            onclick={resetSync}
+            class="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-sm transition-colors"
+          >
+            Reset Sincronizzazione
+          </button>
         </div>
       {/if}
 
       <!-- Anchors List -->
       {#if anchors.length > 0}
-        <div class="p-3 border-b border-gray-700 flex-shrink-0">
-          <h4 class="text-sm font-semibold text-blue-400 mb-2">
+        <div class="glass-card p-4 flex-shrink-0">
+          <h4 class="text-sm font-semibold text-indigo-400 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
             Ancore ({anchors.length})
           </h4>
-          <div class="space-y-1 max-h-32 overflow-y-auto">
+          <div class="space-y-2 max-h-32 overflow-y-auto">
             {#each anchors as anchor}
-              <div
-                class="flex items-center justify-between text-xs bg-gray-700 rounded px-2 py-1"
-              >
-                <span>#{anchor.subtitle_id}</span>
-                <span class="text-green-400"
-                  >{formatOffset(anchor.offset_ms)}</span
-                >
+              <div class="flex items-center justify-between text-sm bg-white/5 rounded-lg px-3 py-2">
+                <span class="text-gray-400">#{anchor.subtitle_id}</span>
+                <span class="{anchor.offset_ms >= 0 ? 'text-green-400' : 'text-red-400'}">
+                  {formatOffset(anchor.offset_ms)}
+                </span>
                 <button
                   onclick={() => removeAnchor(anchor.subtitle_id)}
-                  class="text-red-400 hover:text-red-300"
+                  class="text-red-400 hover:text-red-300 p-1 hover:bg-red-500/20 rounded transition-colors"
                 >
-                  ✕
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
             {/each}
@@ -550,56 +596,75 @@
       {/if}
 
       <!-- Subtitle List -->
-      <div class="flex-1 overflow-y-auto">
-        {#each subtitles as sub}
-          <button
-            onclick={() => goToSubtitle(sub)}
-            class="w-full text-left p-3 border-b border-gray-700 hover:bg-gray-700 transition-colors
-              {activeSubtitleId === sub.id ? 'bg-blue-600/30 border-l-4 border-l-blue-500' : ''}
-              {sub.is_anchor ? 'bg-green-600/10' : ''}"
-          >
-            <div class="flex items-start gap-2">
-              <span class="text-xs text-gray-500 w-8">#{sub.id}</span>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm truncate">{sub.text}</p>
-                <div class="flex gap-2 text-xs text-gray-400 mt-1">
-                  <span>{formatTime(sub.synced_start_ms)}</span>
-                  <span class="text-gray-600">→</span>
-                  <span>{formatTime(sub.synced_end_ms)}</span>
-                  {#if sub.offset_ms !== 0}
-                    <span
-                      class={sub.offset_ms > 0
-                        ? "text-green-400"
-                        : "text-red-400"}
-                    >
-                      {formatOffset(sub.offset_ms)}
-                    </span>
-                  {/if}
+      <div class="glass-card flex-1 overflow-hidden flex flex-col">
+        <div class="p-4 border-b border-white/10 flex-shrink-0">
+          <h4 class="text-sm font-semibold text-purple-400 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            Sottotitoli
+          </h4>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto">
+          {#each subtitles as sub}
+            <button
+              onclick={() => goToSubtitle(sub)}
+              class="w-full text-left p-3 border-b border-white/5 hover:bg-white/5 transition-colors
+                {activeSubtitleId === sub.id ? 'bg-indigo-500/20 border-l-4 border-l-indigo-500' : ''}
+                {sub.is_anchor ? 'bg-green-500/5' : ''}"
+            >
+              <div class="flex items-start gap-2">
+                <span class="text-xs text-gray-500 w-8 flex-shrink-0">#{sub.id}</span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm truncate text-gray-200">{sub.text}</p>
+                  <div class="flex gap-2 text-xs text-gray-500 mt-1">
+                    <span class="font-mono">{formatTime(sub.synced_start_ms)}</span>
+                    <span class="text-gray-700">→</span>
+                    <span class="font-mono">{formatTime(sub.synced_end_ms)}</span>
+                    {#if sub.offset_ms !== 0}
+                      <span class="{sub.offset_ms > 0 ? 'text-green-400' : 'text-red-400'}">
+                        {formatOffset(sub.offset_ms)}
+                      </span>
+                    {/if}
+                  </div>
                 </div>
+                {#if sub.is_anchor}
+                  <span class="text-green-400 flex-shrink-0">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                  </span>
+                {/if}
               </div>
-              {#if sub.is_anchor}
-                <span class="text-green-400">⚓</span>
-              {/if}
-            </div>
-          </button>
-        {/each}
+            </button>
+          {/each}
 
-        {#if subtitles.length === 0 && !status?.is_loaded}
-          <div class="text-center text-gray-500 py-8">
-            <p>Carica un file SRT per iniziare</p>
-          </div>
-        {/if}
+          {#if subtitles.length === 0 && !status?.is_loaded}
+            <div class="text-center text-gray-500 py-12">
+              <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p>Carica un file SRT per iniziare</p>
+            </div>
+          {/if}
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Error Toast -->
   {#if error}
-    <div
-      class="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg"
-    >
-      {error}
-      <button onclick={() => (error = null)} class="ml-2">✕</button>
+    <div class="fixed bottom-4 right-4 glass-card bg-red-500/20 border border-red-500/30 text-white px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 animate-fade-in">
+      <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span class="text-red-200">{error}</span>
+      <button onclick={() => (error = null)} class="text-red-400 hover:text-red-300 ml-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
   {/if}
 </div>
