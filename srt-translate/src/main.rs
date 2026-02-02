@@ -403,17 +403,39 @@ async fn main() -> Result<()> {
             }
         };
         
-        repair_translation_with_rate_limit(
+        // Gestione errori migliorata: se il repair fallisce, salva il file parziale
+        // e continua al prossimo tentativo invece di propagare l'errore fatalmente
+        let repair_result = repair_translation_with_rate_limit(
             translators.clone(),
             Some(rate_limiters.clone()),
             &original_subtitles,
             &mut translated,
-            missing_ids,
+            missing_ids.clone(),
             language,
             title_context.as_deref(),
             repair_progress,
         )
-        .await?;
+        .await;
+        
+        if let Err(e) = repair_result {
+            eprintln!("⚠️  Repair attempt {} failed: {}", repair_attempt, e);
+            
+            // Salva comunque il file parziale per non perdere il lavoro fatto
+            save_partial_translation(&output_path, &translated)?;
+            println!("💾 Partial translation saved to: {}", output_path.display());
+            
+            // Se l'errore è fatale (es. Quota Exceeded), aspetta un po' prima di riprovare
+            if e.to_string().contains("Quota") || e.to_string().contains("429") || e.to_string().contains("rate") {
+                println!("⏳ Rate limit detected, waiting 60 seconds before retry...");
+                tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+            } else {
+                // Per altri errori, breve pausa per far "raffreddare" l'API
+                println!("⏳ Waiting 5 seconds before retry...");
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            }
+            
+            continue; // Riprova il loop di repair
+        }
         
         // Salva la versione riparata dopo ogni iterazione
         use std::io::Write as _;
@@ -441,6 +463,33 @@ async fn main() -> Result<()> {
     println!("💾 Translation complete: {}", output_path.display());
     println!("✨ Done!");
 
+    Ok(())
+}
+
+/// Salva il file di traduzione parziale (usato in caso di errore nel repair)
+/// Questo evita di perdere il lavoro già fatto se la traduzione viene interrotta
+fn save_partial_translation(
+    output_path: &PathBuf,
+    translated: &std::collections::HashMap<u32, srt_parser::Subtitle>,
+) -> Result<()> {
+    use std::io::Write as _;
+    
+    let mut file = std::fs::File::create(output_path)?;
+    let mut sorted: Vec<_> = translated.iter().collect();
+    sorted.sort_by_key(|(id, _)| *id);
+    
+    for (id, subtitle) in sorted {
+        writeln!(file, "{}", id)?;
+        writeln!(
+            file,
+            "{} --> {}",
+            subtitle.start.to_srt_string(),
+            subtitle.end.to_srt_string()
+        )?;
+        writeln!(file, "{}", subtitle.text)?;
+        writeln!(file)?;
+    }
+    
     Ok(())
 }
 

@@ -5,6 +5,8 @@ members = [
     "srt-extract-lib",
     "srt-translate",
     "srt-translate-lib",
+    "srt-sync-lib",
+    "srt-gui/src-tauri",
 ]
 resolver = "2"
 

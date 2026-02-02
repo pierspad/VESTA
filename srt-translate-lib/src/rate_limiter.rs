@@ -34,8 +34,11 @@ pub fn create_rate_limiter(rpm: u32) -> Arc<RateLimiter> {
         .expect("rpm.max(1) is always >= 1");
     
     // Crea una quota che permette 'rpm' richieste al minuto
-    // Il refill avviene distribuito nel minuto per evitare burst all'inizio
-    let quota = Quota::per_minute(requests_per_minute);
+    // allow_burst(1) significa che le richieste devono essere spaziate nel tempo,
+    // evitando "raffiche" di richieste all'inizio del minuto.
+    // Questo è ideale per traduzioni batch che devono rispettare i rate limit API.
+    let quota = Quota::per_minute(requests_per_minute)
+        .allow_burst(NonZeroU32::new(1).expect("1 is always >= 1"));
     
     Arc::new(GovRateLimiter::direct(quota))
 }

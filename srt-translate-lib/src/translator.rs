@@ -309,9 +309,19 @@ impl Translator {
             parts: Vec<Part>,
         }
 
+        /// Configurazione per forzare output JSON nativo da Gemini 1.5+
+        /// Questo garantisce che il decoder dell'LLM produca sempre JSON valido
+        #[derive(Serialize)]
+        struct GenerationConfig {
+            #[serde(rename = "responseMimeType")]
+            response_mime_type: String,
+        }
+
         #[derive(Serialize)]
         struct GeminiRequest {
             contents: Vec<Content>,
+            #[serde(rename = "generationConfig")]
+            generation_config: GenerationConfig,
         }
 
         #[derive(Deserialize)]
@@ -340,6 +350,11 @@ impl Translator {
             contents: vec![Content {
                 parts: vec![Part { text: prompt }],
             }],
+            // Gemini Native JSON Mode: forza l'output JSON a livello di decoder
+            // Funziona solo con modelli gemini-1.5-* e successivi
+            generation_config: GenerationConfig {
+                response_mime_type: "application/json".to_string(),
+            },
         };
 
         let api_key = self.config.api_key.as_ref()

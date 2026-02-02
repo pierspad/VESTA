@@ -1,0 +1,33 @@
+[package]
+name = "srt-gui"
+version = "0.1.0"
+edition = "2021"
+description = "GUI for SRT subtitle translation and synchronization"
+authors = ["Your Name <your.email@example.com>"]
+license = "MIT"
+
+[lib]
+name = "srt_gui_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+
+# Dipendenze dal workspace
+srt-parser = { path = "../../srt-parser" }
+srt-translate-lib = { path = "../../srt-translate-lib" }
+srt-sync-lib = { path = "../../srt-sync-lib" }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

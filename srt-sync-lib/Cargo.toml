@@ -1,0 +1,20 @@
+[package]
+name = "srt-sync-lib"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "Library for synchronizing SRT subtitles with video using anchor points and interpolation"
+license = "MIT"
+repository = "https://github.com/pierspad/auto_sub_srt"
+keywords = ["srt", "subtitles", "synchronization", "video"]
+categories = ["multimedia"]
+
+[dependencies]
+srt-parser = { path = "../srt-parser", version = "0.1.0" }
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lib]
+name = "srt_sync_lib"
+path = "src/lib.rs"
