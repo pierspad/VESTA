@@ -294,15 +294,22 @@
       <div class="glass-card p-4">
         <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">{t("settings.language")}</h3>
         <p class="text-xs text-gray-500 mb-3">{t("settings.languageDesc")}</p>
-        <select 
-          class="select-modern w-full"
-          value={$currentLanguage}
-          onchange={(e) => setLanguage((e.target as HTMLSelectElement).value)}
-        >
-          {#each availableUILanguages as lang}
-            <option value={lang.code}>{lang.flag} {lang.nativeName}</option>
-          {/each}
-        </select>
+        <div class="relative">
+          <select 
+            class="select-modern w-full appearance-none cursor-pointer pr-10"
+            value={$currentLanguage}
+            onchange={(e) => setLanguage((e.target as HTMLSelectElement).value)}
+          >
+            {#each availableUILanguages as lang}
+              <option value={lang.code}>{lang.flag} {lang.nativeName}</option>
+            {/each}
+          </select>
+          <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
       </div>
 
       <!-- Add Key Button -->
@@ -479,13 +486,25 @@
   <!-- Modal: Add API Key -->
   {#if showAddKey}
     <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onclick={() => (showAddKey = false)}>
-      <div class="bg-gray-900 border border-white/20 rounded-2xl p-6 w-full max-w-md animate-fade-in shadow-2xl" onclick={(e) => e.stopPropagation()}>
+      <div class="bg-gray-900 border border-white/20 rounded-2xl p-6 w-full max-w-lg animate-fade-in shadow-2xl" onclick={(e) => e.stopPropagation()}>
         <h3 class="text-xl font-bold text-white mb-4">{t("settings.modal.newKey")}</h3>
 
         <div class="space-y-4">
+          <!-- Provider indicator (readonly, shows which provider is selected) -->
+          <div class="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br {providers[newKeyType]?.color || 'from-gray-500 to-gray-600'} flex items-center justify-center">
+              <span class="text-xl">{providers[newKeyType]?.icon || '?'}</span>
+            </div>
+            <div>
+              <p class="text-white font-medium">{providers[newKeyType]?.name || newKeyType}</p>
+              <p class="text-xs text-gray-500">{t("settings.modal.provider")}</p>
+            </div>
+          </div>
+
           <div>
-            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.keyName")}</label>
+            <label for="key-name" class="block text-sm text-gray-400 mb-2">{t("settings.modal.keyName")}</label>
             <input
+              id="key-name"
               type="text"
               bind:value={newKeyName}
               placeholder={t("settings.modal.keyNamePlaceholder")}
@@ -494,30 +513,21 @@
           </div>
 
           <div>
-            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.provider")}</label>
-            <div class="grid grid-cols-6 gap-2">
-              {#each providerOrder as providerId}
-                {@const provider = providers[providerId]}
-                <button
-                  type="button"
-                  onclick={() => (newKeyType = provider.id as any)}
-                  class="p-3 rounded-lg transition-all flex flex-col items-center gap-1
-                    {newKeyType === provider.id 
-                      ? 'bg-gradient-to-br ' + provider.color + ' shadow-lg' 
-                      : 'bg-white/10 hover:bg-white/15'}"
-                >
-                  <span class="text-lg">{provider.icon}</span>
-                  <span class="text-xs {newKeyType === provider.id ? 'text-white' : 'text-gray-400'}">
-                    {provider.name.split(' ')[0]}
-                  </span>
-                </button>
-              {/each}
-            </div>
+            <label for="model-id" class="block text-sm text-gray-400 mb-2">{t("settings.modal.modelApiId")}</label>
+            <input
+              id="model-id"
+              type="text"
+              bind:value={newKeyModelName}
+              placeholder={t("settings.modal.modelApiIdPlaceholder")}
+              class="input-modern w-full"
+            />
+            <p class="text-xs text-gray-500 mt-1">{t("settings.modal.modelApiIdHint")}</p>
           </div>
 
           <div>
-            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.apiKey")}</label>
+            <label for="api-key" class="block text-sm text-gray-400 mb-2">{t("settings.modal.apiKey")}</label>
             <input
+              id="api-key"
               type="password"
               bind:value={newKeyValue}
               placeholder={newKeyType === "local" ? t("settings.modal.apiKeyPlaceholderLocal") : t("settings.modal.apiKeyPlaceholder")}
@@ -525,12 +535,13 @@
             />
           </div>
 
-          {#if providers[newKeyType]?.requiresApiUrl}
+          {#if providers[newKeyType]?.requiresApiUrl || newKeyType === "local"}
             <div>
-              <label class="block text-sm text-gray-400 mb-2">
+              <label for="api-url" class="block text-sm text-gray-400 mb-2">
                 {t("settings.modal.apiUrl")}
               </label>
               <input
+                id="api-url"
                 type="text"
                 bind:value={newKeyUrl}
                 placeholder={providers[newKeyType]?.defaultApiUrl || "http://localhost:11434"}
@@ -538,17 +549,6 @@
               />
             </div>
           {/if}
-
-          <div>
-            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.modelName")} ({t("settings.modal.description").split('(')[0].trim()})</label>
-            <input
-              type="text"
-              bind:value={newKeyModelName}
-              placeholder={t("settings.modal.modelNamePlaceholder")}
-              class="input-modern w-full"
-            />
-            <p class="text-xs text-gray-500 mt-1">{t("settings.modal.modelApiIdHint")}</p>
-          </div>
 
           <div class="flex gap-3 pt-2">
             <button onclick={() => (showAddKey = false)} class="btn-secondary flex-1">
@@ -566,13 +566,14 @@
   <!-- Modal: Add Custom Model -->
   {#if showAddModel}
     <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onclick={() => (showAddModel = false)}>
-      <div class="bg-gray-900 border border-white/20 rounded-2xl p-6 w-full max-w-md animate-fade-in shadow-2xl" onclick={(e) => e.stopPropagation()}>
+      <div class="bg-gray-900 border border-white/20 rounded-2xl p-6 w-full max-w-lg animate-fade-in shadow-2xl" onclick={(e) => e.stopPropagation()}>
         <h3 class="text-xl font-bold text-white mb-4">{t("settings.modal.newModel")}</h3>
 
         <div class="space-y-4">
           <div>
-            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.modelName")}</label>
+            <label for="custom-model-name" class="block text-sm text-gray-400 mb-2">{t("settings.modal.modelName")}</label>
             <input
+              id="custom-model-name"
               type="text"
               bind:value={customModelName}
               placeholder={t("settings.modal.modelNamePlaceholder")}
@@ -581,8 +582,9 @@
           </div>
 
           <div>
-            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.modelApiId")}</label>
+            <label for="custom-model-api-id" class="block text-sm text-gray-400 mb-2">{t("settings.modal.modelApiId")}</label>
             <input
+              id="custom-model-api-id"
               type="text"
               bind:value={customModelApiId}
               placeholder={t("settings.modal.modelApiIdPlaceholder")}
@@ -592,18 +594,26 @@
           </div>
 
           <div>
-            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.provider")}</label>
-            <select bind:value={customModelProvider} class="select-modern w-full">
-              {#each providerOrder as providerId}
-                {@const provider = providers[providerId]}
-                <option value={provider.id}>{provider.name}</option>
-              {/each}
-            </select>
+            <label for="custom-model-provider" class="block text-sm text-gray-400 mb-2">{t("settings.modal.provider")}</label>
+            <div class="relative">
+              <select id="custom-model-provider" bind:value={customModelProvider} class="select-modern w-full appearance-none cursor-pointer pr-10">
+                {#each providerOrder as providerId}
+                  {@const provider = providers[providerId]}
+                  <option value={provider.id}>{provider.icon} {provider.name}</option>
+                {/each}
+              </select>
+              <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           </div>
 
           <div>
-            <label class="block text-sm text-gray-400 mb-2">{t("settings.modal.description")}</label>
+            <label for="custom-model-desc" class="block text-sm text-gray-400 mb-2">{t("settings.modal.description")}</label>
             <input
+              id="custom-model-desc"
               type="text"
               bind:value={customModelDescription}
               placeholder={t("settings.modal.descriptionPlaceholder")}

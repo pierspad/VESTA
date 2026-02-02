@@ -7,16 +7,16 @@
  * - Facile aggiungere nuove lingue
  */
 
-import { writable, derived, get } from 'svelte/store';
-import en from './locales/en.json';
-import it from './locales/it.json';
+import { derived, get, writable } from 'svelte/store';
 import de from './locales/de.json';
+import en from './locales/en.json';
 import es from './locales/es.json';
 import fr from './locales/fr.json';
-import ru from './locales/ru.json';
-import pt from './locales/pt.json';
-import zh from './locales/zh.json';
+import it from './locales/it.json';
 import ja from './locales/ja.json';
+import pt from './locales/pt.json';
+import ru from './locales/ru.json';
+import zh from './locales/zh.json';
 
 // Definizione lingue disponibili per l'interfaccia
 export interface UILanguage {
@@ -54,19 +54,38 @@ const translations: Record<string, Record<string, string>> = {
 // Store per la lingua corrente
 const STORAGE_KEY = 'srt-tools-ui-language';
 
+function getSystemLanguage(): string {
+  if (typeof navigator !== 'undefined') {
+    // Prova prima navigator.language (es: "it-IT", "en-US")
+    const fullLang = navigator.language;
+    const shortLang = fullLang.split('-')[0].toLowerCase();
+    
+    if (translations[shortLang]) {
+      return shortLang;
+    }
+    
+    // Prova navigator.languages per lingue alternative
+    if (navigator.languages) {
+      for (const lang of navigator.languages) {
+        const short = lang.split('-')[0].toLowerCase();
+        if (translations[short]) {
+          return short;
+        }
+      }
+    }
+  }
+  return 'en';
+}
+
 function getInitialLanguage(): string {
   if (typeof localStorage !== 'undefined') {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved && translations[saved]) {
       return saved;
     }
-    // Rileva lingua del browser
-    const browserLang = navigator.language.split('-')[0];
-    if (translations[browserLang]) {
-      return browserLang;
-    }
   }
-  return 'en';
+  // Usa la lingua del sistema operativo come default
+  return getSystemLanguage();
 }
 
 export const currentLanguage = writable<string>(getInitialLanguage());

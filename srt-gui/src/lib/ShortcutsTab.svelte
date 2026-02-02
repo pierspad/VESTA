@@ -215,7 +215,7 @@
   </div>
 
   <!-- Shortcuts Grid - Global and Translate -->
-  <div class="grid grid-cols-2 gap-6 flex-1 overflow-auto">
+  <div class="grid grid-cols-2 gap-6">
     {#each Object.entries(groupedShortcuts()).filter(([cat]) => cat !== 'sync') as [category, categoryShortcuts]}
       {#if categoryShortcuts.length > 0}
         <div class="glass-card p-5">

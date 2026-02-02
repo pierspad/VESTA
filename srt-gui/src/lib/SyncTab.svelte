@@ -3,6 +3,10 @@
   import { open, save } from "@tauri-apps/plugin-dialog";
   import { convertFileSrc } from "@tauri-apps/api/core";
   import { onMount } from "svelte";
+  import { locale } from "./i18n";
+
+  // Reactive translation
+  let t = $derived($locale);
 
   // Types
   interface SubtitleInfo {
@@ -82,7 +86,7 @@
         await loadAnchors();
       }
     } catch (e) {
-      error = `Errore caricamento SRT: ${e}`;
+      error = `${t("sync.errorLoadingSrt")} ${e}`;
     }
   }
 
@@ -102,7 +106,7 @@
         status = await invoke<SyncStatus>("sync_set_video", { path });
       }
     } catch (e) {
-      error = `Errore caricamento video: ${e}`;
+      error = `${t("sync.errorLoadingVideo")} ${e}`;
     }
   }
 
@@ -110,7 +114,7 @@
     try {
       subtitles = await invoke<SubtitleInfo[]>("sync_get_subtitles");
     } catch (e) {
-      error = `Errore caricamento sottotitoli: ${e}`;
+      error = `${t("sync.errorLoadingSrt")} ${e}`;
     }
   }
 
@@ -118,7 +122,7 @@
     try {
       anchors = await invoke<AnchorInfo[]>("sync_get_anchors");
     } catch (e) {
-      error = `Errore caricamento ancore: ${e}`;
+      error = `${t("sync.errorAddingAnchor")} ${e}`;
     }
   }
 
@@ -128,7 +132,7 @@
       await loadSubtitles();
       await loadAnchors();
     } catch (e) {
-      error = `Errore aggiornamento stato: ${e}`;
+      error = `${t("sync.errorLoadingSrt")} ${e}`;
     }
   }
 
@@ -147,7 +151,7 @@
       await loadAnchors();
       offsetAdjustment = 0;
     } catch (e) {
-      error = `Errore aggiunta ancora: ${e}`;
+      error = `${t("sync.errorAddingAnchor")} ${e}`;
     }
   }
 
@@ -164,7 +168,7 @@
       await loadSubtitles();
       await loadAnchors();
     } catch (e) {
-      error = `Errore conferma ancora: ${e}`;
+      error = `${t("sync.errorAddingAnchor")} ${e}`;
     }
   }
 
@@ -176,7 +180,7 @@
       await loadSubtitles();
       await loadAnchors();
     } catch (e) {
-      error = `Errore rimozione ancora: ${e}`;
+      error = `${t("sync.errorRemovingAnchor")} ${e}`;
     }
   }
 
@@ -199,10 +203,10 @@
 
       if (selected) {
         await invoke<string>("sync_save_file", { outputPath: selected });
-        alert(`File salvato: ${selected}`);
+        alert(`${t("sync.fileSaved")} ${selected}`);
       }
     } catch (e) {
-      error = `Errore salvataggio: ${e}`;
+      error = `${t("sync.errorSaving")} ${e}`;
     }
   }
 
@@ -214,10 +218,10 @@
 
       if (selected) {
         await invoke<string>("sync_save_session", { sessionPath: selected });
-        alert(`Sessione salvata: ${selected}`);
+        alert(`${t("sync.sessionSaved")} ${selected}`);
       }
     } catch (e) {
-      error = `Errore salvataggio sessione: ${e}`;
+      error = `${t("sync.errorSaving")} ${e}`;
     }
   }
 
@@ -235,19 +239,19 @@
         await loadAnchors();
       }
     } catch (e) {
-      error = `Errore caricamento sessione: ${e}`;
+      error = `${t("sync.errorLoadingSrt")} ${e}`;
     }
   }
 
   async function resetSync() {
-    if (!confirm("Sei sicuro di voler resettare la sincronizzazione?")) return;
+    if (!confirm(t("sync.confirmReset"))) return;
 
     try {
       status = await invoke<SyncStatus>("sync_reset");
       await loadSubtitles();
       await loadAnchors();
     } catch (e) {
-      error = `Errore reset: ${e}`;
+      error = `${t("sync.errorSaving")} ${e}`;
     }
   }
 
@@ -328,7 +332,7 @@
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
-      Carica SRT
+      {t("sync.loadSrt")}
     </button>
     <button
       onclick={selectVideoFile}
@@ -337,7 +341,7 @@
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
       </svg>
-      Carica Video
+      {t("sync.loadVideo")}
     </button>
 
     <div class="flex-1"></div>
@@ -349,7 +353,7 @@
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
       </svg>
-      Carica Sessione
+      {t("sync.loadSession")}
     </button>
     <button
       onclick={saveSession}
@@ -359,7 +363,7 @@
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
       </svg>
-      Salva Sessione
+      {t("sync.saveSession")}
     </button>
     <button
       onclick={saveFile}
@@ -369,7 +373,7 @@
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
       </svg>
-      Esporta SRT
+      {t("sync.saveFile")}
     </button>
   </div>
 
@@ -411,8 +415,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
             </div>
-            <p class="text-lg">Carica un video per iniziare</p>
-            <p class="text-sm text-gray-600 mt-1">Formati supportati: MP4, MKV, AVI, WebM</p>
+            <p class="text-lg">{t("sync.videoPlaceholder")}</p>
+            <p class="text-sm text-gray-600 mt-1">{t("sync.videoFormats")}</p>
           </div>
         {/if}
       </div>
@@ -444,8 +448,10 @@
           <button
             onclick={() =>
               videoElement && (isPlaying ? videoElement.pause() : videoElement.play())}
-            class="btn-primary py-2 px-6"
+            class="btn-primary py-2 px-6 relative group"
+            aria-label={isPlaying ? t("sync.tooltipPause") : t("sync.tooltipPlay")}
           >
+            <span class="tooltip">{isPlaying ? t("sync.tooltipPause") : t("sync.tooltipPlay")}</span>
             {#if isPlaying}
               <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
@@ -464,15 +470,23 @@
             <span class="text-sm text-gray-400">Offset:</span>
             <button
               onclick={() => (offsetAdjustment -= 100)}
-              class="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
-            >-</button>
+              class="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors relative group"
+              aria-label={t("sync.tooltipOffsetMinus")}
+            >
+              <span class="tooltip">{t("sync.tooltipOffsetMinus")}</span>
+              -
+            </button>
             <span class="text-lg font-mono w-24 text-center font-medium {offsetAdjustment > 0 ? 'text-green-400' : offsetAdjustment < 0 ? 'text-red-400' : 'text-white'}">
               {formatOffset(offsetAdjustment)}
             </span>
             <button
               onclick={() => (offsetAdjustment += 100)}
-              class="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
-            >+</button>
+              class="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors relative group"
+              aria-label={t("sync.tooltipOffsetPlus")}
+            >
+              <span class="tooltip">{t("sync.tooltipOffsetPlus")}</span>
+              +
+            </button>
           </div>
 
           <button
@@ -483,27 +497,27 @@
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
-            Conferma Ancora
+            {t("sync.confirmAnchor")}
           </button>
         </div>
 
         <!-- Shortcuts Help -->
         <div class="flex flex-wrap gap-3 text-xs text-gray-500">
           <div class="flex items-center gap-1">
-            <kbd class="px-2 py-1 bg-white/10 rounded text-gray-400">Spazio</kbd>
-            <span>Play/Pausa</span>
+            <kbd class="px-2 py-1 bg-white/10 rounded text-gray-400">{t("sync.keySpace")}</kbd>
+            <span>{t("sync.playPause")}</span>
           </div>
           <div class="flex items-center gap-1">
             <kbd class="px-2 py-1 bg-white/10 rounded text-gray-400">←/→</kbd>
-            <span>Seek ±0.1s</span>
+            <span>{t("sync.seek")}</span>
           </div>
           <div class="flex items-center gap-1">
             <kbd class="px-2 py-1 bg-white/10 rounded text-gray-400">↑/↓</kbd>
-            <span>Offset ±100ms</span>
+            <span>{t("sync.offsetAdjust")}</span>
           </div>
           <div class="flex items-center gap-1">
             <kbd class="px-2 py-1 bg-white/10 rounded text-gray-400">Enter</kbd>
-            <span>Conferma</span>
+            <span>{t("sync.confirm")}</span>
           </div>
         </div>
       </div>
@@ -517,17 +531,17 @@
           <div class="grid grid-cols-2 gap-3">
             <div class="bg-white/5 rounded-xl p-3 text-center">
               <p class="text-2xl font-bold text-white">{status.total_subtitles}</p>
-              <p class="text-xs text-gray-500">Sottotitoli</p>
+              <p class="text-xs text-gray-500">{t("sync.subtitles")}</p>
             </div>
             <div class="bg-white/5 rounded-xl p-3 text-center">
               <p class="text-2xl font-bold text-green-400">{status.anchor_count}</p>
-              <p class="text-xs text-gray-500">Ancore</p>
+              <p class="text-xs text-gray-500">{t("sync.anchors")}</p>
             </div>
           </div>
 
           <div class="space-y-2">
             <div class="flex justify-between text-sm">
-              <span class="text-gray-400">Offset medio:</span>
+              <span class="text-gray-400">{t("sync.averageOffset")}:</span>
               <span class="{status.average_offset_ms > 0 ? 'text-green-400' : status.average_offset_ms < 0 ? 'text-red-400' : 'text-white'}">
                 {formatOffset(status.average_offset_ms)}
               </span>
@@ -541,7 +555,7 @@
               ></div>
             </div>
             <p class="text-xs text-gray-500 text-center">
-              {status.completion_percentage.toFixed(1)}% completato
+              {status.completion_percentage.toFixed(1)}% {t("sync.completed")}
             </p>
           </div>
 
@@ -554,7 +568,7 @@
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
-              Vai al suggerito: #{status.suggested_next_id}
+              {t("sync.goToSuggested")}: #{status.suggested_next_id}
             </button>
           {/if}
 
@@ -562,7 +576,7 @@
             onclick={resetSync}
             class="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-sm transition-colors"
           >
-            Reset Sincronizzazione
+            {t("sync.resetSync")}
           </button>
         </div>
       {/if}
@@ -574,7 +588,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
-            Ancore ({anchors.length})
+            {t("sync.anchors")} ({anchors.length})
           </h4>
           <div class="space-y-2 max-h-32 overflow-y-auto">
             {#each anchors as anchor}
@@ -585,8 +599,10 @@
                 </span>
                 <button
                   onclick={() => removeAnchor(anchor.subtitle_id)}
-                  class="text-red-400 hover:text-red-300 p-1 hover:bg-red-500/20 rounded transition-colors"
+                  class="text-red-400 hover:text-red-300 p-1 hover:bg-red-500/20 rounded transition-colors relative group"
+                  aria-label={t("sync.tooltipRemoveAnchor")}
                 >
+                  <span class="tooltip">{t("sync.tooltipRemoveAnchor")}</span>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -604,7 +620,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             </svg>
-            Sottotitoli
+            {t("sync.subtitles")}
           </h4>
         </div>
         
@@ -647,7 +663,7 @@
               <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <p>Carica un file SRT per iniziare</p>
+              <p>{t("sync.srtPlaceholder")}</p>
             </div>
           {/if}
         </div>

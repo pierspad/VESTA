@@ -4,6 +4,7 @@
   import { open, save } from "@tauri-apps/plugin-dialog";
   import { onMount, onDestroy } from "svelte";
   import { languages, getModelsForProvider, providers } from "./models";
+  import { locale } from "./i18n";
 
   // Props
   interface Props {
@@ -11,6 +12,9 @@
   }
 
   let { onGoToSettings }: Props = $props();
+
+  // Reactive translation
+  let t = $derived($locale);
 
   // Tipi
   interface SrtFileInfo {
@@ -165,7 +169,7 @@
         }
       }
     } catch (e) {
-      error = `Errore selezione file: ${e}`;
+      error = `${t("translate.errorSelectingFile")} ${e}`;
     }
   }
 
@@ -180,7 +184,7 @@
         outputPath = selected;
       }
     } catch (e) {
-      error = `Errore selezione file: ${e}`;
+      error = `${t("translate.errorSelectingFile")} ${e}`;
     }
   }
 
@@ -191,16 +195,16 @@
       fileInfo = await invoke<SrtFileInfo>("load_srt_for_translate", {
         path: inputPath,
       });
-      addLog(`📄 Caricato file con ${fileInfo.subtitle_count} sottotitoli`);
+      addLog(`📄 ${t("translate.loadedFile", { count: fileInfo.subtitle_count })}`);
     } catch (e) {
-      error = `Errore caricamento file: ${e}`;
+      error = `${t("translate.errorLoading")} ${e}`;
       fileInfo = null;
     }
   }
 
   async function startTranslation() {
     if (!inputPath || !outputPath || !selectedKey) {
-      error = "Seleziona un file e una chiave API";
+      error = t("translate.selectFileAndKey");
       return;
     }
 
@@ -208,7 +212,7 @@
     result = null;
     progress = null;
     isTranslating = true;
-    addLog("🚀 Avvio traduzione...");
+    addLog(`🚀 ${t("translate.starting")}`);
 
     const config: TranslateConfig = {
       input_path: inputPath,
@@ -229,9 +233,9 @@
       result = res;
       isTranslating = false;
     } catch (e) {
-      error = `Errore traduzione: ${e}`;
+      error = `${t("translate.errorTranslating")} ${e}`;
       isTranslating = false;
-      addLog(`❌ Errore: ${e}`);
+      addLog(`❌ ${t("translate.error")}: ${e}`);
     }
   }
 
@@ -239,9 +243,9 @@
     try {
       await invoke("cancel_translation");
       isTranslating = false;
-      addLog("⚠️ Traduzione annullata");
+      addLog(`⚠️ ${t("translate.cancelled")}`);
     } catch (e) {
-      error = `Errore annullamento: ${e}`;
+      error = `${t("translate.errorCancelling")} ${e}`;
     }
   }
 
@@ -267,10 +271,10 @@
   <!-- Header -->
   <div class="mb-4">
     <h2 class="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-      Traduzione Sottotitoli
+      {t("translate.title")}
     </h2>
     <p class="text-gray-400 mt-1">
-      Traduci file SRT usando AI (Gemini, OpenAI, Claude, Local LLM)
+      {t("translate.subtitle")}
     </p>
   </div>
 
@@ -278,14 +282,14 @@
   {#if !hasApiKey}
     <div class="mb-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl animate-fade-in">
       <p class="text-amber-300">
-        ⚠️ Nessuna chiave API configurata. 
+        ⚠️ {t("translate.noApiWarning")} 
         <button 
           onclick={handleGoToSettings}
           class="underline hover:text-amber-200 font-medium transition-colors"
         >
-          Vai alle Impostazioni
+          {t("translate.goToSettings")}
         </button> 
-        per aggiungerne una.
+        {t("translate.toAddOne")}
       </p>
     </div>
   {/if}
@@ -300,22 +304,27 @@
           <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
           </svg>
-          File
+          {t("translate.file")}
         </h3>
 
         <div class="space-y-3">
           <div>
-            <label for="input-path" class="block text-sm text-gray-400 mb-1">File SRT Input</label>
+            <label for="input-path" class="block text-sm text-gray-400 mb-1">{t("translate.inputFile")}</label>
             <div class="flex gap-2">
               <input
                 id="input-path"
                 type="text"
                 bind:value={inputPath}
-                placeholder="Seleziona file..."
+                placeholder={t("translate.selectFile")}
                 class="input-modern flex-1 text-sm"
                 readonly
               />
-              <button onclick={selectInputFile} class="btn-primary py-2 px-3">
+              <button 
+                onclick={selectInputFile} 
+                class="btn-primary py-2 px-3 tooltip"
+                data-tooltip={t("translate.tooltip.upload")}
+                aria-label={t("translate.tooltip.upload")}
+              >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
@@ -324,16 +333,21 @@
           </div>
 
           <div>
-            <label for="output-path" class="block text-sm text-gray-400 mb-1">File Output</label>
+            <label for="output-path" class="block text-sm text-gray-400 mb-1">{t("translate.outputFile")}</label>
             <div class="flex gap-2">
               <input
                 id="output-path"
                 type="text"
                 bind:value={outputPath}
-                placeholder="Seleziona destinazione..."
+                placeholder={t("translate.selectDestination")}
                 class="input-modern flex-1 text-sm"
               />
-              <button onclick={selectOutputFile} class="btn-secondary py-2 px-3">
+              <button 
+                onclick={selectOutputFile} 
+                class="btn-secondary py-2 px-3 tooltip"
+                data-tooltip={t("translate.tooltip.save")}
+                aria-label={t("translate.tooltip.save")}
+              >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                 </svg>
@@ -348,7 +362,7 @@
                   <span class="text-xl">📄</span>
                 </div>
                 <div>
-                  <p class="font-medium text-white">{fileInfo.subtitle_count} sottotitoli</p>
+                  <p class="font-medium text-white">{fileInfo.subtitle_count} {t("translate.subtitles")}</p>
                   <p class="text-sm text-gray-400 truncate max-w-xs">"{fileInfo.first_subtitle}"</p>
                 </div>
               </div>
@@ -364,11 +378,11 @@
             <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             </svg>
-            Log
+            {t("translate.log")}
           </h3>
           {#if logs.length > 0}
             <button onclick={clearLogs} class="text-xs text-gray-500 hover:text-gray-400">
-              Cancella
+              {t("translate.clearLog")}
             </button>
           {/if}
         </div>
@@ -378,7 +392,7 @@
             <p class="text-gray-400 text-xs">{log}</p>
           {/each}
           {#if logs.length === 0}
-            <p class="text-gray-600 text-center py-8 text-sm">Nessun log...</p>
+            <p class="text-gray-600 text-center py-8 text-sm">{t("translate.noLog")}</p>
           {/if}
         </div>
       </div>
@@ -393,7 +407,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          Opzioni Traduzione
+          {t("translate.options")}
         </h3>
 
         <div class="space-y-4">
@@ -401,8 +415,8 @@
           {#if hasApiKey}
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-sm text-gray-400 mb-1">Chiave API</label>
-                <select bind:value={selectedKeyId} class="select-modern w-full text-sm">
+                <label for="api-key-select" class="block text-sm text-gray-400 mb-1">{t("translate.apiKey")}</label>
+                <select id="api-key-select" bind:value={selectedKeyId} class="select-modern w-full text-sm">
                   {#each apiKeys as key}
                     <option value={key.id}>
                       {key.name} ({providers[key.apiType]?.name.split(' ')[0] || key.apiType})
@@ -413,8 +427,8 @@
               </div>
 
               <div>
-                <label class="block text-sm text-gray-400 mb-1">Modello</label>
-                <select bind:value={selectedModel} class="select-modern w-full text-sm">
+                <label for="model-select" class="block text-sm text-gray-400 mb-1">{t("translate.model")}</label>
+                <select id="model-select" bind:value={selectedModel} class="select-modern w-full text-sm">
                   {#each availableModels as model}
                     <option value={model.id}>{model.name}</option>
                   {/each}
@@ -425,11 +439,12 @@
 
           <!-- Language Selection - Custom styled -->
           <div>
-            <label class="block text-sm text-gray-400 mb-1">Lingua Target</label>
+            <label for="target-lang" class="block text-sm text-gray-400 mb-1">{t("translate.targetLang")}</label>
             <div class="relative">
               <select
+                id="target-lang"
                 bind:value={targetLang}
-                class="select-modern-styled w-full text-sm appearance-none cursor-pointer"
+                class="select-modern w-full text-sm appearance-none cursor-pointer pr-10"
               >
                 {#each languages as lang}
                   <option value={lang.code}>{lang.flag} {lang.name}</option>
@@ -447,10 +462,10 @@
           <div>
             <div class="flex items-center justify-between mb-1">
               <label class="text-sm text-gray-400 flex items-center gap-2">
-                Batch Size
+                {t("translate.batchSize")}
                 <span 
                   class="tooltip cursor-help"
-                  data-tooltip="Numero di sottotitoli per richiesta API. Valori alti = meno chiamate ma più token."
+                  data-tooltip={t("translate.batchSizeTooltip")}
                 >
                   <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -468,20 +483,21 @@
               class="w-full"
             />
             <div class="flex justify-between text-xs text-gray-500 mt-1">
-              <span>5 (lento)</span>
-              <span>50 (veloce)</span>
+              <span>5 ({t("translate.slow")})</span>
+              <span>50 ({t("translate.fast")})</span>
             </div>
           </div>
 
           <!-- Context -->
           <div>
-            <label class="block text-sm text-gray-400 mb-1">
-              Contesto <span class="text-gray-500">(opzionale)</span>
+            <label for="context-input" class="block text-sm text-gray-400 mb-1">
+              {t("translate.context")} <span class="text-gray-500">{t("translate.contextOptional")}</span>
             </label>
             <input
+              id="context-input"
               type="text"
               bind:value={titleContext}
-              placeholder="es: Pulp Fiction, Breaking Bad..."
+              placeholder={t("translate.contextPlaceholder")}
               class="input-modern w-full text-sm"
             />
           </div>
@@ -495,7 +511,7 @@
             <svg class="w-5 h-5 text-blue-400 {isTranslating ? 'animate-spin' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Progresso
+            {t("translate.progress")}
           </h3>
 
           <div class="space-y-3">
@@ -505,7 +521,7 @@
 
             <div class="flex justify-between items-center">
               <span class="text-gray-400 text-sm">
-                Batch {progress?.current_batch || 0} / {progress?.total_batches || 0}
+                {t("translate.batch")} {progress?.current_batch || 0} / {progress?.total_batches || 0}
               </span>
               <span class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
                 {Math.round(progress?.percentage || 0)}%
@@ -517,7 +533,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Tempo rimanente: {formatEta(progress.eta_seconds)}</span>
+                <span>{t("translate.timeRemaining")} {formatEta(progress.eta_seconds)}</span>
               </div>
             {/if}
           </div>
@@ -545,7 +561,7 @@
             </div>
             <div class="flex-1">
               <h3 class="text-lg font-semibold {result.success ? 'text-green-400' : 'text-red-400'}">
-                {result.success ? "Traduzione Completata" : "Errore"}
+                {result.success ? t("translate.completed") : t("translate.error")}
               </h3>
               <p class="text-gray-300 text-sm mt-1">{result.message}</p>
               {#if result.output_path}
@@ -576,7 +592,7 @@
             <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
-            Annulla
+            {t("translate.cancel")}
           </button>
         {:else}
           <button
@@ -588,7 +604,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Avvia Traduzione
+            {t("translate.start")}
           </button>
         {/if}
       </div>

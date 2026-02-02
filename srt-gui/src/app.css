@@ -187,7 +187,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Tooltip */
+/* Tooltip - Improved and wider */
 .tooltip {
   position: relative;
 }
@@ -195,26 +195,31 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .tooltip::after {
   content: attr(data-tooltip);
   position: absolute;
-  bottom: 100%;
+  bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(20, 20, 30, 0.95);
   color: white;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  white-space: nowrap;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.4;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
   z-index: 1000;
-  max-width: 300px;
+  min-width: 180px;
+  max-width: 320px;
   white-space: normal;
   text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transform: translateX(-50%) translateY(5px);
 }
 
 .tooltip:hover::after {
   opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* Badge */
