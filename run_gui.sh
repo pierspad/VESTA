@@ -52,4 +52,7 @@ echo ""
 
 # Avvia Tauri in modalità sviluppo
 # Questo compilerà il backend Rust e avvierà il server frontend Vite
+# Fix per WebKit su Linux (previene schermo bianco muovendo la finestra)
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
+
 npm run tauri dev
