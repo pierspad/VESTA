@@ -176,7 +176,8 @@
     if (model.provider === 'openrouter') {
         newKeyUrl = "https://openrouter.ai/api/v1";
     }
-    openAddKeyModal(model.provider, model.name);
+    // Usa l'ID del modello, non il nome display
+    openAddKeyModal(model.provider, model.id);
   }
 </script>
 
@@ -265,7 +266,7 @@
         <!-- Family List -->
         <div class="flex-1 overflow-y-auto p-2 space-y-1">
           <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wide px-3 py-2">
-            Model Families
+            {t("settings.modelFamilies")}
           </h3>
           {#each families as family}
             <button
@@ -381,7 +382,7 @@
                     title={t("settings.delete")}
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
                 </div>
@@ -404,8 +405,11 @@
 
   <!-- Modal: Add API Key -->
   {#if showAddKey}
-    <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onclick={() => (showAddKey = false)}>
-      <div class="glass-card w-full max-w-lg overflow-hidden animate-fade-in shadow-2xl border border-white/10 bg-gray-900" onclick={(e) => e.stopPropagation()}>
+    <div 
+      class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" 
+      onmousedown={(e) => { if (e.target === e.currentTarget) showAddKey = false; }}
+    >
+      <div class="w-full max-w-lg overflow-hidden animate-fade-in shadow-2xl border border-white/20 bg-gray-900/98 backdrop-blur-xl rounded-xl" onmousedown={(e) => e.stopPropagation()}>
         <div class="p-6 border-b border-white/5 bg-white/5">
           <h3 class="text-xl font-bold text-white flex items-center gap-2">
              {t("settings.modal.addCustomApiKey")}
@@ -445,10 +449,10 @@
                   <span class="text-2xl">{provider.icon}</span>
                   <div class="flex flex-col">
                     <span class="text-sm font-bold">
-                      {providerId === 'local' ? 'Local Server' : 'Cloud API (OpenRouter)'}
+                      {providerId === 'local' ? t("settings.modal.localServer") : t("settings.modal.cloudApi")}
                     </span>
                     <span class="text-[10px] opacity-70 leading-tight">
-                      {providerId === 'local' ? 'Ollama, LM Studio (Your PC)' : 'GPT, Claude, Gemini (Online)'}
+                      {providerId === 'local' ? t("settings.modal.localServerDesc") : t("settings.modal.cloudApiDesc")}
                     </span>
                   </div>
                 </button>
@@ -488,24 +492,37 @@
                   id="api-key"
                   type="password"
                   bind:value={newKeyValue}
-                  placeholder={newKeyType === "local" ? "Not required for local..." : "sk-..."}
-                  class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all placeholder-gray-600 font-mono"
+                  disabled={newKeyType === "local"}
+                  placeholder={newKeyType === "local" ? t("settings.modal.notRequiredForLocal") : "sk-..."}
+                  class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all placeholder-gray-600 font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
-              <!-- Model ID for Local/Custom only -->
-              {#if newKeyType === "local"}
-                <div class="col-span-2 animate-fade-in">
-                  <label for="model-id" class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">{t("settings.modal.defaultModel")}</label>
-                  <input
-                    id="model-id"
-                    type="text"
-                    bind:value={newKeyModelName}
-                    placeholder="e.g. llama3, mistral..."
-                    class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all placeholder-gray-600 font-mono"
-                  />
-                </div>
-              {/if}
+              <!-- Model ID - sempre visibile per entrambi i provider -->
+              <div class="col-span-2 animate-fade-in">
+                <label for="model-id" class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                  {t("settings.modal.defaultModel")}
+                  {#if newKeyType === "openrouter"}
+                    <span class="text-indigo-400 font-normal ml-1">(OpenRouter Model ID)</span>
+                  {/if}
+                </label>
+                <input
+                  id="model-id"
+                  type="text"
+                  bind:value={newKeyModelName}
+                  placeholder={newKeyType === "local" ? "e.g. llama3.2, gemma3:27b..." : "e.g. google/gemini-2.5-flash, anthropic/claude-3.5-sonnet..."}
+                  class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all placeholder-gray-600 font-mono"
+                />
+                {#if newKeyType === "openrouter"}
+                  <p class="text-[10px] text-gray-500 mt-1.5 leading-relaxed">
+                    💡 {t("settings.modal.openrouterModelHint")} <a href="https://openrouter.ai/models" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline">openrouter.ai/models</a>
+                  </p>
+                {:else}
+                  <p class="text-[10px] text-gray-500 mt-1.5 leading-relaxed">
+                    💡 {t("settings.modal.localEndpointDefault")}
+                  </p>
+                {/if}
+              </div>
             </div>
           </div>
 

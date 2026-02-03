@@ -104,6 +104,14 @@
   "settings.modal.defaultModel": "Default Model ID",
   "settings.modal.defaultModelPlaceholder": "e.g.: llama3.2, mistral, gpt-4o",
   "settings.modal.defaultModelHint": "The model to use by default with this configuration",
+  "settings.modal.openrouterModelHint": "Find the ID at openrouter.ai/models — You can use any model, even if it's not in the preset list!",
+  "settings.modal.localServer": "Local Server",
+  "settings.modal.localServerDesc": "Ollama, LM Studio (Your PC)",
+  "settings.modal.cloudApi": "Cloud API (OpenRouter)",
+  "settings.modal.cloudApiDesc": "GPT, Claude, Gemini (Online)",
+  "settings.modal.notRequiredForLocal": "Not required for local...",
+  "settings.modal.localEndpointDefault": "Default: http://localhost:11434/v1 (Ollama)",
+  "settings.modelFamilies": "Model Families",
 
   "settings.addCustomApiKey": "Add Custom API Key",
 
