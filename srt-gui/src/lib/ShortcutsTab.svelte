@@ -67,10 +67,12 @@
     shortcuts = getShortcuts();
   });
 
-  // Handler cleanup function
-  let cleanupHandler: (() => void) | null = null;
-
-  function handleKeyCapture(e: KeyboardEvent) {
+  function startEditing(shortcutId: string) {
+    editingShortcut = shortcutId;
+    recordingKey = true;
+    
+    // Listen for key press
+    const handler = (e: KeyboardEvent) => {
       e.preventDefault();
       e.stopPropagation();
       
@@ -105,32 +107,18 @@
           setTimeout(() => (success = null), 3000);
         }
         
-        stopEditing();
+        editingShortcut = null;
+        recordingKey = false;
+        window.removeEventListener("keydown", handler);
       }
-  }
-
-  function startEditing(shortcutId: string) {
-    // If already editing, cleanup first
-    if (cleanupHandler) cleanupHandler();
-
-    editingShortcut = shortcutId;
-    recordingKey = true;
-    
-    window.addEventListener("keydown", handleKeyCapture);
-    cleanupHandler = () => {
-        window.removeEventListener("keydown", handleKeyCapture);
-        cleanupHandler = null;
     };
-  }
-
-  function stopEditing() {
-    if (cleanupHandler) cleanupHandler();
-    editingShortcut = null;
-    recordingKey = false;
+    
+    window.addEventListener("keydown", handler);
   }
 
   function cancelEditing() {
-    stopEditing();
+    editingShortcut = null;
+    recordingKey = false;
   }
 
   function resetToDefaults() {

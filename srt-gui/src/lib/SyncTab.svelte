@@ -65,41 +65,6 @@
     return null;
   });
 
-  // Virtualization / Sliding Window
-  const WINDOW_SIZE = 20; // Number of subtitles to show (centered)
-  
-  let visibleSubtitles = $derived.by(() => {
-     if (!subtitles || subtitles.length === 0) return [];
-     
-     // Find index of active subtitle
-     let activeIndex = -1;
-     if (activeSubtitleId !== null) {
-        activeIndex = subtitles.findIndex(s => s.id === activeSubtitleId);
-     } else if (currentSubtitle) {
-        activeIndex = subtitles.findIndex(s => s.id === currentSubtitle.id);
-     }
-
-     // If no active subtitle, show the beginning or keep current position
-     // For now, default to beginning if nothing active
-     if (activeIndex === -1) activeIndex = 0;
-
-     // Calculate start and end
-     let start = Math.max(0, activeIndex - Math.floor(WINDOW_SIZE / 2));
-     let end = Math.min(subtitles.length, start + WINDOW_SIZE);
-     
-     // Adjust start if close to end
-     if (end - start < WINDOW_SIZE) {
-        start = Math.max(0, end - WINDOW_SIZE);
-     }
-
-     return subtitles.slice(start, end);
-  });
-
-  // Calculate if there are more before or after (for UI indicators if needed)
-  let hasMoreBefore = $derived(visibleSubtitles.length > 0 && visibleSubtitles[0].id > subtitles[0].id);
-  let hasMoreAfter = $derived(visibleSubtitles.length > 0 && visibleSubtitles[visibleSubtitles.length - 1].id < subtitles[subtitles.length - 1].id);
-
-
   // Update current video time
   function onTimeUpdate() {
     if (videoElement) {
@@ -783,13 +748,7 @@
         </div>
         
         <div class="flex-1 overflow-y-auto">
-          {#if hasMoreBefore}
-             <div class="p-2 text-center text-xs text-gray-600 italic">
-               ... {visibleSubtitles[0].id - 1} previous ...
-             </div>
-          {/if}
-          
-          {#each visibleSubtitles as sub (sub.id)}
+          {#each subtitles as sub (sub.id)}
             <button
               onclick={() => goToSubtitle(sub)}
               class="w-full text-left p-3 border-b border-white/5 hover:bg-white/5
@@ -821,12 +780,6 @@
               </div>
             </button>
           {/each}
-
-          {#if hasMoreAfter}
-             <div class="p-2 text-center text-xs text-gray-600 italic">
-               ... more ...
-             </div>
-          {/if}
 
           {#if subtitles.length === 0 && !status?.is_loaded}
             <div class="text-center text-gray-500 py-12">
