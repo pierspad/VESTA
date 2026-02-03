@@ -236,10 +236,20 @@ export interface CustomModel {
   description?: string;
 }
 
+export interface ApiKeyConfig {
+  id: string;
+  name: string;
+  apiType: "local" | "openrouter";
+  apiKey: string;
+  apiUrl?: string;
+  modelName?: string;  // Nome modello preferito
+  isDefault: boolean;
+}
+
 // Funzione per ottenere tutti i modelli di un provider (inclusi custom)
 export function getModelsForProvider(providerId: string): ModelInfo[] {
   const defaultModels = modelsByProvider[providerId] || [];
-  
+
   // Carica modelli personalizzati
   const customModelsJson = localStorage.getItem("srt-tools-custom-models");
   if (customModelsJson) {
@@ -258,7 +268,7 @@ export function getModelsForProvider(providerId: string): ModelInfo[] {
       return defaultModels;
     }
   }
-  
+
   return defaultModels;
 }
 
@@ -266,7 +276,7 @@ export function getModelsForProvider(providerId: string): ModelInfo[] {
 export function saveCustomModel(model: CustomModel): void {
   const customModelsJson = localStorage.getItem("srt-tools-custom-models");
   let customModels: CustomModel[] = [];
-  
+
   if (customModelsJson) {
     try {
       customModels = JSON.parse(customModelsJson);
@@ -274,7 +284,7 @@ export function saveCustomModel(model: CustomModel): void {
       customModels = [];
     }
   }
-  
+
   // Controlla se esiste già
   const existingIndex = customModels.findIndex((m) => m.id === model.id);
   if (existingIndex >= 0) {
@@ -282,7 +292,7 @@ export function saveCustomModel(model: CustomModel): void {
   } else {
     customModels.push(model);
   }
-  
+
   localStorage.setItem("srt-tools-custom-models", JSON.stringify(customModels));
 }
 
@@ -290,7 +300,7 @@ export function saveCustomModel(model: CustomModel): void {
 export function deleteCustomModel(modelId: string): void {
   const customModelsJson = localStorage.getItem("srt-tools-custom-models");
   if (!customModelsJson) return;
-  
+
   try {
     let customModels: CustomModel[] = JSON.parse(customModelsJson);
     customModels = customModels.filter((m) => m.id !== modelId);
@@ -304,7 +314,7 @@ export function deleteCustomModel(modelId: string): void {
 export function getCustomModels(): CustomModel[] {
   const customModelsJson = localStorage.getItem("srt-tools-custom-models");
   if (!customModelsJson) return [];
-  
+
   try {
     return JSON.parse(customModelsJson);
   } catch {
@@ -363,13 +373,13 @@ export const defaultShortcuts: ShortcutDefinition[] = [
   { id: "tab-settings", action: "switchToSettings", description: "Vai a Impostazioni", defaultKey: "Alt+3", category: "global" },
   { id: "tab-shortcuts", action: "switchToShortcuts", description: "Vai a Shortcuts", defaultKey: "Alt+4", category: "global" },
   { id: "settings-add-key", action: "addApiKey", description: "Aggiungi chiave API", defaultKey: "Ctrl+N", category: "global" },
-  
+
   // Traduzione
   { id: "translate-open-file", action: "openInputFile", description: "Apri file SRT", defaultKey: "Ctrl+O", category: "translate" },
   { id: "translate-start", action: "startTranslation", description: "Avvia traduzione", defaultKey: "Ctrl+Enter", category: "translate" },
   { id: "translate-cancel", action: "cancelTranslation", description: "Annulla traduzione", defaultKey: "Escape", category: "translate" },
   { id: "translate-clear-logs", action: "clearLogs", description: "Cancella log", defaultKey: "Ctrl+L", category: "translate" },
-  
+
   // Sincronizzazione (divise in 2 gruppi nella visualizzazione)
   { id: "sync-play-pause", action: "playPause", description: "Play/Pausa video", defaultKey: "Space", category: "sync" },
   { id: "sync-seek-back", action: "seekBack", description: "Indietro 0.1s", defaultKey: "ArrowLeft", category: "sync" },
@@ -391,7 +401,7 @@ export const defaultShortcuts: ShortcutDefinition[] = [
 export function getShortcuts(): ShortcutDefinition[] {
   const overridesJson = localStorage.getItem("srt-tools-shortcut-overrides");
   if (!overridesJson) return defaultShortcuts;
-  
+
   try {
     const overrides: Record<string, string> = JSON.parse(overridesJson);
     return defaultShortcuts.map((shortcut) => ({
@@ -407,7 +417,7 @@ export function getShortcuts(): ShortcutDefinition[] {
 export function saveShortcutOverride(shortcutId: string, newKey: string): void {
   const overridesJson = localStorage.getItem("srt-tools-shortcut-overrides");
   let overrides: Record<string, string> = {};
-  
+
   if (overridesJson) {
     try {
       overrides = JSON.parse(overridesJson);
@@ -415,7 +425,7 @@ export function saveShortcutOverride(shortcutId: string, newKey: string): void {
       overrides = {};
     }
   }
-  
+
   overrides[shortcutId] = newKey;
   localStorage.setItem("srt-tools-shortcut-overrides", JSON.stringify(overrides));
 }
@@ -431,4 +441,22 @@ export function formatContextWindow(tokens: number): string {
     return `${(tokens / 1000000).toFixed(1)}M`;
   }
   return `${(tokens / 1000).toFixed(0)}K`;
+}
+
+// Helper per caricare e validare le chiavi API
+export function loadAndValidateApiKeys(): ApiKeyConfig[] {
+  const saved = localStorage.getItem("srt-tools-api-keys");
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return [];
+
+    // Filtra chiavi con tipo non valido (es. "gemini" legacy)
+    return parsed.filter(k =>
+      k.apiType === "local" || k.apiType === "openrouter"
+    );
+  } catch {
+    return [];
+  }
 }

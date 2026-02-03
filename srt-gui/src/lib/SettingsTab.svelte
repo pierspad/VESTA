@@ -9,22 +9,13 @@
     deleteCustomModel,
     getCustomModels,
     formatContextWindow,
+    loadAndValidateApiKeys,
     type ModelInfo,
     type CustomModel,
     type ProviderInfo,
+    type ApiKeyConfig,
   } from "./models";
   import { locale, currentLanguage, availableUILanguages, setLanguage } from "./i18n";
-
-  // Types - Simplified to only 2 providers
-  interface ApiKeyConfig {
-    id: string;
-    name: string;
-    apiType: "local" | "openrouter";
-    apiKey: string;
-    apiUrl?: string;
-    modelName?: string;  // Nome modello preferito
-    isDefault: boolean;
-  }
 
   // State
   let apiKeys = $state<ApiKeyConfig[]>([]);
@@ -39,7 +30,7 @@
 
   // New key form
   let newKeyName = $state("");
-  let newKeyType = $state<ApiKeyConfig["apiType"]>("gemini");
+  let newKeyType = $state<ApiKeyConfig["apiType"]>("openrouter");
   let newKeyValue = $state("");
   let newKeyUrl = $state("");
   let newKeyModelName = $state("");
@@ -47,7 +38,7 @@
   // New custom model form
   let customModelName = $state("");
   let customModelApiId = $state("");
-  let customModelProvider = $state("gemini");
+  let customModelProvider = $state("openrouter");
   let customModelDescription = $state("");
 
   // Computed
@@ -70,14 +61,7 @@
   });
 
   function loadApiKeys() {
-    const saved = localStorage.getItem("srt-tools-api-keys");
-    if (saved) {
-      try {
-        apiKeys = JSON.parse(saved);
-      } catch {
-        apiKeys = [];
-      }
-    }
+    apiKeys = loadAndValidateApiKeys();
   }
 
   function saveApiKeys() {

@@ -3,7 +3,7 @@
   import { listen } from "@tauri-apps/api/event";
   import { open, save } from "@tauri-apps/plugin-dialog";
   import { onMount, onDestroy } from "svelte";
-  import { languages, getModelsForProvider, providers } from "./models";
+  import { languages, getModelsForProvider, providers, loadAndValidateApiKeys, type ApiKeyConfig } from "./models";
   import { locale } from "./i18n";
 
   // Props
@@ -52,14 +52,7 @@
   }
 
   // Simplified to only 2 providers: local and openrouter
-  interface ApiKeyConfig {
-    id: string;
-    name: string;
-    apiType: "local" | "openrouter";
-    apiKey: string;
-    apiUrl?: string;
-    isDefault: boolean;
-  }
+
 
   interface ModelInfo {
     id: string;
@@ -135,20 +128,14 @@
   });
 
   function loadApiKeys() {
-    const saved = localStorage.getItem("srt-tools-api-keys");
-    if (saved) {
-      try {
-        apiKeys = JSON.parse(saved);
-        // Select default key
-        const defaultKey = apiKeys.find((k) => k.isDefault);
-        if (defaultKey) {
-          selectedKeyId = defaultKey.id;
-        } else if (apiKeys.length > 0) {
-          selectedKeyId = apiKeys[0].id;
-        }
-      } catch {
-        apiKeys = [];
-      }
+    apiKeys = loadAndValidateApiKeys();
+    
+    // Select default key
+    const defaultKey = apiKeys.find((k) => k.isDefault);
+    if (defaultKey) {
+      selectedKeyId = defaultKey.id;
+    } else if (apiKeys.length > 0) {
+      selectedKeyId = apiKeys[0].id;
     }
   }
 
