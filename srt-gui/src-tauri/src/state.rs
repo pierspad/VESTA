@@ -1,7 +1,6 @@
 //! Gestione dello stato globale dell'applicazione.
 
 use std::sync::Mutex;
-use std::sync::Arc;
 use srt_sync_lib::SyncEngine;
 use tokio_util::sync::CancellationToken;
 

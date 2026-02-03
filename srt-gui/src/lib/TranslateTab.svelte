@@ -3,7 +3,17 @@
   import { listen } from "@tauri-apps/api/event";
   import { open, save } from "@tauri-apps/plugin-dialog";
   import { onMount, onDestroy } from "svelte";
-  import { languages, getModelsForProvider, providers, loadAndValidateApiKeys, type ApiKeyConfig } from "./models";
+  import { 
+    languages, 
+    getModelsForProvider, 
+    providers, 
+    providerOrder,
+    loadAndValidateApiKeys, 
+    hasUsableKeyForModel,
+    getUsableKeysForModel,
+    type ApiKeyConfig,
+    type ModelInfo 
+  } from "./models";
   import { locale } from "./i18n";
 
   // Props
@@ -53,21 +63,14 @@
 
   // Simplified to only 2 providers: local and openrouter
 
-
-  interface ModelInfo {
-    id: string;
-    name: string;
-    provider: string;
-  }
-
   // State
   let inputPath = $state("");
   let outputPath = $state("");
   let targetLang = $state("it");
-  let selectedKeyId = $state("");
+  let selectedProvider = $state<"local" | "openrouter">("openrouter");
+  let selectedModel = $state("");
   let batchSize = $state(10);
   let titleContext = $state("");
-  let selectedModel = $state("");
 
   let fileInfo = $state<SrtFileInfo | null>(null);
   let isTranslating = $state(false);
@@ -82,19 +85,23 @@
 
   let apiKeys = $state<ApiKeyConfig[]>([]);
   let availableModels = $state<ModelInfo[]>([]);
+  let currentKeyIndex = $state(0); // Indice corrente per rotazione chiavi
 
   let unlistenProgress: (() => void) | null = null;
   let unlistenComplete: (() => void) | null = null;
 
-  // Derived: selected API key
-  let selectedKey = $derived(apiKeys.find((k) => k.id === selectedKeyId) || null);
-  let hasApiKey = $derived(apiKeys.length > 0);
+  // Derived: check if the selected provider/model combo has usable API keys
+  let hasConfiguredKeys = $derived(hasUsableKeyForModel(apiKeys, selectedModel, selectedProvider));
+  let usableKeys = $derived(getUsableKeysForModel(apiKeys, selectedModel, selectedProvider));
+  let keysCount = $derived(usableKeys.length);
 
-  // Update models when key changes
+  // Update models when provider changes
   $effect(() => {
-    if (selectedKey) {
-      availableModels = getModelsForProvider(selectedKey.apiType);
-      if (!selectedModel && availableModels.length > 0) {
+    availableModels = getModelsForProvider(selectedProvider);
+    // Select first model by default if current selection is invalid
+    if (availableModels.length > 0) {
+      const currentModelValid = availableModels.some(m => m.id === selectedModel);
+      if (!currentModelValid) {
         selectedModel = availableModels[0].id;
       }
     }
@@ -129,14 +136,20 @@
 
   function loadApiKeys() {
     apiKeys = loadAndValidateApiKeys();
-    
-    // Select default key
-    const defaultKey = apiKeys.find((k) => k.isDefault);
-    if (defaultKey) {
-      selectedKeyId = defaultKey.id;
-    } else if (apiKeys.length > 0) {
-      selectedKeyId = apiKeys[0].id;
+    // Set default provider if keys exist
+    if (apiKeys.length > 0) {
+      // Prefer openrouter if available
+      const hasOpenRouter = apiKeys.some(k => k.apiType === "openrouter");
+      selectedProvider = hasOpenRouter ? "openrouter" : "local";
     }
+  }
+
+  // Get next API key in rotation
+  function getNextApiKey(): ApiKeyConfig | null {
+    if (usableKeys.length === 0) return null;
+    const key = usableKeys[currentKeyIndex % usableKeys.length];
+    currentKeyIndex = (currentKeyIndex + 1) % usableKeys.length;
+    return key;
   }
 
   function addLog(message: string) {
@@ -195,8 +208,15 @@
   }
 
   async function startTranslation() {
-    if (!inputPath || !outputPath || !selectedKey) {
+    if (!inputPath || !outputPath || !hasConfiguredKeys) {
       error = t("translate.selectFileAndKey");
+      return;
+    }
+
+    // Get the first available key (rotation will be handled per-batch)
+    const apiKey = getNextApiKey();
+    if (!apiKey) {
+      error = t("translate.noKeysForModel");
       return;
     }
 
@@ -204,17 +224,19 @@
     result = null;
     progress = null;
     isTranslating = true;
+    currentKeyIndex = 0; // Reset rotation for new translation
     addLog(`🚀 ${t("translate.starting")}`);
+    addLog(`🔑 ${t("translate.usingKeys", { count: keysCount })}`);
 
     const config: TranslateConfig = {
       input_path: inputPath,
       output_path: outputPath,
       target_lang: targetLang,
-      api_key: selectedKey.apiKey,
-      api_type: selectedKey.apiType,
+      api_key: apiKey.apiKey,
+      api_type: selectedProvider,
       batch_size: batchSize,
       title_context: titleContext || null,
-      api_url: selectedKey.apiUrl || null,
+      api_url: apiKey.apiUrl || providers[selectedProvider]?.defaultApiUrl || null,
       model: selectedModel || null,
     };
 
@@ -270,11 +292,11 @@
     </p>
   </div>
 
-  <!-- API Warning Banner (shows when no API configured, disappears when configured) -->
-  {#if !hasApiKey}
+  <!-- API Warning Banner (shows when no API configured for selected model) -->
+  {#if !hasConfiguredKeys}
     <div class="mb-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl animate-fade-in">
       <p class="text-amber-300">
-        ⚠️ {t("translate.noApiWarning")} 
+        ⚠️ {t("translate.noKeysForModel")} 
         <button 
           onclick={handleGoToSettings}
           class="underline hover:text-amber-200 font-medium transition-colors"
@@ -301,44 +323,47 @@
         </h3>
 
         <div class="space-y-4">
-          <!-- API Key Selection -->
-          {#if hasApiKey}
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label for="api-key-select" class="block text-sm text-gray-400 mb-1">{t("translate.apiKey")}</label>
-                <div class="relative">
-                  <select id="api-key-select" bind:value={selectedKeyId} class="select-modern w-full text-sm appearance-none pr-10">
-                    {#each apiKeys as key}
-                      <option value={key.id}>
-                        {key.name} {key.isDefault ? "⭐" : ""}
-                      </option>
-                    {/each}
-                  </select>
-                  <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label for="model-select" class="block text-sm text-gray-400 mb-1">{t("translate.model")}</label>
-                <div class="relative">
-                  <select id="model-select" bind:value={selectedModel} class="select-modern w-full text-sm appearance-none pr-10">
-                    {#each availableModels as model}
-                      <option value={model.id}>{model.name}</option>
-                    {/each}
-                  </select>
-                  <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
+          <!-- Provider & Model Selection (always visible) -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="provider-select" class="block text-sm text-gray-400 mb-1">{t("translate.provider")}</label>
+              <div class="relative">
+                <select id="provider-select" bind:value={selectedProvider} class="select-modern w-full text-sm appearance-none pr-10">
+                  {#each providerOrder as providerId}
+                    <option value={providerId}>
+                      {providers[providerId].icon} {providers[providerId].name}
+                    </option>
+                  {/each}
+                </select>
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
               </div>
             </div>
-          {/if}
+
+            <div>
+              <label for="model-select" class="block text-sm text-gray-400 mb-1">
+                {t("translate.model")}
+                {#if hasConfiguredKeys}
+                  <span class="text-green-400 text-xs ml-1">({keysCount} 🔑)</span>
+                {/if}
+              </label>
+              <div class="relative">
+                <select id="model-select" bind:value={selectedModel} class="select-modern w-full text-sm appearance-none pr-10">
+                  {#each availableModels as model}
+                    <option value={model.id}>{model.name}</option>
+                  {/each}
+                </select>
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Language Selection -->
           <div>
@@ -490,7 +515,7 @@
         {:else}
           <button
             onclick={startTranslation}
-            disabled={!inputPath || !outputPath || !selectedKey}
+            disabled={!inputPath || !outputPath || !hasConfiguredKeys}
             class="btn-success flex-1 py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -622,24 +647,5 @@
 </div>
 
 <style>
-  .select-modern-styled {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 12px 40px 12px 16px;
-    color: white;
-    transition: all 0.3s ease;
-  }
-
-  .select-modern-styled:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-  }
-
-  .select-modern-styled option {
-    background: #1a1a2e;
-    color: white;
-    padding: 10px;
-  }
+  /* Component-specific styles are inherited from app.css */
 </style>

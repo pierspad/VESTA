@@ -1,5 +1,5 @@
 {
-  "app.title": "SRT Tools",
+  "app.title": "RE2S",
   "app.subtitle": "Translation & Synchronization",
   "app.version": "v0.1.0 • Tauri + Svelte",
   "app.status.ready": "System ready",
@@ -179,6 +179,9 @@
   "translate.waitingForTranslation": "Waiting for translation to start...",
   "translate.errorCancelling": "Error cancelling:",
   "translate.errorSelectingFile": "Error selecting file:",
+  "translate.provider": "Provider",
+  "translate.noKeysForModel": "No API key configured for this provider.",
+  "translate.usingKeys": "Using {{count}} API key(s) in rotation",
 
   "translate.tooltip.upload": "Select input SRT file",
   "translate.tooltip.save": "Select output destination",

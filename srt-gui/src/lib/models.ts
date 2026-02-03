@@ -292,11 +292,12 @@ export interface CustomModel {
 export interface ApiKeyConfig {
   id: string;
   name: string;
+  displayName: string; // Nome visualizzato con numero: "google/gemini-3-pro - 1"
   apiType: "local" | "openrouter";
   apiKey: string;
   apiUrl?: string;
-  modelName?: string;  // Nome modello preferito
-  isDefault: boolean;
+  modelName?: string;  // Nome modello preferito (ID del modello)
+  keyIndex: number;    // Numero progressivo per chiavi con stesso modello
 }
 
 // Funzione per ottenere tutti i modelli di un provider (inclusi custom)
@@ -526,8 +527,104 @@ export function loadAndValidateApiKeys(): ApiKeyConfig[] {
       return null;
     }).filter((k: any) => k !== null);
 
-    return converted as ApiKeyConfig[];
+    // Assicura che tutte le chiavi abbiano displayName e keyIndex
+    return normalizeApiKeyNames(converted as ApiKeyConfig[]);
   } catch {
     return [];
   }
+}
+
+// Genera un nome display per la chiave API basato su provider/modello e indice
+export function generateKeyDisplayName(
+  apiType: "local" | "openrouter",
+  modelName: string | undefined,
+  index: number
+): string {
+  const prefix = apiType === "local" ? "local" : "";
+  const modelPart = modelName || "default";
+  
+  // Se il modello ha già un prefisso (es: google/gemini-3-pro), usalo
+  // Altrimenti aggiungi il prefisso del provider
+  const fullModelName = modelName && modelName.includes("/") 
+    ? modelName 
+    : prefix ? `${prefix}/${modelPart}` : modelPart;
+  
+  return `${fullModelName} - ${index}`;
+}
+
+// Normalizza i nomi delle chiavi API con numerazione progressiva
+export function normalizeApiKeyNames(keys: ApiKeyConfig[]): ApiKeyConfig[] {
+  // Raggruppa per modello (apiType + modelName)
+  const groups = new Map<string, ApiKeyConfig[]>();
+  
+  for (const key of keys) {
+    const groupKey = `${key.apiType}:${key.modelName || "default"}`;
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, []);
+    }
+    groups.get(groupKey)!.push(key);
+  }
+  
+  // Assegna numeri progressivi a ciascun gruppo
+  const result: ApiKeyConfig[] = [];
+  for (const [, groupKeys] of groups) {
+    groupKeys.forEach((key, idx) => {
+      result.push({
+        ...key,
+        keyIndex: idx + 1,
+        displayName: generateKeyDisplayName(key.apiType, key.modelName, idx + 1)
+      });
+    });
+  }
+  
+  return result;
+}
+
+// Ottiene tutte le chiavi configurate per un provider specifico
+export function getKeysForProvider(keys: ApiKeyConfig[], provider: "local" | "openrouter"): ApiKeyConfig[] {
+  return keys.filter(k => k.apiType === provider);
+}
+
+// Ottiene tutte le chiavi configurate per un modello specifico
+export function getKeysForModel(keys: ApiKeyConfig[], modelId: string): ApiKeyConfig[] {
+  return keys.filter(k => k.modelName === modelId);
+}
+
+// Controlla se esiste almeno una chiave API configurata per un provider
+export function hasKeysForProvider(keys: ApiKeyConfig[], provider: "local" | "openrouter"): boolean {
+  return keys.some(k => k.apiType === provider);
+}
+
+// Controlla se esiste almeno una chiave API utilizzabile per un modello
+// Per OpenRouter: qualsiasi chiave OpenRouter funziona per qualsiasi modello OpenRouter
+// Per Local: serve una chiave locale con l'URL configurato
+export function hasUsableKeyForModel(keys: ApiKeyConfig[], modelId: string, provider: "local" | "openrouter"): boolean {
+  if (provider === "openrouter") {
+    // Qualsiasi chiave OpenRouter funziona per qualsiasi modello OpenRouter
+    return keys.some(k => k.apiType === "openrouter" && k.apiKey);
+  } else {
+    // Per modelli locali, serve una configurazione locale (chiave opzionale)
+    return keys.some(k => k.apiType === "local");
+  }
+}
+
+// Ottiene tutte le chiavi utilizzabili per un modello (per la rotazione)
+export function getUsableKeysForModel(keys: ApiKeyConfig[], modelId: string, provider: "local" | "openrouter"): ApiKeyConfig[] {
+  if (provider === "openrouter") {
+    // Tutte le chiavi OpenRouter sono utilizzabili
+    return keys.filter(k => k.apiType === "openrouter" && k.apiKey);
+  } else {
+    // Per modelli locali, tutte le config locali
+    return keys.filter(k => k.apiType === "local");
+  }
+}
+
+// Conta il numero di chiavi per modello (utile per la UI)
+export function countKeysPerModel(keys: ApiKeyConfig[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const key of keys) {
+    const modelKey = key.modelName || "default";
+    counts.set(modelKey, (counts.get(modelKey) || 0) + 1);
+  }
+  return counts;
 }

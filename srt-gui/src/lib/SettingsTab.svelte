@@ -9,6 +9,8 @@
     getCustomModels,
     formatContextWindow,
     loadAndValidateApiKeys,
+    normalizeApiKeyNames,
+    generateKeyDisplayName,
     type ModelInfo,
     type CustomModel,
     type ApiKeyConfig,
@@ -92,6 +94,9 @@
   }
 
   function saveApiKeys() {
+    // Normalize names before saving
+    const normalized = normalizeApiKeyNames(apiKeys);
+    apiKeys = normalized;
     localStorage.setItem("srt-tools-api-keys", JSON.stringify(apiKeys));
   }
 
@@ -122,14 +127,22 @@
       return;
     }
 
+    // Calculate the next index for this model
+    const existingKeysForModel = apiKeys.filter(k => 
+      k.apiType === newKeyType && 
+      (k.modelName || "default") === (newKeyModelName.trim() || "default")
+    );
+    const nextIndex = existingKeysForModel.length + 1;
+
     const newKey: ApiKeyConfig = {
       id: generateId(),
       name: newKeyName.trim(),
+      displayName: generateKeyDisplayName(newKeyType, newKeyModelName.trim() || undefined, nextIndex),
       apiType: newKeyType,
       apiKey: newKeyValue.trim(),
       apiUrl: newKeyUrl.trim() || undefined,
       modelName: newKeyModelName.trim() || undefined,
-      isDefault: apiKeys.filter((k) => k.apiType === newKeyType).length === 0,
+      keyIndex: nextIndex,
     };
 
     apiKeys = [...apiKeys, newKey];
@@ -171,34 +184,13 @@
       return;
     }
 
-    const wasDefault = key.isDefault;
-    const keyType = key.apiType;
     apiKeys = apiKeys.filter((k) => k.id !== deleteConfirmId);
-
-    // Set new default if needed
-    if (wasDefault) {
-      const sameTypeKeys = apiKeys.filter((k) => k.apiType === keyType);
-      if (sameTypeKeys.length > 0) {
-        sameTypeKeys[0].isDefault = true;
-      }
-    }
-
+    
+    // Re-normalize to update indices
     saveApiKeys();
     success = t("settings.keyDeleted");
     setTimeout(() => (success = null), 3000);
     cancelDelete();
-  }
-
-  function setDefaultKey(id: string) {
-    const key = apiKeys.find((k) => k.id === id);
-    if (!key) return;
-
-    // Remove default from same type
-    apiKeys = apiKeys.map((k) => ({
-      ...k,
-      isDefault: k.apiType === key.apiType ? k.id === id : k.isDefault,
-    }));
-    saveApiKeys();
   }
 
   // Visibility toggle for API keys
@@ -404,10 +396,9 @@
         </div>
 
         <div class="flex-1 overflow-y-auto p-2 space-y-2">
-          {#each apiKeys as key}
+          {#each apiKeys as key, index}
             <div
-              class="p-3 bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-all group
-                {key.isDefault ? 'ring-1 ring-indigo-500/50 bg-indigo-500/5' : ''}"
+              class="p-3 bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-all group"
             >
               <div class="flex items-start gap-3">
                 <div class="w-8 h-8 rounded-lg bg-gradient-to-br {providers[key.apiType]?.color || 'from-gray-500 to-gray-600'} flex items-center justify-center flex-shrink-0 text-white text-xs shadow-lg">
@@ -416,13 +407,8 @@
 
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 mb-0.5">
-                    <span class="font-medium text-gray-200 text-sm truncate">{key.name}</span>
-                    {#if key.isDefault}
-                      <!-- Pin icon for default -->
-                      <svg class="w-3.5 h-3.5 text-indigo-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M16 4c.55 0 1 .45 1 1v4.38l1.71 1.71c.18.18.29.43.29.7V14c0 .55-.45 1-1 1h-5v5l-1 1-1-1v-5H6c-.55 0-1-.45-1-1v-2.21c0-.27.11-.52.29-.71L7 9.38V5c0-.55.45-1 1-1h8zm-1 2H9v3.62l-2 2V13h10v-1.38l-2-2V6z"/>
-                      </svg>
-                    {/if}
+                    <span class="font-medium text-gray-200 text-sm truncate">{key.displayName || key.name}</span>
+                    <span class="text-[10px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-mono">#{index + 1}</span>
                   </div>
                   <div class="flex items-center gap-1.5">
                     <button
@@ -454,18 +440,6 @@
                 </div>
 
                 <div class="flex flex-col gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                  {#if !key.isDefault}
-                    <button
-                      onclick={() => setDefaultKey(key.id)}
-                      class="p-1.5 text-gray-500 hover:text-indigo-400 hover:bg-white/10 rounded transition-colors"
-                      title={t("settings.setAsDefault")}
-                    >
-                      <!-- Pin icon -->
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v4.38l1.71 1.71c.18.18.29.43.29.7V14a2 2 0 01-2 2h-5v4l-2 2-2-2v-4H5a2 2 0 01-2-2v-2.21c0-.27.11-.52.29-.71L5 9.38V5z" />
-                      </svg>
-                    </button>
-                  {/if}
                   <button
                     onclick={() => askDeleteApiKey(key.id)}
                     class="p-1.5 text-gray-500 hover:text-red-400 hover:bg-white/10 rounded transition-colors"
