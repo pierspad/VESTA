@@ -76,51 +76,6 @@ jobs:
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
         run: npx tauri build --bundles deb,rpm,appimage
-        
-      - name: Arch Linux Package
-        run: |
-          DEB_FILE=$(find target/release/bundle/deb -name "*.deb" | head -n 1)
-          SHA256=$(sha256sum "$DEB_FILE" | awk '{print $1}')
-          cp "$DEB_FILE" "build-scripts/vesta-${VERSION}.deb"
-          
-          cd build-scripts
-          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
-          LOCAL_URI="file:///workspace/build-scripts/vesta-${VERSION}.deb"
-          sed -i "s|\${_pkgname}-\${pkgver}.deb::https://[^ \"]*|\${_pkgname}-\${pkgver}.deb::${LOCAL_URI}|" PKGBUILD
-          sed -i "0,/[a-f0-9]\{64\}/s//${SHA256}/" PKGBUILD
-          
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/build-scripts archlinux:base-devel bash -c "
-            pacman -Syu --noconfirm git sudo
-            useradd -m builder
-            chown -R builder:builder .
-            echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
-            su builder -c 'makepkg -sfc --noconfirm'
-          "
-
-      - name: Flatpak Build
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder
-          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          sudo flatpak install -y flathub org.gnome.Platform//46 org.gnome.Sdk//46
-          
-          APPIMAGE=$(find target/release/bundle/appimage -name "*.AppImage" | head -n 1)
-          chmod +x "$APPIMAGE"
-          "$APPIMAGE" --appimage-extract
-          
-          mkdir -p build-scripts/flatpak-files
-          BINARY=$(find squashfs-root -name "vesta" -type f -executable | head -1)
-          if [ -z "$BINARY" ]; then
-            BINARY=$(find squashfs-root/usr/bin -type f -executable | head -1)
-          fi
-          cp "$BINARY" build-scripts/flatpak-files/vesta
-          
-          cp apps/srt-gui/src-tauri/icons/icon-512x512.png build-scripts/flatpak-files/com.vesta.desktop.png
-          cp com.vesta.desktop.desktop build-scripts/flatpak-files/
-          
-          cd build-scripts
-          flatpak-builder --force-clean --repo=repo flatpak-build com.vesta.desktop.flatpak.yml
-          flatpak build-bundle repo "vesta-${VERSION}.flatpak" com.vesta.desktop
 
       - name: Upload DEB
         uses: actions/upload-artifact@v4
@@ -140,11 +95,104 @@ jobs:
           name: vesta-linux-appimage
           path: target/release/bundle/appimage/*.AppImage
 
+  # ===========================================================
+  # Arch Linux Package (depends on core linux build)
+  # ===========================================================
+  build-linux-arch:
+    name: Build (linux-arch)
+    needs: build-linux
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(sed -n 's/^pkgver=//p' build-scripts/PKGBUILD)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download DEB artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vesta-linux-deb
+          path: deb-artifact
+
+      - name: Arch Linux Package
+        run: |
+          DEB_FILE=$(find deb-artifact -name "*.deb" | head -n 1)
+          SHA256=$(sha256sum "$DEB_FILE" | awk '{print $1}')
+          cp "$DEB_FILE" "build-scripts/vesta-${VERSION}.deb"
+
+          cd build-scripts
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+          LOCAL_URI="file:///workspace/build-scripts/vesta-${VERSION}.deb"
+          sed -i "s|\${_pkgname}-\${pkgver}.deb::https://[^ \"]*|\${_pkgname}-\${pkgver}.deb::${LOCAL_URI}|" PKGBUILD
+          sed -i "0,/[a-f0-9]\{64\}/s//${SHA256}/" PKGBUILD
+
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/build-scripts archlinux:base-devel bash -c "
+            pacman -Syu --noconfirm git sudo
+            useradd -m builder
+            chown -R builder:builder .
+            echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+            su builder -c 'makepkg -sfc --noconfirm'
+          "
+
       - name: Upload Arch Package
         uses: actions/upload-artifact@v4
         with:
           name: packages-arch
           path: build-scripts/*.pkg.tar.zst
+
+  # ===========================================================
+  # Flatpak Build (depends on core linux build)
+  # ===========================================================
+  build-linux-flatpak:
+    name: Build (linux-flatpak)
+    needs: build-linux
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(sed -n 's/^pkgver=//p' build-scripts/PKGBUILD)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download AppImage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vesta-linux-appimage
+          path: appimage-artifact
+
+      - name: Flatpak Build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y flathub org.gnome.Platform//48 org.gnome.Sdk//48
+
+          APPIMAGE=$(find appimage-artifact -name "*.AppImage" | head -n 1)
+          chmod +x "$APPIMAGE"
+          "$APPIMAGE" --appimage-extract
+
+          mkdir -p build-scripts/flatpak-files
+          BINARY=$(find squashfs-root -name "vesta" -type f -executable | head -1)
+          if [ -z "$BINARY" ]; then
+            BINARY=$(find squashfs-root/usr/bin -type f -executable | head -1)
+          fi
+          cp "$BINARY" build-scripts/flatpak-files/vesta
+
+          cp apps/srt-gui/src-tauri/icons/icon-512x512.png build-scripts/flatpak-files/com.vesta.desktop.png
+          cp com.vesta.desktop.desktop build-scripts/flatpak-files/
+
+          cd build-scripts
+          flatpak-builder --force-clean --repo=repo flatpak-build com.vesta.desktop.flatpak.yml
+          flatpak build-bundle repo "vesta-${VERSION}.flatpak" com.vesta.desktop
 
       - name: Upload Flatpak
         uses: actions/upload-artifact@v4
@@ -296,7 +344,7 @@ jobs:
   # ===========================================================
   release:
     name: Create Release
-    needs: [build-linux, build-windows, build-macos]
+    needs: [build-linux, build-linux-arch, build-linux-flatpak, build-windows, build-macos]
     if: ${{ always() && startsWith(github.ref, 'refs/tags/') && needs.build-linux.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
