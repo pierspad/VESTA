@@ -78,6 +78,14 @@ fn main() {
     #[cfg(target_os = "linux")]
     {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        // Prevent WebKitWebProcess crash when gst-plugins-good is not installed
+        // (missing autoaudiosink element causes the app to go grey/unresponsive)
+        std::env::set_var("WEBKIT_DISABLE_MEDIA_STREAM", "1");
+        // Disable GStreamer audio/video sinks entirely to prevent
+        // "GStreamer element autoaudiosink not found" errors on drag-drop
+        std::env::set_var("GST_PLUGIN_FEATURE_RANK", "autoaudiosink:0,autovideosink:0,pulsesink:0,alsasink:0");
+        // Prevent WebKit from using GStreamer for content sniffing on dropped files
+        std::env::set_var("GST_REGISTRY_UPDATE", "no");
     }
 
     let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
@@ -264,6 +272,68 @@ fn main() {
         .manage(Mutex::new(FlashcardState::default()) as AppFlashcardState)
         .manage(Mutex::new(TranscribeState::default()) as AppTranscribeState)
         .manage(MediaServerPort(port))
+        .setup(|app| {
+            // On Linux, prevent WebKit from navigating to file:// URLs when files
+            // are drag-dropped onto the webview. Without this, WebKit tries to
+            // load video files via GStreamer, causing a crash when gst-plugins are
+            // missing (autoaudiosink not found).
+            #[cfg(target_os = "linux")]
+            {
+                use tauri::Manager;
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.with_webview(|wv| {
+                        #[allow(deprecated)]
+                        {
+                        use webkit2gtk::WebViewExt;
+                        use webkit2gtk::NavigationPolicyDecision;
+                        use webkit2gtk::NavigationPolicyDecisionExt;
+                        use webkit2gtk::PolicyDecisionExt;
+                        use webkit2gtk::PolicyDecisionType;
+                        use webkit2gtk::URIRequestExt;
+                        use webkit2gtk::glib::{Cast, ObjectExt};
+                        let webview = wv.inner();
+                        let wk: &webkit2gtk::WebView = webview.as_ref();
+
+                        // 1) Block file:// navigations (belt-and-suspenders with JS preventDefault)
+                        wk.connect_decide_policy(|_wv, decision, decision_type| {
+                            if decision_type == PolicyDecisionType::NavigationAction
+                                || decision_type == PolicyDecisionType::NewWindowAction
+                            {
+                                if let Some(nav) = decision.downcast_ref::<NavigationPolicyDecision>() {
+                                    if let Some(request) = NavigationPolicyDecisionExt::request(nav) {
+                                        if let Some(uri) = URIRequestExt::uri(&request) {
+                                            if uri.starts_with("file://") {
+                                                decision.ignore();
+                                                return true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            false
+                        });
+
+                        // 2) Prevent WebKit from processing dropped file data via GStreamer.
+                        //    wry (Tauri's webview layer) connects its own drag-data-received
+                        //    handler FIRST (during webview construction) which extracts URIs
+                        //    and emits Tauri's DragDrop events.  Our handler fires AFTER wry's
+                        //    but BEFORE WebKit's class handler.  By stopping the signal here,
+                        //    WebKit's default handler never runs, so the WebProcess never
+                        //    receives the dropped data and never invokes GStreamer — avoiding
+                        //    the "autoaudiosink not found" crash entirely.
+                        let wk_obj: webkit2gtk::glib::Object = wk.clone().upcast();
+                        wk_obj.connect_local("drag-data-received", false, |values| {
+                            if let Ok(widget) = values[0].get::<webkit2gtk::glib::Object>() {
+                                widget.stop_signal_emission_by_name("drag-data-received");
+                            }
+                            None
+                        });
+                        }
+                    });
+                }
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             get_media_server_port,
             // Comandi app info

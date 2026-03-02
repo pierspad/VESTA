@@ -48,20 +48,20 @@ export const availableUILanguages: UILanguage[] = [
 ];
 
 const translations: Record<string, Record<string, string>> = {
-  ar,
-  de,
+  ar: { ...en, ...ar },
+  de: { ...en, ...de },
   en,
-  es,
-  fr,
-  hi,
-  it,
-  ja,
-  ko,
-  pl,
-  pt,
-  ru,
-  tr,
-  zh,
+  es: { ...en, ...es },
+  fr: { ...en, ...fr },
+  hi: { ...en, ...hi },
+  it: { ...en, ...it },
+  ja: { ...en, ...ja },
+  ko: { ...en, ...ko },
+  pl: { ...en, ...pl },
+  pt: { ...en, ...pt },
+  ru: { ...en, ...ru },
+  tr: { ...en, ...tr },
+  zh: { ...en, ...zh },
 };
 
 const STORAGE_KEY = 'srt-tools-ui-language';

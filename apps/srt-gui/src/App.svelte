@@ -57,7 +57,12 @@
   }
 </script>
 
-<main class="flex h-screen min-w-[1440px] min-h-[900px] bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 text-gray-100">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<main
+  class="flex h-screen min-w-[1440px] min-h-[900px] bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 text-gray-100"
+  ondragover={(e) => e.preventDefault()}
+  ondrop={(e) => e.preventDefault()}
+>
   <Sidebar {activeTab} onTabChange={(tab) => (activeTab = tab)} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
 
   <!-- Main Content - use CSS visibility to preserve state -->

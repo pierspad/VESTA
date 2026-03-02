@@ -145,11 +145,13 @@ async fn perform_translation(
     let api_type = match config.api_type.to_lowercase().as_str() {
         "local" => ApiType::Local,
         "google" | "gemini" => ApiType::Google,
+        "groq" => ApiType::Groq,
+        "custom" => ApiType::Local, // Custom providers use OpenAI-compatible API
         // OpenRouter e altri sono disabilitati per ora
         "openrouter" | "openai" | "anthropic" | "mistral" => {
-            return Err("Provider disabilitato. Usa 'google' o 'local'.".to_string());
+            return Err("Provider disabilitato. Usa 'google', 'local' o 'groq'.".to_string());
         }
-        _ => return Err(format!("Tipo API non supportato: {}. Usa 'google' o 'local'.", config.api_type)),
+        _ => return Err(format!("Tipo API non supportato: {}. Usa 'google', 'local' o 'groq'.", config.api_type)),
     };
 
     // Determina URL base sul tipo
@@ -157,6 +159,7 @@ async fn perform_translation(
         match api_type {
             ApiType::Local => "http://localhost:11434/v1".to_string(),
             ApiType::Google => "https://generativelanguage.googleapis.com/v1beta".to_string(),
+            ApiType::Groq => "https://api.groq.com/openai/v1".to_string(),
             ApiType::OpenRouter => "https://openrouter.ai/api/v1".to_string(), // Non usato
         }
     });
@@ -166,6 +169,7 @@ async fn perform_translation(
         match api_type {
             ApiType::Local => "llama3.2".to_string(),
             ApiType::Google => "gemini-2.0-flash".to_string(),
+            ApiType::Groq => "llama-3.3-70b-versatile".to_string(),
             ApiType::OpenRouter => "google/gemini-2.0-flash-001".to_string(), // Non usato
         }
     });
@@ -176,7 +180,7 @@ async fn perform_translation(
         if api_type == ApiType::Local {
             vec!["".to_string()] // Empty key for local
         } else {
-            return Err("Nessuna chiave API Google fornita. Aggiungi le tue chiavi API nelle impostazioni.".to_string());
+            return Err("Nessuna chiave API fornita. Aggiungi le tue chiavi API nelle impostazioni.".to_string());
         }
     } else {
         config.api_keys.clone()

@@ -16,6 +16,8 @@ pub enum ApiType {
     Local,
     /// Google Gemini API nativa - richiede API key Google (AIza...)
     Google,
+    /// Groq API - Inferenza ultra-veloce su LPU (OpenAI-compatible)
+    Groq,
     /// OpenRouter o qualsiasi API OpenAI-compatible - richiede API key (DISABILITATO per ora)
     #[allow(dead_code)]
     OpenRouter,
@@ -66,7 +68,7 @@ impl Translator {
     pub async fn translate(&self, text: &str, target_lang: &str, context: Option<&str>) -> Result<String> {
         match self.config.api_type {
             ApiType::Google => self.translate_google(text, target_lang, context).await,
-            ApiType::Local | ApiType::OpenRouter => self.translate_openai(text, target_lang, context).await,
+            ApiType::Local | ApiType::OpenRouter | ApiType::Groq => self.translate_openai(text, target_lang, context).await,
         }
     }
 
@@ -81,7 +83,7 @@ impl Translator {
     ) -> Result<String> {
         match self.config.api_type {
             ApiType::Google => self.translate_with_context_google(text, target_lang, title_context, surrounding_context).await,
-            ApiType::Local | ApiType::OpenRouter => self.translate_with_context_openai(text, target_lang, title_context, surrounding_context).await,
+            ApiType::Local | ApiType::OpenRouter | ApiType::Groq => self.translate_with_context_openai(text, target_lang, title_context, surrounding_context).await,
         }
     }
 
@@ -94,7 +96,7 @@ impl Translator {
     ) -> Result<HashMap<u32, String>> {
         match self.config.api_type {
             ApiType::Google => self.translate_batch_google(texts_with_ids, target_lang, context).await,
-            ApiType::Local | ApiType::OpenRouter => self.translate_batch_openai(texts_with_ids, target_lang, context).await,
+            ApiType::Local | ApiType::OpenRouter | ApiType::Groq => self.translate_batch_openai(texts_with_ids, target_lang, context).await,
         }
     }
 

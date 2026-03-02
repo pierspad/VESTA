@@ -358,7 +358,7 @@
   <div class="grid grid-cols-2 gap-6">
     {#each Object.entries(groupedShortcuts).filter(([cat]) => cat !== "sync") as [category, categoryShortcuts]}
       {#if categoryShortcuts.length > 0}
-        <div class="glass-card p-5">
+        <div class="glass-card p-5" style="content-visibility: auto; contain-intrinsic-size: auto 300px;">
           <div class="mb-4">
             <h3 class="text-lg font-semibold text-white">
               {t(categoryLabels[category])}
@@ -380,7 +380,7 @@
 
   {#if groupedShortcuts.sync.length > 0}
     <div class="mt-6">
-      <div class="glass-card p-5">
+      <div class="glass-card p-5" style="content-visibility: auto; contain-intrinsic-size: auto 400px;">
         <div class="mb-4">
           <h3 class="text-lg font-semibold text-white">
             {t("shortcuts.category.sync")}

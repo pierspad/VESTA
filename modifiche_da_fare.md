@@ -1,4 +1,9 @@
 
+1) se voglio usare un llm locale
+
+
+
+
 Modifiche da effettuare nella tab Flashcards{
 
 }

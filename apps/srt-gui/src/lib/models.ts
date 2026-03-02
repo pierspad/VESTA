@@ -53,7 +53,7 @@ export const providers: Record<string, ProviderInfo> = {
     name: "Google Gemini",
     icon: "google", // Use icon ID for custom SVG icons
     color: "from-blue-500 to-cyan-500",
-    description: "Google Gemini native API (requires AIza... key)",
+    description: "Gemini 3.1 Pro, 3 Flash (requires AIza... key)",
     requiresApiKey: true,
     requiresApiUrl: false,
     defaultApiUrl: "https://generativelanguage.googleapis.com/v1beta",
@@ -64,7 +64,7 @@ export const providers: Record<string, ProviderInfo> = {
     name: "OpenAI GPT",
     icon: "openai", // Use icon ID for custom SVG icons
     color: "from-emerald-500 to-teal-500",
-    description: "GPT-4, GPT-4o, GPT-3.5 (Coming Soon)",
+    description: "GPT-5.2, GPT-5, GPT-4o (Coming Soon)",
     requiresApiKey: true,
     requiresApiUrl: false,
     defaultApiUrl: "https://api.openai.com/v1",
@@ -75,11 +75,33 @@ export const providers: Record<string, ProviderInfo> = {
     name: "Anthropic Claude",
     icon: "anthropic", // Use icon ID for custom SVG icons
     color: "from-orange-500 to-amber-500",
-    description: "Claude 3.5, Claude 3 (Coming Soon)",
+    description: "Opus 4.6, Sonnet 4.6 (Coming Soon)",
     requiresApiKey: true,
     requiresApiUrl: false,
     defaultApiUrl: "https://api.anthropic.com/v1",
     enabled: false, // Coming soon
+  },
+  custom: {
+    id: "custom",
+    name: "Provider Personalizzato",
+    icon: "custom",
+    color: "from-gray-500 to-gray-600",
+    description: "Qualsiasi endpoint compatibile OpenAI (URL + API key opzionale)",
+    requiresApiKey: false,
+    requiresApiUrl: true,
+    defaultApiUrl: "",
+    enabled: true,
+  },
+  groq: {
+    id: "groq",
+    name: "Groq API",
+    icon: "groq",
+    color: "from-orange-400 to-red-500",
+    description: "Ultra-fast inference on LPU (Llama, GPT-OSS, Qwen)",
+    requiresApiKey: true,
+    requiresApiUrl: false,
+    defaultApiUrl: "https://api.groq.com/openai/v1",
+    enabled: true,
   },
   openrouter: {
     id: "openrouter",
@@ -95,35 +117,62 @@ export const providers: Record<string, ProviderInfo> = {
 };
 
 // Solo provider abilitati
-export const providerOrder = ["local", "google"];
+export const providerOrder = ["local", "custom", "google", "groq"];
 
 // Modelli per provider
 export const modelsByProvider: Record<string, ModelInfo[]> = {
   local: [
+    // --- Meta Llama ---
     {
-      id: "llama3.2",
-      name: "Llama 3.2",
+      id: "llama3.3",
+      name: "Llama 3.3 70B",
       provider: "local",
       family: "Meta",
       familyInfo: { type: "open-weights", badge: "Open" },
-      description: "Meta open-weight latest local model",
+      description: "Ultimo modello Meta 70B, eccellente per traduzioni",
       recommended: true,
     },
     {
-      id: "llama3.1",
-      name: "Llama 3.1",
+      id: "llama3.2",
+      name: "Llama 3.2 3B",
       provider: "local",
       family: "Meta",
       familyInfo: { type: "open-weights", badge: "Open" },
-      description: "Versione precedente utile per traduzioni",
+      description: "Compatto e veloce, 3B parametri",
     },
+    {
+      id: "llama3.2:1b",
+      name: "Llama 3.2 1B",
+      provider: "local",
+      family: "Meta",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Ultra-leggero 1B, per risorse limitate",
+    },
+    {
+      id: "llama3.1",
+      name: "Llama 3.1 8B",
+      provider: "local",
+      family: "Meta",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "8B parametri, buon bilanciamento qualità/velocità",
+    },
+    {
+      id: "llama3.1:70b",
+      name: "Llama 3.1 70B",
+      provider: "local",
+      family: "Meta",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "70B parametri, qualità elevata",
+    },
+    // --- Mistral ---
     {
       id: "mistral-small-3.1",
       name: "Mistral Small 3.1",
       provider: "local",
       family: "Mistral",
       familyInfo: { type: "open-weights", badge: "Open" },
-      description: "Mistral Small 3.1 locale",
+      description: "Mistral Small 3.1, 24B parametri",
+      recommended: true,
     },
     {
       id: "mistral-medium-3",
@@ -134,36 +183,244 @@ export const modelsByProvider: Record<string, ModelInfo[]> = {
       description: "Mistral Medium 3 locale",
     },
     {
+      id: "mistral-nemo",
+      name: "Mistral Nemo 12B",
+      provider: "local",
+      family: "Mistral",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "12B, ottimo per multilingue e traduzioni",
+    },
+    {
       id: "mixtral-8x7b",
       name: "Mixtral 8x7B",
       provider: "local",
       family: "Mistral",
       familyInfo: { type: "open-weights", badge: "Open" },
-      description: "Mixtral MoE per uso locale",
+      description: "Mixtral MoE, 46.7B totali (12.9B attivi)",
     },
     {
+      id: "codestral",
+      name: "Codestral 22B",
+      provider: "local",
+      family: "Mistral",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Specializzato in codice ma buono anche per testo",
+    },
+    // --- DeepSeek ---
+    {
+      id: "deepseek-r1",
+      name: "DeepSeek R1",
+      provider: "local",
+      family: "DeepSeek",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "Ragionamento avanzato, eccellente per traduzioni complesse",
+      recommended: true,
+    },
+    {
+      id: "deepseek-r1:8b",
+      name: "DeepSeek R1 8B",
+      provider: "local",
+      family: "DeepSeek",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "Versione compatta 8B del modello R1",
+    },
+    {
+      id: "deepseek-r1:14b",
+      name: "DeepSeek R1 14B",
+      provider: "local",
+      family: "DeepSeek",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "14B parametri, buon bilanciamento",
+    },
+    {
+      id: "deepseek-r1:32b",
+      name: "DeepSeek R1 32B",
+      provider: "local",
+      family: "DeepSeek",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "32B parametri, qualità superiore",
+    },
+    {
+      id: "deepseek-r1:70b",
+      name: "DeepSeek R1 70B",
+      provider: "local",
+      family: "DeepSeek",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "70B parametri, massima qualità",
+    },
+    {
+      id: "deepseek-v3",
+      name: "DeepSeek V3",
+      provider: "local",
+      family: "DeepSeek",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "MoE 671B totali, modello flagship",
+    },
+    // --- Qwen ---
+    {
       id: "qwen2.5",
-      name: "Qwen 2.5",
+      name: "Qwen 2.5 7B",
       provider: "local",
       family: "Qwen",
       familyInfo: { type: "open-source", badge: "OSS" },
-      description: "Ottimo per multilingue locale",
+      description: "7B, ottimo per multilingue",
     },
     {
-      id: "gemma3-27b-local",
-      name: "Gemma 3 27B Local",
+      id: "qwen2.5:14b",
+      name: "Qwen 2.5 14B",
+      provider: "local",
+      family: "Qwen",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "14B, bilanciamento qualità/velocità",
+    },
+    {
+      id: "qwen2.5:32b",
+      name: "Qwen 2.5 32B",
+      provider: "local",
+      family: "Qwen",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "32B, qualità elevata per multilingue",
+    },
+    {
+      id: "qwen2.5:72b",
+      name: "Qwen 2.5 72B",
+      provider: "local",
+      family: "Qwen",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "72B, massima qualità Qwen",
+    },
+    {
+      id: "qwq",
+      name: "QwQ 32B",
+      provider: "local",
+      family: "Qwen",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "Modello di ragionamento Qwen 32B",
+    },
+    // --- Google Gemma ---
+    {
+      id: "gemma3:27b",
+      name: "Gemma 3 27B",
       provider: "local",
       family: "Google",
       familyInfo: { type: "open-weights", badge: "Open" },
-      description: "Gemma 3 27B (open)",
+      description: "Top di gamma open, eccellente ragionamento",
+    },
+    {
+      id: "gemma3:12b",
+      name: "Gemma 3 12B",
+      provider: "local",
+      family: "Google",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Bilanciato, ottime performance",
+    },
+    {
+      id: "gemma3:4b",
+      name: "Gemma 3 4B",
+      provider: "local",
+      family: "Google",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Compatto, veloce per task semplici",
+    },
+    {
+      id: "gemma3:1b",
+      name: "Gemma 3 1B",
+      provider: "local",
+      family: "Google",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Nano modello, massima velocità",
+    },
+    // --- Microsoft ---
+    {
+      id: "phi4",
+      name: "Phi-4 14B",
+      provider: "local",
+      family: "Microsoft",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Ultimo modello Microsoft, 14B parametri",
+    },
+    {
+      id: "phi3.5",
+      name: "Phi-3.5 Mini",
+      provider: "local",
+      family: "Microsoft",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "3.8B, compatto e performante",
     },
     {
       id: "phi3",
-      name: "Phi-3",
+      name: "Phi-3 3.8B",
       provider: "local",
       family: "Microsoft",
       familyInfo: { type: "open-weights", badge: "Open" },
       description: "Microsoft compatto locale",
+    },
+    // --- Cohere ---
+    {
+      id: "command-r",
+      name: "Command R 35B",
+      provider: "local",
+      family: "Cohere",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Ottimizzato per RAG e conversazione",
+    },
+    {
+      id: "command-r-plus",
+      name: "Command R+ 104B",
+      provider: "local",
+      family: "Cohere",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "104B, massima qualità Cohere",
+    },
+    // --- 01.AI ---
+    {
+      id: "yi:34b",
+      name: "Yi 1.5 34B",
+      provider: "local",
+      family: "01.AI",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Eccellente per cinese, inglese e multilingue",
+    },
+    {
+      id: "yi:9b",
+      name: "Yi 1.5 9B",
+      provider: "local",
+      family: "01.AI",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Compatto, buono per multilingue",
+    },
+    // --- Community Models ---
+    {
+      id: "nous-hermes2",
+      name: "Nous Hermes 2",
+      provider: "local",
+      family: "Community",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Fine-tuned Llama, ottimo per istruzioni",
+    },
+    {
+      id: "dolphin-mixtral",
+      name: "Dolphin Mixtral",
+      provider: "local",
+      family: "Community",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Mixtral uncensored, versatile",
+    },
+    {
+      id: "solar",
+      name: "Solar 10.7B",
+      provider: "local",
+      family: "Upstage",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Upstage Solar, ottimo per task generali",
+    },
+    {
+      id: "internlm2",
+      name: "InternLM2 20B",
+      provider: "local",
+      family: "Shanghai AI Lab",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "Forte in multilingue e ragionamento",
     },
   ],
 
@@ -250,6 +507,57 @@ export const modelsByProvider: Record<string, ModelInfo[]> = {
     },
   ],
 
+  // Groq API - Inferenza ultra-veloce su hardware LPU
+  groq: [
+    {
+      id: "llama-3.3-70b-versatile",
+      name: "Llama 3.3 70B Versatile",
+      provider: "groq",
+      family: "Meta",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      contextWindow: 131072,
+      description: "Meta 70B, modello flagship velocissimo su Groq",
+      recommended: true,
+    },
+    {
+      id: "llama-3.1-8b-instant",
+      name: "Llama 3.1 8B Instant",
+      provider: "groq",
+      family: "Meta",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      contextWindow: 131072,
+      description: "Ultra-veloce 8B, latenza minima",
+    },
+    {
+      id: "openai/gpt-oss-120b",
+      name: "GPT-OSS 120B",
+      provider: "groq",
+      family: "OpenAI",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      contextWindow: 131072,
+      description: "OpenAI flagship open-weight MoE 120B",
+      recommended: true,
+    },
+    {
+      id: "openai/gpt-oss-20b",
+      name: "GPT-OSS 20B",
+      provider: "groq",
+      family: "OpenAI",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      contextWindow: 131072,
+      description: "OpenAI compact MoE 20B, ottimizzato per costi",
+    },
+    {
+      id: "qwen/qwen3-32b",
+      name: "Qwen 3 32B",
+      provider: "groq",
+      family: "Qwen",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      contextWindow: 131072,
+      description: "Qwen 3 multilingue avanzato, ragionamento dual-mode",
+    },
+  ],
+
   // OpenRouter è disabilitato ma manteniamo la struttura per future implementazioni
   openrouter: [],
 };
@@ -266,7 +574,7 @@ export interface CustomModel {
 export interface ApiKeyConfig {
   id: string;
   name: string;
-  apiType: "local" | "google" | "openrouter" | "openai" | "anthropic";
+  apiType: "local" | "google" | "openrouter" | "openai" | "anthropic" | "custom" | "groq";
   apiKey: string;
   apiUrl?: string;
   modelName?: string;  // Nome modello preferito
@@ -496,7 +804,7 @@ export function loadAndValidateApiKeys(): ApiKeyConfig[] {
     // Converti chiavi con tipi legacy a "google" e filtra quelle non valide
     const converted = parsed.map((k: any) => {
       // Se già ha un tipo valido (local, google), mantienilo
-      if (k.apiType === "local" || k.apiType === "google") {
+      if (k.apiType === "local" || k.apiType === "google" || k.apiType === "groq") {
         return k;
       }
       // Converti tipi legacy (openrouter, gemini, openai, anthropic, etc.) a google
@@ -528,4 +836,152 @@ export function loadAndValidateApiKeys(): ApiKeyConfig[] {
   } catch {
     return [];
   }
+}
+
+// ─── Card Templates ──────────────────────────────────────────────────────────
+
+export interface CardTemplateConfig {
+  frontHtml: string;
+  backHtml: string;
+  css: string;
+  noteTypeName: string;
+}
+
+export interface FieldNamesConfig {
+  expression: string;
+  meaning: string;
+  reading: string;
+  audio: string;
+  snapshot: string;
+  video: string;
+  tags: string;
+  sequenceMarker: string;
+  notes: string;
+}
+
+const CARD_TEMPLATE_KEY = "vesta-card-templates";
+const FIELD_NAMES_KEY = "vesta-field-names";
+
+export const defaultFieldNames: FieldNamesConfig = {
+  expression: "Expression",
+  meaning: "Meaning",
+  reading: "Reading",
+  audio: "Audio",
+  snapshot: "Snapshot",
+  video: "Video",
+  tags: "Tags",
+  sequenceMarker: "SequenceMarker",
+  notes: "Notes",
+};
+
+export function loadFieldNames(): FieldNamesConfig {
+  try {
+    const raw = localStorage.getItem(FIELD_NAMES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        expression: parsed.expression || defaultFieldNames.expression,
+        meaning: parsed.meaning || defaultFieldNames.meaning,
+        reading: parsed.reading || defaultFieldNames.reading,
+        audio: parsed.audio || defaultFieldNames.audio,
+        snapshot: parsed.snapshot || defaultFieldNames.snapshot,
+        video: parsed.video || defaultFieldNames.video,
+        tags: parsed.tags || defaultFieldNames.tags,
+        sequenceMarker: parsed.sequenceMarker || defaultFieldNames.sequenceMarker,
+        notes: parsed.notes || defaultFieldNames.notes,
+      };
+    }
+  } catch { /* ignore */ }
+  return { ...defaultFieldNames };
+}
+
+export function saveFieldNames(config: FieldNamesConfig): void {
+  localStorage.setItem(FIELD_NAMES_KEY, JSON.stringify(config));
+}
+
+export function resetFieldNames(): FieldNamesConfig {
+  localStorage.removeItem(FIELD_NAMES_KEY);
+  return { ...defaultFieldNames };
+}
+
+export const defaultCardTemplates: CardTemplateConfig = {
+  frontHtml: `<div id="tags-container"></div>
+<div id="tags-source" style="display: none;">{{Tags}}</div>
+<div id="timestamp-source" style="display: none;">{{SequenceMarker}}</div>
+<div class='expression'>{{Expression}}</div>
+<hr>`,
+  backHtml: `<div id="tags-container"></div>
+<div id="tags-source" style="display: none;">{{Tags}}</div>
+<div id="timestamp-source" style="display: none;">{{SequenceMarker}}</div>
+<span class='media'>{{Audio}}</span>
+<div class="expression">{{Expression}}</div>
+<hr>
+<br>
+<div class='reading'>{{Reading}}</div>
+<div class='meaning'>{{Meaning}}</div>
+<br>
+<div class='media'>{{Snapshot}}</div>
+<span class='media'>{{Video}}</span>
+<br />`,
+  css: `.card {
+  font-family: arial;
+  font-size: 20px;
+  text-align: center;
+  color: black;
+  background-color: white;
+}
+#tags-container {
+  text-align: left;
+  margin-bottom: 8px;
+  min-height: 20px;
+}
+.tag-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-family: arial, sans-serif;
+  font-weight: 600;
+  color: #333;
+  background-color: #f0f0f0;
+  padding: 4px 8px;
+  border-radius: 8px;
+  margin-right: 4px;
+  margin-bottom: 4px;
+  border: 1px solid #ddd;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+}
+.card video,
+.card iframe {
+  width: 600px;
+  height: 400px;
+  max-width: 100%;
+  display: block;
+  margin: 10px auto;
+  border: 1px solid #eee;
+}`,
+  noteTypeName: "Vesta Default",
+};
+
+export function loadCardTemplates(): CardTemplateConfig {
+  try {
+    const raw = localStorage.getItem(CARD_TEMPLATE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        frontHtml: parsed.frontHtml || defaultCardTemplates.frontHtml,
+        backHtml: parsed.backHtml || defaultCardTemplates.backHtml,
+        css: parsed.css || defaultCardTemplates.css,
+        noteTypeName: parsed.noteTypeName || defaultCardTemplates.noteTypeName,
+      };
+    }
+  } catch { /* ignore */ }
+  return { ...defaultCardTemplates };
+}
+
+export function saveCardTemplates(config: CardTemplateConfig): void {
+  localStorage.setItem(CARD_TEMPLATE_KEY, JSON.stringify(config));
+}
+
+export function resetCardTemplates(): CardTemplateConfig {
+  localStorage.removeItem(CARD_TEMPLATE_KEY);
+  return { ...defaultCardTemplates };
 }

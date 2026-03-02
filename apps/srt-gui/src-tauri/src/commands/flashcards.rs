@@ -122,6 +122,11 @@ pub struct FlashcardConfig {
 
     // Performance: CPU cores to use (optional, defaults to 3/4 of available)
     pub cpu_cores: Option<usize>,
+
+    // Custom Anki card templates (optional, overrides built-in defaults)
+    pub card_front_html: Option<String>,
+    pub card_back_html: Option<String>,
+    pub card_css: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1371,10 +1376,10 @@ fn generate_apkg(
             field_defs.push(r#"{"name":"Back","ord":1,"sticky":false,"rtl":false,"font":"Arial","size":20,"description":"","plainText":false,"collapsed":false,"excludeFromSearch":false}"#.to_string());
         }
 
-        // Use custom subs2srs templates and styling
-        let qfmt = ANKI_FRONT_TEMPLATE;
-        let afmt = ANKI_BACK_TEMPLATE;
-        let css = ANKI_CARD_STYLING;
+        // Use custom templates if provided, otherwise use defaults
+        let qfmt = config.card_front_html.as_deref().unwrap_or(ANKI_FRONT_TEMPLATE);
+        let afmt = config.card_back_html.as_deref().unwrap_or(ANKI_BACK_TEMPLATE);
+        let css = config.card_css.as_deref().unwrap_or(ANKI_CARD_STYLING);
 
         let note_type_name = config.note_type_name.as_deref().unwrap_or("subs2srs");
 

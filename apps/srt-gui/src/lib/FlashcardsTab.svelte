@@ -1,11 +1,14 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
+  import { getCurrentWebview } from "@tauri-apps/api/webview";
   import { open } from "@tauri-apps/plugin-dialog";
   import { onDestroy, onMount, tick } from "svelte";
   import { locale } from "./i18n";
-  import { languages } from "./models";
+  import { languages, loadCardTemplates } from "./models";
   import SearchableSelect from "./SearchableSelect.svelte";
+
+  const SUBTITLE_EXTENSIONS = ["srt", "ass", "ssa", "vtt"];
 
   let t = $derived($locale);
 
@@ -67,6 +70,307 @@
       if (m) return parseInt(m[1], 10);
     }
     return null;
+  }
+
+  const ORIGINAL_SUBTITLE_HINTS = [
+    "native",
+    "original",
+    "orig",
+    "source",
+  ];
+  const REFERENCE_SUBTITLE_HINTS = [
+    "translated",
+    "translation",
+    "tradotto",
+    "traduzione",
+    "reference",
+    "ref",
+  ];
+  const KNOWN_LANGUAGE_CODES = new Set(
+    languages.map((lang) => lang.code.toLowerCase()),
+  );
+
+  interface ParsedSeriesSubtitle {
+    path: string;
+    name: string;
+    baseKey: string;
+    language: string | null;
+    roleHint: "original" | "reference" | "unknown";
+    episodeNumber: number | null;
+  }
+
+  interface SeriesDraftEntry {
+    baseKey: string;
+    displayName: string;
+    targetSubsPath: string;
+    nativeSubsPath: string;
+    mediaPath: string;
+    mediaType: "none" | "video" | "audio";
+    episodeNumber: number | null;
+  }
+
+  function stripCompoundSubtitleSuffix(baseName: string): string {
+    let stem = baseName.toLowerCase();
+    stem = stem.replace(/[\s]+/g, " ");
+    stem = stem.replace(/[._-](native|original|orig|source)(?=($|[._-]))/gi, "");
+    // Also strip reference/translation hints for consistent matching
+    stem = stem.replace(/[._-](translated|translation|tradotto|traduzione|reference|ref)(?=($|[._-]))/gi, "");
+
+    const suffixParts = stem.split(/[._-]+/).filter(Boolean);
+    if (suffixParts.length > 1) {
+      const lastPart = suffixParts[suffixParts.length - 1];
+      if (KNOWN_LANGUAGE_CODES.has(lastPart)) {
+        suffixParts.pop();
+      }
+    }
+    // Normalize all separators to underscore for consistent matching
+    stem = suffixParts.join("_");
+
+    return stem.replace(/[._-]+$/g, "").trim();
+  }
+
+  function parseSeriesSubtitle(path: string): ParsedSeriesSubtitle {
+    const name = getFileName(path);
+    const baseName = name.replace(/\.[^/.]+$/, "");
+    const normalized = baseName.toLowerCase();
+    const language = inferLanguageFromPath(path);
+    const roleHint = ORIGINAL_SUBTITLE_HINTS.some((hint) =>
+      new RegExp(`(^|[._-])${hint}([._-]|$)`, "i").test(normalized),
+    )
+      ? "original"
+      : REFERENCE_SUBTITLE_HINTS.some((hint) =>
+            new RegExp(`(^|[._-])${hint}([._-]|$)`, "i").test(normalized),
+          )
+        ? "reference"
+        : "unknown";
+
+    return {
+      path,
+      name,
+      baseKey: stripCompoundSubtitleSuffix(baseName) || normalized,
+      language,
+      roleHint,
+      episodeNumber: extractEpisodeNumber(name),
+    };
+  }
+
+  function parseSeriesMedia(path: string) {
+    const name = getFileName(path);
+    const baseName = name.replace(/\.[^/.]+$/, "");
+    return {
+      path,
+      name,
+      baseKey: stripCompoundSubtitleSuffix(baseName) || baseName.toLowerCase(),
+      mediaType: detectMediaType(name),
+      episodeNumber: extractEpisodeNumber(name),
+    };
+  }
+
+  function classifySubtitleCandidates(
+    paths: string[],
+    preferredRole: "target" | "native" | "auto" = "auto",
+  ): { target: string; native: string } {
+    if (paths.length === 0) return { target: "", native: "" };
+
+    const parsed = paths
+      .map(parseSeriesSubtitle)
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+    if (paths.length === 1) {
+      return preferredRole === "native"
+        ? { target: "", native: paths[0] }
+        : { target: paths[0], native: "" };
+    }
+
+    const normalizedNoteTypeLanguage = noteTypeLanguage.toLowerCase();
+    let targetCandidate =
+      parsed.find((item) => item.roleHint === "original") ||
+      (normalizedNoteTypeLanguage
+        ? parsed.find(
+            (item) => item.language?.toLowerCase() === normalizedNoteTypeLanguage,
+          )
+        : undefined) ||
+      parsed[0];
+
+    let nativeCandidate =
+      parsed.find(
+        (item) =>
+          item.path !== targetCandidate.path && item.roleHint === "reference",
+      ) ||
+      (normalizedNoteTypeLanguage
+        ? parsed.find(
+            (item) =>
+              item.path !== targetCandidate.path &&
+              item.language?.toLowerCase() !== normalizedNoteTypeLanguage,
+          )
+        : undefined) ||
+      parsed.find((item) => item.path !== targetCandidate.path) ||
+      null;
+
+    if (preferredRole === "native" && paths.length === 1) {
+      targetCandidate = { ...targetCandidate, path: "" };
+    }
+
+    return {
+      target: targetCandidate.path,
+      native: nativeCandidate?.path || "",
+    };
+  }
+
+  function buildSeriesDraftMap(): Map<string, SeriesDraftEntry> {
+    const map = new Map<string, SeriesDraftEntry>();
+
+    episodes.forEach((episode) => {
+      const baseKey =
+        episode.targetSubsPath
+          ? parseSeriesSubtitle(episode.targetSubsPath).baseKey
+          : episode.nativeSubsPath
+            ? parseSeriesSubtitle(episode.nativeSubsPath).baseKey
+            : episode.mediaPath
+              ? parseSeriesMedia(episode.mediaPath).baseKey
+              : `episode-${episode.id}`;
+
+      map.set(baseKey, {
+        baseKey,
+        displayName:
+          getFileName(episode.targetSubsPath || episode.nativeSubsPath || episode.mediaPath) ||
+          baseKey,
+        targetSubsPath: episode.targetSubsPath,
+        nativeSubsPath: episode.nativeSubsPath,
+        mediaPath: episode.mediaPath,
+        mediaType: episode.mediaType,
+        episodeNumber:
+          extractEpisodeNumber(
+            getFileName(
+              episode.targetSubsPath || episode.nativeSubsPath || episode.mediaPath,
+            ),
+          ) || null,
+      });
+    });
+
+    return map;
+  }
+
+  function seriesDraftMapToEpisodes(draftMap: Map<string, SeriesDraftEntry>) {
+    const sortedEntries = [...draftMap.values()].sort((a, b) => {
+      const aEpisode = a.episodeNumber ?? Number.MAX_SAFE_INTEGER;
+      const bEpisode = b.episodeNumber ?? Number.MAX_SAFE_INTEGER;
+      if (aEpisode !== bEpisode) return aEpisode - bEpisode;
+      return a.displayName.localeCompare(b.displayName, undefined, {
+        numeric: true,
+      });
+    });
+
+    episodes = sortedEntries.map((entry, index) => ({
+      id: index + 1,
+      targetSubsPath: entry.targetSubsPath,
+      nativeSubsPath: entry.nativeSubsPath,
+      mediaPath: entry.mediaPath,
+      mediaType: entry.mediaType,
+    }));
+  }
+
+  function mergeSeriesSubtitleFiles(
+    subtitleFiles: string[],
+    preferredRole: "target" | "native" | "auto",
+  ) {
+    const draftMap = buildSeriesDraftMap();
+    const grouped = new Map<string, string[]>();
+
+    subtitleFiles.forEach((path) => {
+      const parsed = parseSeriesSubtitle(path);
+      const group = grouped.get(parsed.baseKey) || [];
+      group.push(path);
+      grouped.set(parsed.baseKey, group);
+    });
+
+    grouped.forEach((paths, baseKey) => {
+      const parsedGroup = paths.map(parseSeriesSubtitle);
+      const epNum = parsedGroup.find((item) => item.episodeNumber !== null)?.episodeNumber || null;
+      let entry = draftMap.get(baseKey);
+
+      // Fallback: match by episode number if baseKey doesn't match
+      if (!entry && epNum !== null) {
+        for (const [, existing] of draftMap) {
+          if (existing.episodeNumber === epNum) {
+            entry = existing;
+            break;
+          }
+        }
+      }
+
+      if (!entry) {
+        entry = {
+          baseKey,
+          displayName: parsedGroup[0]?.name || baseKey,
+          targetSubsPath: "",
+          nativeSubsPath: "",
+          mediaPath: "",
+          mediaType: "none" as const,
+          episodeNumber: epNum,
+        };
+      }
+
+      const classified = classifySubtitleCandidates(paths, preferredRole);
+
+      if (preferredRole === "native" && paths.length === 1) {
+        entry.nativeSubsPath = paths[0];
+      } else {
+        if (classified.target) entry.targetSubsPath = classified.target;
+        if (classified.native) entry.nativeSubsPath = classified.native;
+      }
+
+      draftMap.set(entry.baseKey, entry);
+    });
+
+    seriesDraftMapToEpisodes(draftMap);
+  }
+
+  function mergeSeriesMediaFiles(mediaFiles: string[]) {
+    const draftMap = buildSeriesDraftMap();
+
+    mediaFiles.forEach((path) => {
+      const parsed = parseSeriesMedia(path);
+      let entry = draftMap.get(parsed.baseKey);
+
+      // Fallback: match by episode number if baseKey doesn't match
+      if (!entry && parsed.episodeNumber !== null) {
+        for (const [key, existing] of draftMap) {
+          if (existing.episodeNumber === parsed.episodeNumber && !existing.mediaPath) {
+            entry = existing;
+            break;
+          }
+        }
+      }
+
+      if (!entry) {
+        entry = {
+          baseKey: parsed.baseKey,
+          displayName: parsed.name,
+          targetSubsPath: "",
+          nativeSubsPath: "",
+          mediaPath: "",
+          mediaType: "none" as const,
+          episodeNumber: parsed.episodeNumber,
+        };
+      }
+
+      entry.mediaPath = parsed.path;
+      entry.mediaType = parsed.mediaType;
+      entry.episodeNumber = entry.episodeNumber ?? parsed.episodeNumber;
+      draftMap.set(entry.baseKey, entry);
+    });
+
+    seriesDraftMapToEpisodes(draftMap);
+  }
+
+  function mergeSeriesDroppedFiles(subtitleFiles: string[], mediaFiles: string[]) {
+    if (subtitleFiles.length > 0) {
+      mergeSeriesSubtitleFiles(subtitleFiles, "auto");
+    }
+    if (mediaFiles.length > 0) {
+      mergeSeriesMediaFiles(mediaFiles);
+    }
   }
 
   // Auto-match files across categories by episode number, then lexicographic
@@ -143,9 +447,17 @@
     episodes = newEpisodes;
   }
 
+  // Normalize open() return: may be string | string[] | null
+  function normalizeSelected(selected: unknown): string[] {
+    if (!selected) return [];
+    if (typeof selected === "string") return [selected];
+    if (Array.isArray(selected)) return selected.filter((s): s is string => typeof s === "string" && s.length > 0);
+    return [];
+  }
+
   async function addSeriesTargetSubs() {
     try {
-      const selected = await open({
+      const raw = await open({
         multiple: true,
         filters: [
           {
@@ -154,16 +466,13 @@
           },
         ],
       });
-      if (selected && Array.isArray(selected) && selected.length > 0) {
-        autoMatchFiles(
-          selected as string[],
-          episodes.map((e) => e.nativeSubsPath).filter(Boolean),
-          episodes.map((e) => e.mediaPath).filter(Boolean),
-        );
+      const selected = normalizeSelected(raw);
+      if (selected.length > 0) {
+        mergeSeriesSubtitleFiles(selected, "target");
 
         // Infer language from first file if needed
         if (!noteTypeLanguage) {
-          const inferred = inferLanguageFromPath(selected[0] as string);
+          const inferred = inferLanguageFromPath(selected[0]);
           if (inferred) {
             noteTypeLanguage = inferred;
             localStorage.setItem(NOTE_TYPE_LANGUAGE_KEY, inferred);
@@ -182,7 +491,7 @@
 
   async function addSeriesNativeSubs() {
     try {
-      const selected = await open({
+      const raw = await open({
         multiple: true,
         filters: [
           {
@@ -191,14 +500,11 @@
           },
         ],
       });
-      if (selected && Array.isArray(selected) && selected.length > 0) {
-        autoMatchFiles(
-          episodes.map((e) => e.targetSubsPath),
-          selected as string[],
-          episodes.map((e) => e.mediaPath).filter(Boolean),
-        );
+      const selected = normalizeSelected(raw);
+      if (selected.length > 0) {
+        mergeSeriesSubtitleFiles(selected, "native");
         addLog(
-          `${(selected as string[]).length} ${t("flashcards.seriesNativeSubsAdded")}`,
+          `${selected.length} ${t("flashcards.seriesNativeSubsAdded")}`,
           "native-subs",
         );
       }
@@ -209,7 +515,7 @@
 
   async function addSeriesMedia() {
     try {
-      const selected = await open({
+      const raw = await open({
         multiple: true,
         filters: [
           {
@@ -218,14 +524,11 @@
           },
         ],
       });
-      if (selected && Array.isArray(selected) && selected.length > 0) {
-        autoMatchFiles(
-          episodes.map((e) => e.targetSubsPath),
-          episodes.map((e) => e.nativeSubsPath).filter(Boolean),
-          selected as string[],
-        );
+      const selected = normalizeSelected(raw);
+      if (selected.length > 0) {
+        mergeSeriesMediaFiles(selected);
         addLog(
-          `${(selected as string[]).length} ${t("flashcards.seriesMediaAdded")}`,
+          `${selected.length} ${t("flashcards.seriesMediaAdded")}`,
           "media",
         );
       }
@@ -358,6 +661,12 @@
     col3: ["exportFormat", "cpuCores", "actions", "progressResult", "logs"],
   };
 
+  const DEFAULT_SERIES_LAYOUT: ColumnLayout = {
+    col1: ["naming", "ankiFields"],
+    col2: ["audioClips", "snapshots", "videoClips", "subtitleOptions", "contextLines", "filters"],
+    col3: ["exportFormat", "cpuCores", "actions", "progressResult", "logs"],
+  };
+
   function loadLayout(): ColumnLayout {
     try {
       const saved = localStorage.getItem("vesta-flashcards-layout-v2");
@@ -374,11 +683,43 @@
     return { ...DEFAULT_LAYOUT };
   }
 
+  function loadSeriesLayout(): ColumnLayout {
+    try {
+      const saved = localStorage.getItem("vesta-flashcards-series-layout-v1");
+      if (saved) {
+        const parsed = JSON.parse(saved) as ColumnLayout;
+        const all = [...parsed.col1, ...parsed.col2, ...parsed.col3];
+        const valid =
+          PANEL_IDS.every((id) => all.includes(id)) &&
+          all.length === PANEL_IDS.length;
+        if (valid) return parsed;
+      }
+    } catch {}
+    return { ...DEFAULT_SERIES_LAYOUT };
+  }
+
   function saveLayout(layout: ColumnLayout) {
     localStorage.setItem("vesta-flashcards-layout-v2", JSON.stringify(layout));
   }
 
-  let panelLayout = $state<ColumnLayout>(loadLayout());
+  function saveSeriesLayout(layout: ColumnLayout) {
+    localStorage.setItem("vesta-flashcards-series-layout-v1", JSON.stringify(layout));
+  }
+
+  let movieLayout = $state<ColumnLayout>(loadLayout());
+  let seriesLayout = $state<ColumnLayout>(loadSeriesLayout());
+
+  let panelLayout = $derived(seriesMode ? seriesLayout : movieLayout);
+
+  function updatePanelLayout(newLayout: ColumnLayout) {
+    if (seriesMode) {
+      seriesLayout = newLayout;
+      saveSeriesLayout(newLayout);
+    } else {
+      movieLayout = newLayout;
+      saveLayout(newLayout);
+    }
+  }
 
   // Column count (1, 2, or 3)
   const COLUMN_COUNT_KEY = "vesta-flashcards-column-count";
@@ -397,22 +738,22 @@
   function setColumnCount(count: 1 | 2 | 3) {
     columnCount = count;
     localStorage.setItem(COLUMN_COUNT_KEY, String(count));
+    let newLayout: ColumnLayout;
     // Redistribute panels: merge hidden columns into the last visible one
     if (count === 1) {
-      panelLayout = {
+      newLayout = {
         col1: [...panelLayout.col1, ...panelLayout.col2, ...panelLayout.col3],
         col2: [],
         col3: [],
       };
     } else if (count === 2) {
-      panelLayout = {
+      newLayout = {
         col1: [...panelLayout.col1],
         col2: [...panelLayout.col2, ...panelLayout.col3],
         col3: [],
       };
-    }
-    // For count === 3, if col2/col3 are empty, redistribute from col1
-    if (count === 3) {
+    } else {
+      // For count === 3, if col2/col3 are empty, redistribute from col1
       const all = [
         ...panelLayout.col1,
         ...panelLayout.col2,
@@ -421,7 +762,7 @@
       if (panelLayout.col2.length === 0 && panelLayout.col3.length === 0) {
         const third = Math.ceil(all.length / 3);
         const twoThirds = Math.ceil((all.length * 2) / 3);
-        panelLayout = {
+        newLayout = {
           col1: all.slice(0, third),
           col2: all.slice(third, twoThirds),
           col3: all.slice(twoThirds),
@@ -430,14 +771,16 @@
         // Coming from 2 columns: split col2
         const col2All = [...panelLayout.col2];
         const half = Math.ceil(col2All.length / 2);
-        panelLayout = {
+        newLayout = {
           col1: [...panelLayout.col1],
           col2: col2All.slice(0, half),
           col3: col2All.slice(half),
         };
+      } else {
+        newLayout = { ...panelLayout };
       }
     }
-    saveLayout(panelLayout);
+    updatePanelLayout(newLayout);
   }
 
   // Computed column grid class
@@ -512,8 +855,7 @@
     newLayout[col] = [...newLayout[col]];
     newLayout[col].splice(idx, 0, draggedPanel);
 
-    panelLayout = newLayout;
-    saveLayout(panelLayout);
+    updatePanelLayout(newLayout);
     draggedPanel = null;
     dragOverCol = null;
     dragOverIdx = null;
@@ -530,13 +872,21 @@
   }
 
   function resetLayout() {
-    panelLayout = {
-      ...DEFAULT_LAYOUT,
-      col1: [...DEFAULT_LAYOUT.col1],
-      col2: [...DEFAULT_LAYOUT.col2],
-      col3: [...DEFAULT_LAYOUT.col3],
-    };
-    saveLayout(panelLayout);
+    if (seriesMode) {
+      seriesLayout = {
+        col1: [...DEFAULT_SERIES_LAYOUT.col1],
+        col2: [...DEFAULT_SERIES_LAYOUT.col2],
+        col3: [...DEFAULT_SERIES_LAYOUT.col3],
+      };
+      saveSeriesLayout(seriesLayout);
+    } else {
+      movieLayout = {
+        col1: [...DEFAULT_LAYOUT.col1],
+        col2: [...DEFAULT_LAYOUT.col2],
+        col3: [...DEFAULT_LAYOUT.col3],
+      };
+      saveLayout(movieLayout);
+    }
     columnCount = 3;
     localStorage.setItem(COLUMN_COUNT_KEY, "3");
   }
@@ -626,6 +976,7 @@
   const previewPerPage = 50;
 
   let unlisten: (() => void) | null = null;
+  let unlistenDragDrop: (() => void) | null = null;
   let canRunFlashcards = $derived(
     seriesMode
       ? Boolean(
@@ -664,6 +1015,136 @@
     }
 
     return null;
+  }
+
+  // ─── File Drag-and-Drop Handler ───────────────────────────────────────────
+  function getFileExtension(path: string): string {
+    return (path.split(".").pop() || "").toLowerCase();
+  }
+
+  function getFileName(path: string): string {
+    return path.replace(/\\/g, "/").split("/").pop() || path;
+  }
+
+  function isSubtitleFile(path: string): boolean {
+    return SUBTITLE_EXTENSIONS.includes(getFileExtension(path));
+  }
+
+  function isMediaFile(path: string): boolean {
+    const ext = getFileExtension(path);
+    return VIDEO_EXTENSIONS.includes(ext) || AUDIO_EXTENSIONS.includes(ext);
+  }
+
+  /**
+   * Determine which subtitle file is "target" (the one you're studying)
+   * and which is "native" (your native language translation).
+   * Uses language codes in filenames, keywords, and the selected noteTypeLanguage.
+   */
+  function classifySubtitles(paths: string[]): { target: string; native: string } {
+    return classifySubtitleCandidates(paths, "auto");
+  }
+
+  async function handleFileDrop(paths: string[]) {
+    if (!paths || paths.length === 0) return;
+
+    const subtitleFiles = paths.filter(isSubtitleFile);
+    const mediaFiles = paths.filter(isMediaFile);
+
+    if (subtitleFiles.length === 0 && mediaFiles.length === 0) {
+      addLog(t("flashcards.dropNoValidFiles") || "No valid subtitle or media files dropped", "warning");
+      return;
+    }
+
+    if (seriesMode) {
+      if (subtitleFiles.length > 0 || mediaFiles.length > 0) {
+        mergeSeriesDroppedFiles(subtitleFiles, mediaFiles);
+        addLog(`${episodes.length} ${t("flashcards.seriesEpisodesAdded")}`, "target-subs");
+      }
+    } else {
+      // Single-episode mode
+      if (subtitleFiles.length >= 2) {
+        const { target, native } = classifySubtitles(subtitleFiles);
+        if (target) {
+          targetSubsPath = target;
+          const filename = getFileName(target);
+          if (!noteTypeLanguage) {
+            const inferred = inferLanguageFromPath(target);
+            if (inferred) {
+              noteTypeLanguage = inferred;
+              localStorage.setItem(NOTE_TYPE_LANGUAGE_KEY, inferred);
+            }
+          }
+          try {
+            const info = await invoke<any>("flashcard_load_subs", { path: target });
+            targetSubsInfo = info;
+            addLog(`${info.count} ${t("flashcards.subtitlesLoaded")} (${info.format.toUpperCase()})`, "target-subs", filename);
+            if (!deckName) deckName = filename.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
+          } catch (e) {
+            error = `Error parsing subtitles: ${e}`;
+          }
+        }
+        if (native) {
+          nativeSubsPath = native;
+          const filename = getFileName(native);
+          try {
+            const info = await invoke<any>("flashcard_load_subs", { path: native });
+            nativeSubsInfo = info;
+            addLog(`${info.count} ${t("flashcards.subtitlesLoaded")} (${info.format.toUpperCase()})`, "native-subs", filename);
+          } catch (e) {
+            error = `Error parsing native subtitles: ${e}`;
+          }
+        }
+      } else if (subtitleFiles.length === 1) {
+        // Single subtitle: assign to target if empty, otherwise to native
+        const subPath = subtitleFiles[0];
+        const filename = getFileName(subPath);
+        if (!targetSubsPath) {
+          targetSubsPath = subPath;
+          if (!noteTypeLanguage) {
+            const inferred = inferLanguageFromPath(subPath);
+            if (inferred) {
+              noteTypeLanguage = inferred;
+              localStorage.setItem(NOTE_TYPE_LANGUAGE_KEY, inferred);
+            }
+          }
+          try {
+            const info = await invoke<any>("flashcard_load_subs", { path: subPath });
+            targetSubsInfo = info;
+            addLog(`${info.count} ${t("flashcards.subtitlesLoaded")} (${info.format.toUpperCase()})`, "target-subs", filename);
+            if (!deckName) deckName = filename.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
+          } catch (e) {
+            error = `Error parsing subtitles: ${e}`;
+          }
+        } else {
+          nativeSubsPath = subPath;
+          try {
+            const info = await invoke<any>("flashcard_load_subs", { path: subPath });
+            nativeSubsInfo = info;
+            addLog(`${info.count} ${t("flashcards.subtitlesLoaded")} (${info.format.toUpperCase()})`, "native-subs", filename);
+          } catch (e) {
+            error = `Error parsing native subtitles: ${e}`;
+          }
+        }
+      }
+
+      // Handle media files
+      if (mediaFiles.length > 0) {
+        const mp = mediaFiles[0];
+        mediaPath = mp;
+        const filename = getFileName(mp);
+        mediaType = detectMediaType(filename);
+        if (mediaType === "video") {
+          generateAudio = true;
+          generateSnapshots = true;
+          addLog(`${t("flashcards.mediaTypeVideo")}`, "media", filename);
+        } else if (mediaType === "audio") {
+          generateAudio = true;
+          generateSnapshots = false;
+          generateVideoClips = false;
+          addLog(`${t("flashcards.mediaTypeAudio")}`, "media", filename);
+        }
+      }
+    }
   }
 
   onMount(async () => {
@@ -708,6 +1189,17 @@
       cpuCores = 3;
     }
 
+    // Listen for OS-level file drag and drop
+    try {
+      unlistenDragDrop = await getCurrentWebview().onDragDropEvent((event) => {
+        if (event.payload.type === "drop" && event.payload.paths) {
+          handleFileDrop(event.payload.paths);
+        }
+      });
+    } catch (e) {
+      console.warn("Failed to set up drag-drop listener:", e);
+    }
+
     unlisten = await listen<{
       stage: string;
       message: string;
@@ -730,6 +1222,7 @@
 
   onDestroy(() => {
     if (unlisten) unlisten();
+    if (unlistenDragDrop) unlistenDragDrop();
   });
 
   // Track the i18n key of the last progress log so sequential updates
@@ -845,6 +1338,9 @@
         include_subs2: includeSubs2Field,
       },
       cpu_cores: cpuCores,
+      card_front_html: loadCardTemplates().frontHtml,
+      card_back_html: loadCardTemplates().backHtml,
+      card_css: loadCardTemplates().css,
     };
   }
 
@@ -1156,6 +1652,9 @@
             include_subs2: includeSubs2Field,
           },
           cpu_cores: cpuCores,
+          card_front_html: loadCardTemplates().frontHtml,
+          card_back_html: loadCardTemplates().backHtml,
+          card_css: loadCardTemplates().css,
         };
 
         try {
@@ -1391,8 +1890,11 @@
   }
 </script>
 
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class="h-full flex flex-col p-6 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-gray-950"
+  ondragover={(e) => e.preventDefault()}
+  ondrop={(e) => e.preventDefault()}
 >
   {#if ffmpegAvailable === false}
     <div
@@ -1946,11 +2448,11 @@
               </div>
             {:else}
               <div class="border border-gray-700/50 rounded-lg overflow-hidden">
-                <div class="overflow-y-auto max-h-[300px]">
-                  <table class="w-full text-xs">
+                <div class="overflow-y-auto max-h-[400px]">
+                  <table class="w-full text-xs table-fixed">
                     <thead class="bg-gray-800/80 sticky top-0">
                       <tr>
-                        <th class="p-1.5 text-left text-gray-400 w-8">#</th>
+                        <th class="p-1.5 text-left text-gray-400 w-10">#</th>
                         <th class="p-1.5 text-left text-gray-400"
                           >{t("flashcards.targetLangSubs")}</th
                         >
@@ -1960,7 +2462,7 @@
                         <th class="p-1.5 text-left text-gray-400"
                           >{t("flashcards.mediaFile")}</th
                         >
-                        <th class="p-1.5 w-8"></th>
+                        <th class="p-1.5 w-10"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1972,13 +2474,13 @@
                         >
                           <td class="p-1.5 text-gray-500 font-mono">{ep.id}</td>
                           <td
-                            class="p-1.5 text-emerald-300 truncate max-w-[150px]"
+                            class="p-1.5 text-emerald-300 truncate"
                             title={ep.targetSubsPath}
                           >
                             {ep.targetSubsPath.split("/").pop()}
                           </td>
                           <td
-                            class="p-1.5 truncate max-w-[150px] {ep.nativeSubsPath
+                            class="p-1.5 truncate {ep.nativeSubsPath
                               ? 'text-blue-300'
                               : 'text-gray-600'}"
                             title={ep.nativeSubsPath || "—"}
@@ -1988,7 +2490,7 @@
                               : "—"}
                           </td>
                           <td
-                            class="p-1.5 truncate max-w-[150px] {ep.mediaPath
+                            class="p-1.5 truncate {ep.mediaPath
                               ? 'text-purple-300'
                               : 'text-gray-600'}"
                             title={ep.mediaPath || "—"}
@@ -3013,7 +3515,11 @@
         {/if}
       </div>
     {:else if panelId === "ankiFields"}
-      <div class="glass-card p-4">
+      <div
+        class="glass-card p-4 {!hasAnyFiles
+          ? 'opacity-50 pointer-events-none'
+          : ''}"
+      >
         <h3
           class="text-sm font-semibold mb-3 flex items-center gap-2 text-lime-400"
         >
@@ -3165,7 +3671,11 @@
         </div>
       </div>
     {:else if panelId === "exportFormat"}
-      <div class="glass-card p-4">
+      <div
+        class="glass-card p-4 {!hasAnyFiles
+          ? 'opacity-50 pointer-events-none'
+          : ''}"
+      >
         <h3
           class="text-sm font-semibold mb-3 flex items-center gap-2 text-sky-400"
         >
@@ -3307,7 +3817,11 @@
         </div>
       </div>
     {:else if panelId === "naming"}
-      <div class="glass-card p-4">
+      <div
+        class="glass-card p-4 {!hasAnyFiles
+          ? 'opacity-50 pointer-events-none'
+          : ''}"
+      >
         <h3
           class="text-sm font-semibold mb-3 flex items-center gap-2 text-amber-400"
         >
@@ -3360,21 +3874,15 @@
               placeholder={t("flashcards.deckNamePlaceholder")}
             />
           </div>
-          <div>
-            <span class="block text-xs text-gray-400 mb-1"
-              >{t("flashcards.firstEpisode")}</span
-            >
-            <input
-              type="number"
-              bind:value={firstEpisode}
-              min="1"
-              class="input-modern w-20 text-sm"
-            />
-          </div>
+
         </div>
       </div>
     {:else if panelId === "cpuCores"}
-      <div class="glass-card p-4">
+      <div
+        class="glass-card p-4 {!hasAnyFiles
+          ? 'opacity-50 pointer-events-none'
+          : ''}"
+      >
         <h3
           class="text-sm font-semibold mb-3 flex items-center gap-2 text-orange-400"
         >
@@ -3927,13 +4435,20 @@
   </div>
 
   <div class="flex-1 grid {gridColClass} gap-4 min-h-0 overflow-y-auto">
+    {#if seriesMode}
+      <!-- In series mode, render the files panel full-width above the columns -->
+      <div class="{columnCount >= 2 ? 'col-span-2' : ''} {columnCount >= 3 ? 'col-span-3' : ''} mb-1">
+        {@render panelContent("files")}
+      </div>
+    {/if}
     <div
-      class="space-y-3 overflow-y-auto pr-1 min-h-[100px]"
+      class="space-y-3 {seriesMode ? '' : 'overflow-y-auto'} pr-1 min-h-[100px]"
       ondragover={(e) => onDragOverColumn(e, "col1")}
       ondrop={() => onDropColumn("col1")}
       role="list"
     >
       {#each panelLayout.col1 as panelId, idx (panelId)}
+        {#if !(seriesMode && panelId === "files")}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
           draggable="true"
@@ -3956,6 +4471,7 @@
         >
           {@render panelContent(panelId)}
         </div>
+        {/if}
       {/each}
       {#if draggedPanel && dragOverCol === "col1" && dragOverIdx === panelLayout.col1.length}
         <div class="h-1 bg-emerald-400 rounded-full mx-4 transition-all"></div>
@@ -3964,12 +4480,13 @@
 
     {#if columnCount >= 2}
       <div
-        class="space-y-3 overflow-y-auto pr-1 min-h-[100px]"
+        class="space-y-3 {seriesMode ? '' : 'overflow-y-auto'} pr-1 min-h-[100px]"
         ondragover={(e) => onDragOverColumn(e, "col2")}
         ondrop={() => onDropColumn("col2")}
         role="list"
       >
         {#each panelLayout.col2 as panelId, idx (panelId)}
+          {#if !(seriesMode && panelId === "files")}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             draggable="true"
@@ -3992,6 +4509,7 @@
           >
             {@render panelContent(panelId)}
           </div>
+          {/if}
         {/each}
         {#if draggedPanel && dragOverCol === "col2" && dragOverIdx === panelLayout.col2.length}
           <div
@@ -4003,12 +4521,13 @@
 
     {#if columnCount >= 3}
       <div
-        class="space-y-3 overflow-y-auto pr-1 min-h-[100px]"
+        class="space-y-3 {seriesMode ? '' : 'overflow-y-auto'} pr-1 min-h-[100px]"
         ondragover={(e) => onDragOverColumn(e, "col3")}
         ondrop={() => onDropColumn("col3")}
         role="list"
       >
         {#each panelLayout.col3 as panelId, idx (panelId)}
+          {#if !(seriesMode && panelId === "files")}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             draggable="true"
@@ -4031,6 +4550,7 @@
           >
             {@render panelContent(panelId)}
           </div>
+          {/if}
         {/each}
         {#if draggedPanel && dragOverCol === "col3" && dragOverIdx === panelLayout.col3.length}
           <div
