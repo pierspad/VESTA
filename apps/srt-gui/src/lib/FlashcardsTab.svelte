@@ -3013,7 +3013,11 @@
         {/if}
       </div>
     {:else if panelId === "ankiFields"}
-      <div class="glass-card p-4">
+      <div
+        class="glass-card p-4 {!hasAnyFiles
+          ? 'opacity-50 pointer-events-none'
+          : ''}"
+      >
         <h3
           class="text-sm font-semibold mb-3 flex items-center gap-2 text-lime-400"
         >
@@ -3307,7 +3311,11 @@
         </div>
       </div>
     {:else if panelId === "naming"}
-      <div class="glass-card p-4">
+      <div
+        class="glass-card p-4 {!hasAnyFiles
+          ? 'opacity-50 pointer-events-none'
+          : ''}"
+      >
         <h3
           class="text-sm font-semibold mb-3 flex items-center gap-2 text-amber-400"
         >

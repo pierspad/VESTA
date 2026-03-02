@@ -879,7 +879,7 @@
 </script>
 
 <div
-  class="h-full flex flex-col overflow-hidden bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 relative"
+  class="h-full flex flex-col p-6 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-900 to-gray-950 relative"
   role="application"
   ondrop={(e) => {
     e.preventDefault();
@@ -975,7 +975,7 @@
   ></video>
 
   <!-- Reset Layout Button -->
-  <div class="flex justify-end px-4 mt-2">
+  <div class="flex justify-end">
     <button
       onclick={resetSyncLayout}
       class="text-[10px] text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
@@ -998,9 +998,7 @@
   </div>
 
   <!-- Top Bar -->
-  <div
-    class="flex items-center gap-4 p-4 glass-card mx-4 mt-1 mb-0 flex-shrink-0"
-  >
+  <div class="flex items-center gap-4 p-4 glass-card mt-1 mb-0 flex-shrink-0">
     <div class="flex items-center gap-2 flex-1 max-w-lg">
       <button
         onclick={selectSrtFile}
@@ -1788,7 +1786,7 @@
   {/snippet}
 
   <!-- Main Grid: 2 Columns (Drag-and-Drop Reorderable) -->
-  <div class="flex-1 grid grid-cols-2 gap-4 p-4 pt-2 min-h-0 overflow-hidden">
+  <div class="flex-1 grid grid-cols-2 gap-6 pt-2 min-h-0 overflow-hidden">
     <div
       class="flex flex-col gap-3 overflow-y-auto min-h-[100px]"
       ondragover={(e) => sOnDragOverColumn(e, "col1")}

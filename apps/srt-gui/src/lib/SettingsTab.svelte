@@ -31,8 +31,8 @@
   let newKeyType = $state<ApiKeyConfig["apiType"]>("google");
   let newKeyValue = $state("");
   let newKeyUrl = $state("");
-  let newKeyModelName = $state("");
   let showNewKeyPassword = $state(false);
+  let editKeyId = $state<string | null>(null);
 
   let currentProviderModels = $derived(
     getModelsForProvider(selectedProviderType),
@@ -92,14 +92,27 @@
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   }
 
-  function openAddKeyModal(providerId?: string, modelName?: string) {
+  function openAddKeyModal(providerId?: string) {
+    editKeyId = null;
     if (providerId) {
       newKeyType = providerId as ApiKeyConfig["apiType"];
       newKeyName = providers[providerId]?.name || "";
     }
-    if (modelName) {
-      newKeyModelName = modelName;
-    }
+    newKeyValue = "";
+    newKeyUrl =
+      newKeyType === "local" ? providers.local.defaultApiUrl || "" : "";
+    showAddKey = true;
+  }
+
+  function openEditKeyModal(id: string) {
+    const key = apiKeys.find((k) => k.id === id);
+    if (!key) return;
+    editKeyId = id;
+    newKeyType = key.apiType;
+    newKeyName = key.name;
+    newKeyValue = key.apiKey;
+    newKeyUrl = key.apiUrl || "";
+    showNewKeyPassword = false;
     showAddKey = true;
   }
 
@@ -109,50 +122,63 @@
       return;
     }
 
-    if (newKeyType !== "local") {
-      if (!newKeyUrl.trim()) {
-        error =
-          t("settings.errorEndpointRequired");
-        return;
-      }
-      if (!newKeyValue.trim()) {
-        error = t("settings.errorKeyRequired");
-        return;
-      }
+    if (newKeyType === "local" && !newKeyUrl.trim()) {
+      error = t("settings.errorEndpointRequired");
+      return;
     }
 
-    if (newKeyType === "local" && !newKeyUrl.trim()) {
-      error =
-        t("settings.errorEndpointRequired");
+    if (newKeyType !== "local" && !newKeyValue.trim()) {
+      error = t("settings.errorKeyRequired");
       return;
     }
 
     if (newKeyType === "google" && !newKeyValue.trim().startsWith("AIza")) {
-      error =
-        t("settings.errorInvalidGoogleKey");
+      error = t("settings.errorInvalidGoogleKey");
       return;
     }
 
-    const newKey: ApiKeyConfig = {
-      id: generateId(),
-      name: newKeyName.trim(),
-      apiType: newKeyType,
-      apiKey: newKeyValue.trim(),
-      apiUrl: newKeyUrl.trim() || undefined,
-      modelName: newKeyModelName.trim() || undefined,
-      isDefault: apiKeys.filter((k) => k.apiType === newKeyType).length === 0,
-    };
+    // Auto-set API URL for known providers
+    let resolvedUrl = newKeyUrl.trim() || undefined;
+    if (newKeyType === "google") {
+      resolvedUrl = "https://generativelanguage.googleapis.com/v1beta";
+    }
 
-    apiKeys = [...apiKeys, newKey];
-    saveApiKeys();
+    if (editKeyId) {
+      // Edit existing key
+      apiKeys = apiKeys.map((k) =>
+        k.id === editKeyId
+          ? {
+              ...k,
+              name: newKeyName.trim(),
+              apiType: newKeyType,
+              apiKey: newKeyValue.trim(),
+              apiUrl: resolvedUrl,
+            }
+          : k,
+      );
+      saveApiKeys();
+      success = t("settings.keyUpdated");
+    } else {
+      // Add new key
+      const newKey: ApiKeyConfig = {
+        id: generateId(),
+        name: newKeyName.trim(),
+        apiType: newKeyType,
+        apiKey: newKeyValue.trim(),
+        apiUrl: resolvedUrl,
+        isDefault: apiKeys.filter((k) => k.apiType === newKeyType).length === 0,
+      };
+      apiKeys = [...apiKeys, newKey];
+      saveApiKeys();
+      success = t("settings.keyAdded");
+    }
 
     newKeyName = "";
     newKeyValue = "";
     newKeyUrl = "";
-    newKeyModelName = "";
+    editKeyId = null;
     showAddKey = false;
 
-    success = t("settings.keyAdded");
     setTimeout(() => (success = null), 3000);
   }
 
@@ -263,11 +289,7 @@
   }
 
   function onModelClick(model: ModelInfo) {
-    if (model.provider === "google") {
-      newKeyUrl = "https://generativelanguage.googleapis.com/v1beta";
-    }
-    // Usa l'ID del modello, non il nome display
-    openAddKeyModal(model.provider, model.id);
+    openAddKeyModal(model.provider);
   }
 </script>
 
@@ -405,7 +427,9 @@
                 {:else}
                   <span class="text-sm">🌐</span>
                 {/if}
-                <span class="truncate">{t(`provider.${pid}`) || provider?.name || pid}</span>
+                <span class="truncate"
+                  >{t(`provider.${pid}`) || provider?.name || pid}</span
+                >
                 {#if !isEnabled}
                   <span
                     class="absolute -top-1 -right-1 text-[8px] bg-amber-500/80 text-white px-1 py-0.5 rounded font-bold"
@@ -422,7 +446,9 @@
             {providers[selectedProviderType]?.name || selectedProviderType}
           </h3>
           <p class="text-sm text-gray-500 leading-relaxed">
-            {t(`provider.${selectedProviderType}.desc`) || providers[selectedProviderType]?.description || ""}
+            {t(`provider.${selectedProviderType}.desc`) ||
+              providers[selectedProviderType]?.description ||
+              ""}
           </p>
           {#if selectedProviderType === "google"}
             <div
@@ -621,16 +647,9 @@
                       </span>
                     {/if}
                   </div>
-                  {#if key.modelName}
-                    <div class="text-[10px] text-indigo-400 mt-1 truncate">
-                      {t("settings.model")}: {key.modelName}
-                    </div>
-                  {/if}
                 </div>
 
-                <div
-                  class="flex flex-col gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                >
+                <div class="flex items-center gap-1.5">
                   {#if !key.isDefault}
                     <button
                       onclick={() => setDefaultKey(key.id)}
@@ -638,7 +657,7 @@
                       title={t("settings.setAsDefault")}
                     >
                       <svg
-                        class="w-3.5 h-3.5"
+                        class="w-4 h-4"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -653,12 +672,31 @@
                     </button>
                   {/if}
                   <button
+                    onclick={() => openEditKeyModal(key.id)}
+                    class="p-2.5 text-gray-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors"
+                    title={t("settings.edit")}
+                  >
+                    <svg
+                      class="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+                  <button
                     onclick={() => askDeleteApiKey(key.id)}
-                    class="p-1.5 text-gray-500 hover:text-red-400 hover:bg-white/10 rounded transition-colors"
+                    class="p-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
                     title={t("settings.delete")}
                   >
                     <svg
-                      class="w-3.5 h-3.5"
+                      class="w-5 h-5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -717,7 +755,9 @@
       >
         <div class="p-6 border-b border-white/5 bg-white/5">
           <h3 class="text-xl font-bold text-white flex items-center gap-2">
-            {t("settings.modal.addCustomApiKey")}
+            {editKeyId
+              ? t("settings.modal.editApiKey")
+              : t("settings.modal.addCustomApiKey")}
           </h3>
         </div>
 
@@ -800,7 +840,9 @@
                   </svg>
                 </div>
                 <div class="flex flex-col">
-                  <span class="text-sm font-bold">{t("settings.modal.providerGoogle")}</span>
+                  <span class="text-sm font-bold"
+                    >{t("settings.modal.providerGoogle")}</span
+                  >
                   <span class="text-[10px] opacity-70 leading-tight"
                     >{t("settings.modal.providerGoogleDesc")}</span
                   >
@@ -822,7 +864,9 @@
                   </svg>
                 </div>
                 <div class="flex flex-col">
-                  <span class="text-sm font-bold">{t("settings.modal.providerOpenai")}</span>
+                  <span class="text-sm font-bold"
+                    >{t("settings.modal.providerOpenai")}</span
+                  >
                   <span class="text-[10px] opacity-70 leading-tight"
                     >{t("settings.modal.providerOpenaiDesc")}</span
                   >
@@ -848,7 +892,9 @@
                   </svg>
                 </div>
                 <div class="flex flex-col">
-                  <span class="text-sm font-bold">{t("settings.modal.providerAnthropic")}</span>
+                  <span class="text-sm font-bold"
+                    >{t("settings.modal.providerAnthropic")}</span
+                  >
                   <span class="text-[10px] opacity-70 leading-tight"
                     >{t("settings.modal.providerAnthropicDesc")}</span
                   >
@@ -877,8 +923,8 @@
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-              <div class="col-span-2">
+            {#if newKeyType === "local"}
+              <div>
                 <label
                   for="api-url"
                   class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5"
@@ -894,76 +940,33 @@
                   class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all placeholder-gray-600 font-mono"
                 />
               </div>
+            {/if}
 
-              {#if newKeyType !== "local"}
-                <div class="col-span-2">
-                  <label
-                    for="api-key"
-                    class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5"
-                    >{t("settings.modal.apiKey")}</label
+            {#if newKeyType !== "local"}
+              <div>
+                <label
+                  for="api-key"
+                  class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5"
+                  >{t("settings.modal.apiKey")}</label
+                >
+                <div class="relative">
+                  <input
+                    id="api-key"
+                    type={showNewKeyPassword ? "text" : "password"}
+                    bind:value={newKeyValue}
+                    placeholder={newKeyType === "google" ? "AIza..." : "sk-..."}
+                    class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 pr-20 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all placeholder-gray-600 font-mono"
+                  />
+                  <div
+                    class="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1"
                   >
-                  <div class="relative">
-                    <input
-                      id="api-key"
-                      type={showNewKeyPassword ? "text" : "password"}
-                      bind:value={newKeyValue}
-                      placeholder={newKeyType === "google"
-                        ? "AIza..."
-                        : "sk-..."}
-                      class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 pr-20 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all placeholder-gray-600 font-mono"
-                    />
-                    <div
-                      class="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1"
+                    <button
+                      type="button"
+                      onclick={() => (showNewKeyPassword = !showNewKeyPassword)}
+                      class="p-1.5 text-gray-500 hover:text-gray-300 transition-colors"
+                      title={t("settings.toggleVisibility")}
                     >
-                      <button
-                        type="button"
-                        onclick={() =>
-                          (showNewKeyPassword = !showNewKeyPassword)}
-                        class="p-1.5 text-gray-500 hover:text-gray-300 transition-colors"
-                        title={t("settings.toggleVisibility")}
-                      >
-                        {#if showNewKeyPassword}
-                          <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                            />
-                          </svg>
-                        {:else}
-                          <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                            />
-                          </svg>
-                        {/if}
-                      </button>
-                      <button
-                        type="button"
-                        onclick={() => copyToClipboard(newKeyValue)}
-                        class="p-1.5 text-gray-500 hover:text-gray-300 transition-colors"
-                        title="Copy"
-                      >
+                      {#if showNewKeyPassword}
                         <svg
                           class="w-4 h-4"
                           fill="none"
@@ -974,50 +977,67 @@
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
-                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
                           />
                         </svg>
-                      </button>
-                    </div>
+                      {:else}
+                        <svg
+                          class="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      {/if}
+                    </button>
+                    <button
+                      type="button"
+                      onclick={() => copyToClipboard(newKeyValue)}
+                      class="p-1.5 text-gray-500 hover:text-gray-300 transition-colors"
+                      title="Copy"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 </div>
-              {/if}
-
-              <!-- Model ID - opzionale, il modello si sceglie nel tab Traduzione -->
-              <div class="col-span-2 animate-fade-in">
-                <label
-                  for="model-id"
-                  class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5"
-                >
-                  {t("settings.modal.defaultModel")}
-                  <span class="text-gray-600 font-normal normal-case"
-                    >({t("settings.modal.optional")})</span
-                  >
-                </label>
-                <input
-                  id="model-id"
-                  type="text"
-                  bind:value={newKeyModelName}
-                  placeholder={newKeyType === "local"
-                    ? "e.g. llama3.2, gemma3:27b..."
-                    : "e.g. gemini-2.0-flash, gemini-1.5-pro..."}
-                  class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all placeholder-gray-600 font-mono"
-                />
-                <p class="text-[10px] text-gray-500 mt-1.5 leading-relaxed">
-                  💡 {t("settings.modal.modelOptionalHint")}
-                </p>
-                {#if newKeyType === "google"}
-                  <p class="text-[10px] text-gray-500 mt-1.5 leading-relaxed">
-                    💡 {t("settings.modal.apiKeyHintGoogle")} <a
-                      href="https://aistudio.google.com/apikey"
-                      target="_blank"
-                      class="text-blue-400 hover:text-blue-300 underline"
-                      >aistudio.google.com/apikey</a
-                    >
-                  </p>
-                {/if}
               </div>
-            </div>
+            {/if}
+
+            {#if newKeyType === "google"}
+              <p class="text-[10px] text-gray-500 leading-relaxed">
+                💡 {t("settings.modal.apiKeyHintGoogle")}
+                <a
+                  href="https://aistudio.google.com/apikey"
+                  target="_blank"
+                  class="text-blue-400 hover:text-blue-300 underline"
+                  >aistudio.google.com/apikey</a
+                >
+              </p>
+            {/if}
           </div>
 
           <div class="flex gap-3 pt-4 border-t border-white/5">

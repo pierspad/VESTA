@@ -53,7 +53,7 @@ export const providers: Record<string, ProviderInfo> = {
     name: "Google Gemini",
     icon: "google", // Use icon ID for custom SVG icons
     color: "from-blue-500 to-cyan-500",
-    description: "Google Gemini native API (requires AIza... key)",
+    description: "Gemini 3.1 Pro, 3 Flash (requires AIza... key)",
     requiresApiKey: true,
     requiresApiUrl: false,
     defaultApiUrl: "https://generativelanguage.googleapis.com/v1beta",
@@ -64,7 +64,7 @@ export const providers: Record<string, ProviderInfo> = {
     name: "OpenAI GPT",
     icon: "openai", // Use icon ID for custom SVG icons
     color: "from-emerald-500 to-teal-500",
-    description: "GPT-4, GPT-4o, GPT-3.5 (Coming Soon)",
+    description: "GPT-5.2, GPT-5, GPT-4o (Coming Soon)",
     requiresApiKey: true,
     requiresApiUrl: false,
     defaultApiUrl: "https://api.openai.com/v1",
@@ -75,7 +75,7 @@ export const providers: Record<string, ProviderInfo> = {
     name: "Anthropic Claude",
     icon: "anthropic", // Use icon ID for custom SVG icons
     color: "from-orange-500 to-amber-500",
-    description: "Claude 3.5, Claude 3 (Coming Soon)",
+    description: "Opus 4.6, Sonnet 4.6 (Coming Soon)",
     requiresApiKey: true,
     requiresApiUrl: false,
     defaultApiUrl: "https://api.anthropic.com/v1",

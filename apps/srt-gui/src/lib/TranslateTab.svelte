@@ -4,7 +4,12 @@
   import { open, save } from "@tauri-apps/plugin-dialog";
   import { onDestroy, onMount } from "svelte";
   import { locale } from "./i18n";
-  import { getModelsForProvider, languages, loadAndValidateApiKeys, type ApiKeyConfig } from "./models";
+  import {
+    getModelsForProvider,
+    languages,
+    loadAndValidateApiKeys,
+    type ApiKeyConfig,
+  } from "./models";
   import SearchableSelect from "./SearchableSelect.svelte";
 
   interface Props {
@@ -63,6 +68,8 @@
   let batchSize = $state(15);
   let titleContext = $state("");
   let selectedModel = $state("");
+  let customEndpoint = $state("");
+  let customApiKey = $state("");
 
   const batchPresets = [
     { id: "precise", value: 5 },
@@ -71,10 +78,10 @@
     { id: "turbo", value: 50 },
   ] as const;
   let activeBatchPreset = $derived(
-    batchPresets.find(p => p.value === batchSize)?.id ?? null
+    batchPresets.find((p) => p.value === batchSize)?.id ?? null,
   );
   function setBatchPreset(presetId: string) {
-    const preset = batchPresets.find(p => p.id === presetId);
+    const preset = batchPresets.find((p) => p.id === presetId);
     if (preset) batchSize = preset.value;
   }
 
@@ -87,7 +94,7 @@
   let expandedPathField = $state<string | null>(null);
 
   let helpSection = $state<string | null>(null);
-  
+
   // Live subtitle preview - array of translated subtitle pairs
   interface SubtitlePair {
     id: number;
@@ -98,14 +105,15 @@
   let previewRefreshInterval: ReturnType<typeof setInterval> | null = null;
 
   let apiKeys = $state<ApiKeyConfig[]>([]);
-  
+
   let unlistenProgress: (() => void) | null = null;
   let unlistenComplete: (() => void) | null = null;
 
   let providerOptions = $derived.by(() => {
-     const opts = [{ id: "local", name: t("provider.local") }];
-     opts.push({ id: "google", name: t("provider.google") });
-     return opts;
+    const opts = [{ id: "local", name: t("provider.local") }];
+    opts.push({ id: "google", name: t("provider.google") });
+    opts.push({ id: "custom", name: t("provider.custom") });
+    return opts;
   });
 
   let availableModels = $derived.by(() => {
@@ -124,7 +132,10 @@
     if (currentLang !== previousTargetLang) {
       if (inputPath && outputPath) {
         if (outputPath.endsWith(`.${previousTargetLang}.srt`)) {
-          outputPath = outputPath.replace(new RegExp(`\\.${previousTargetLang}\\.srt$`, 'i'), `.${currentLang}.srt`);
+          outputPath = outputPath.replace(
+            new RegExp(`\\.${previousTargetLang}\\.srt$`, "i"),
+            `.${currentLang}.srt`,
+          );
         }
       } else if (inputPath && !outputPath) {
         outputPath = inputPath.replace(/\.srt$/i, `.${currentLang}.srt`);
@@ -136,27 +147,30 @@
   // Auto-select first model when provider changes (if current model invalid)
   $effect(() => {
     if (availableModels.length > 0) {
-       const currentValid = availableModels.find(m => m.id === selectedModel);
-       if (!currentValid) {
-         selectedModel = availableModels[0].id;
-       }
+      const currentValid = availableModels.find((m) => m.id === selectedModel);
+      if (!currentValid) {
+        selectedModel = availableModels[0].id;
+      }
     } else {
-        selectedModel = "";
+      selectedModel = "";
     }
   });
 
   $effect(() => {
-      if (!selectedProviderFamily && providerOptions.length > 0) {
-          selectedProviderFamily = "local"; // Default to Local LLM
-      }
+    if (!selectedProviderFamily && providerOptions.length > 0) {
+      selectedProviderFamily = "local"; // Default to Local LLM
+    }
   });
 
   let hasValidKey = $derived.by(() => {
-      if (selectedProviderFamily === "local") return true; 
-      if (selectedProviderFamily === "google") {
-        return apiKeys.some(k => k.apiType === "google");
-      }
-      return false;
+    if (selectedProviderFamily === "local") return true;
+    if (selectedProviderFamily === "google") {
+      return apiKeys.some((k) => k.apiType === "google");
+    }
+    if (selectedProviderFamily === "custom") {
+      return customEndpoint.trim().length > 0;
+    }
+    return false;
   });
 
   function handleStorageChange(e: StorageEvent) {
@@ -169,7 +183,7 @@
     loadApiKeys();
 
     window.addEventListener("storage", handleStorageChange);
-    
+
     // Also listen for custom event for same-window updates
     window.addEventListener("apikeys-updated", loadApiKeys);
 
@@ -178,7 +192,7 @@
       (event) => {
         progress = event.payload;
         addLog(event.payload.message);
-      }
+      },
     );
 
     unlistenComplete = await listen<TranslateResult>(
@@ -192,7 +206,7 @@
           progress = null;
         }
         addLog(`✅ ${event.payload.message}`);
-      }
+      },
     );
   });
 
@@ -213,13 +227,16 @@
 
   async function refreshTranslatedPreview() {
     if (!inputPath || !outputPath) return;
-    
+
     try {
-      const pairs = await invoke<SubtitlePair[]>("get_latest_translated_subtitles", {
-        inputPath: inputPath,
-        outputPath: outputPath,
-        count: 10 // Show last 10 translated subtitles
-      });
+      const pairs = await invoke<SubtitlePair[]>(
+        "get_latest_translated_subtitles",
+        {
+          inputPath: inputPath,
+          outputPath: outputPath,
+          count: 10, // Show last 10 translated subtitles
+        },
+      );
       translatedPairs = pairs;
     } catch (e) {
       // Silently ignore errors (file may not exist yet)
@@ -286,7 +303,9 @@
       fileInfo = await invoke<SrtFileInfo>("load_srt_for_translate", {
         path: inputPath,
       });
-      addLog(`📄 ${t("translate.loadedFile", { count: fileInfo.subtitle_count })}`);
+      addLog(
+        `📄 ${t("translate.loadedFile", { count: fileInfo.subtitle_count })}`,
+      );
     } catch (e) {
       error = `${t("translate.errorLoading")} ${e}`;
       fileInfo = null;
@@ -294,15 +313,24 @@
   }
 
   async function startTranslation() {
-    if (!inputPath || !outputPath || !selectedModel) {
+    if (
+      !inputPath ||
+      !outputPath ||
+      (selectedProviderFamily !== "custom" && !selectedModel)
+    ) {
       error = t("translate.selectFileAndKey");
       return;
     }
 
+    if (selectedProviderFamily === "custom" && !customEndpoint.trim()) {
+      error = t("translate.customEndpointRequired");
+      return;
+    }
+
     if (!hasValidKey) {
-        // Should not happen as button is disabled
-        error = t("translate.noApiWarning");
-        return;
+      // Should not happen as button is disabled
+      error = t("translate.noApiWarning");
+      return;
     }
 
     error = null;
@@ -315,31 +343,38 @@
 
     let keysToSend: string[] = [];
     if (selectedProviderFamily === "local") {
-        keysToSend = []; // Local doesn't need API keys
+      keysToSend = []; // Local doesn't need API keys
     } else if (selectedProviderFamily === "google") {
-        // Collect ALL Google keys (round-robin rotation)
-        keysToSend = apiKeys
-            .filter(k => k.apiType === "google")
-            .map(k => k.apiKey.trim())
-            .filter(k => k.length > 0);
+      // Collect ALL Google keys (round-robin rotation)
+      keysToSend = apiKeys
+        .filter((k) => k.apiType === "google")
+        .map((k) => k.apiKey.trim())
+        .filter((k) => k.length > 0);
     }
-    
+
     if (keysToSend.length > 0) {
-        addLog(`🔑 Using ${keysToSend.length} API key(s)`);
-        const hasValidGoogleKeys = keysToSend.some(k => k.startsWith('AIza'));
-        if (!hasValidGoogleKeys && selectedProviderFamily === "google") {
-            addLog(`⚠️ Warning: No valid Google AI keys found. Google API keys should start with 'AIza...'`);
-        }
+      addLog(`🔑 Using ${keysToSend.length} API key(s)`);
+      const hasValidGoogleKeys = keysToSend.some((k) => k.startsWith("AIza"));
+      if (!hasValidGoogleKeys && selectedProviderFamily === "google") {
+        addLog(
+          `⚠️ Warning: No valid Google AI keys found. Google API keys should start with 'AIza...'`,
+        );
+      }
     } else if (selectedProviderFamily !== "local") {
-        addLog(`⚠️ No valid API keys found for ${selectedProviderFamily}`);
+      addLog(`⚠️ No valid API keys found for ${selectedProviderFamily}`);
     }
-    
+
     let apiUrl: string | null = null;
     if (selectedProviderFamily === "local") {
-         const localKey = apiKeys.find(k => k.apiType === "local");
-         if (localKey && localKey.apiUrl) apiUrl = localKey.apiUrl;
+      const localKey = apiKeys.find((k) => k.apiType === "local");
+      if (localKey && localKey.apiUrl) apiUrl = localKey.apiUrl;
     } else if (selectedProviderFamily === "google") {
-        apiUrl = "https://generativelanguage.googleapis.com/v1beta";
+      apiUrl = "https://generativelanguage.googleapis.com/v1beta";
+    } else if (selectedProviderFamily === "custom") {
+      apiUrl = customEndpoint.trim();
+      if (customApiKey.trim()) {
+        keysToSend = [customApiKey.trim()];
+      }
     }
 
     const config: TranslateConfig = {
@@ -347,11 +382,12 @@
       output_path: outputPath,
       target_lang: targetLang,
       api_keys: keysToSend,
-      api_type: selectedProviderFamily, // "local" or "google"
+      api_type:
+        selectedProviderFamily === "custom" ? "custom" : selectedProviderFamily, // "local", "google", or "custom"
       batch_size: batchSize,
       title_context: titleContext || null,
       api_url: apiUrl,
-      model: selectedModel || null,
+      model: selectedProviderFamily === "custom" ? null : selectedModel || null,
     };
 
     try {
@@ -363,17 +399,25 @@
     } catch (e: any) {
       let msg = e ? e.toString() : "Unknown error";
       const errorLower = msg.toLowerCase();
-      
+
       let userMsg = msg;
-      
-      if (errorLower.includes("429") || errorLower.includes("quota") || errorLower.includes("rate limit")) {
-          userMsg = t("translate.error.ratelimit");
-      } else if (errorLower.includes("401") || errorLower.includes("unauthorized") || errorLower.includes("api key")) {
-          userMsg = t("translate.error.apikey");
+
+      if (
+        errorLower.includes("429") ||
+        errorLower.includes("quota") ||
+        errorLower.includes("rate limit")
+      ) {
+        userMsg = t("translate.error.ratelimit");
+      } else if (
+        errorLower.includes("401") ||
+        errorLower.includes("unauthorized") ||
+        errorLower.includes("api key")
+      ) {
+        userMsg = t("translate.error.apikey");
       } else if (errorLower.includes("json") || errorLower.includes("parse")) {
-          userMsg = t("translate.error.json");
+        userMsg = t("translate.error.json");
       }
-      
+
       error = `${t("translate.errorTranslating")} ${userMsg}`;
       isTranslating = false;
       addLog(`❌ ${t("translate.error")}: ${msg}`);
@@ -449,7 +493,9 @@
     localStorage.setItem("srt-translate-layout-v1", JSON.stringify(layout));
   }
 
-  let translatePanelLayout = $state<TranslateColumnLayout>(loadTranslateLayout());
+  let translatePanelLayout = $state<TranslateColumnLayout>(
+    loadTranslateLayout(),
+  );
 
   let trDraggedPanel = $state<TranslatePanelId | null>(null);
   let trDragOverCol = $state<"col1" | "col2" | null>(null);
@@ -457,7 +503,10 @@
 
   function trOnDragStart(e: DragEvent, panelId: TranslatePanelId) {
     const target = e.target as HTMLElement;
-    if (target?.tagName === "INPUT" && (target as HTMLInputElement).type === "range") {
+    if (
+      target?.tagName === "INPUT" &&
+      (target as HTMLInputElement).type === "range"
+    ) {
       e.preventDefault();
       return;
     }
@@ -525,17 +574,18 @@
 </script>
 
 <div class="h-full flex flex-col p-6 overflow-y-auto translate-tab-scroll">
-
   {#if !hasValidKey && selectedProviderFamily !== "local"}
-    <div class="mb-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl animate-fade-in">
+    <div
+      class="mb-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl animate-fade-in"
+    >
       <p class="text-amber-300">
-        ⚠️ {t("translate.noApiWarning")} 
-        <button 
+        ⚠️ {t("translate.noApiWarning")}
+        <button
           onclick={handleGoToSettings}
           class="underline hover:text-amber-200 font-medium transition-colors"
         >
           {t("translate.goToSettings")}
-        </button> 
+        </button>
         {t("translate.toAddOne")}
       </p>
     </div>
@@ -544,160 +594,472 @@
   {#snippet panelContent(panelId: TranslatePanelId)}
     {#if panelId === "options"}
       <div class="glass-card p-5">
-        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2 text-green-400">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+        <h3
+          class="text-lg font-semibold mb-4 flex items-center gap-2 text-green-400"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+            />
           </svg>
           {t("translate.options")}
-          <button type="button" onclick={() => helpSection = 'options'}
-            class="ml-auto text-gray-500 hover:text-green-300 transition-colors" title="Info">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <button
+            type="button"
+            onclick={() => (helpSection = "options")}
+            class="ml-auto text-gray-500 hover:text-green-300 transition-colors"
+            title="Info"
+          >
+            <svg
+              class="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           </button>
         </h3>
         <div class="space-y-4">
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label for="provider-select" class="block text-sm text-gray-400 mb-1">{t("translate.provider")}</label>
-              <SearchableSelect noResultsText={t("common.noResults")}
-                options={providerOptions.map(p => ({ value: p.id, label: p.name }))}
-                value={selectedProviderFamily}
-                onchange={(v) => selectedProviderFamily = v}
-                placeholder={t("translate.provider")}
-              />
+          <!-- Provider Buttons -->
+          <div>
+            <span class="block text-sm text-gray-400 mb-2"
+              >{t("translate.provider")}</span
+            >
+            <div class="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onclick={() => (selectedProviderFamily = "local")}
+                class="flex items-center gap-2 p-2.5 rounded-lg transition-all duration-200 border text-left text-xs
+                  {selectedProviderFamily === 'local'
+                  ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
+                  : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}"
+              >
+                <div
+                  class="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg flex-shrink-0"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+                <span class="font-semibold truncate">{t("provider.local")}</span
+                >
+              </button>
+
+              <button
+                type="button"
+                onclick={() => (selectedProviderFamily = "google")}
+                class="flex items-center gap-2 p-2.5 rounded-lg transition-all duration-200 border text-left text-xs
+                  {selectedProviderFamily === 'google'
+                  ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
+                  : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}"
+              >
+                <div
+                  class="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white shadow-lg flex-shrink-0"
+                >
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    />
+                    <path
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    />
+                  </svg>
+                </div>
+                <span class="font-semibold truncate"
+                  >{t("provider.google")}</span
+                >
+              </button>
+
+              <button
+                type="button"
+                onclick={() => (selectedProviderFamily = "custom")}
+                class="flex items-center gap-2 p-2.5 rounded-lg transition-all duration-200 border text-left text-xs
+                  {selectedProviderFamily === 'custom'
+                  ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
+                  : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}"
+              >
+                <div
+                  class="w-7 h-7 rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center text-white shadow-lg flex-shrink-0"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                </div>
+                <span class="font-semibold truncate"
+                  >{t("provider.custom")}</span
+                >
+              </button>
             </div>
+          </div>
+
+          <!-- Model or Custom Endpoint -->
+          {#if selectedProviderFamily === "custom"}
+            <div
+              class="space-y-3 p-3 bg-white/5 rounded-lg border border-white/10"
+            >
+              <div>
+                <label
+                  for="custom-endpoint"
+                  class="block text-sm text-gray-400 mb-1">URL Endpoint</label
+                >
+                <input
+                  id="custom-endpoint"
+                  type="text"
+                  bind:value={customEndpoint}
+                  placeholder={t("translate.customEndpointPlaceholder")}
+                  class="input-modern w-full text-sm font-mono"
+                />
+              </div>
+              <div>
+                <label
+                  for="custom-apikey"
+                  class="block text-sm text-gray-400 mb-1"
+                  >{t("translate.customApiKeyPlaceholder")}</label
+                >
+                <input
+                  id="custom-apikey"
+                  type="password"
+                  bind:value={customApiKey}
+                  placeholder="sk-... ({t('translate.contextOptional')})"
+                  class="input-modern w-full text-sm font-mono"
+                />
+              </div>
+              <p class="text-[10px] text-gray-500 leading-relaxed">
+                💡 {t("translate.customEndpointHint")}
+              </p>
+            </div>
+          {:else}
             <div>
-              <label for="model-select" class="block text-sm text-gray-400 mb-1">{t("translate.model")}</label>
-              <SearchableSelect noResultsText={t("common.noResults")}
-                options={availableModels.map(m => ({ value: m.id, label: m.name }))}
+              <label for="model-select" class="block text-sm text-gray-400 mb-1"
+                >{t("translate.model")}</label
+              >
+              <SearchableSelect
+                noResultsText={t("common.noResults")}
+                options={availableModels.map((m) => ({
+                  value: m.id,
+                  label: m.name,
+                }))}
                 value={selectedModel}
-                onchange={(v) => selectedModel = v}
+                onchange={(v) => (selectedModel = v)}
                 placeholder={t("translate.model")}
               />
             </div>
-          </div>
-          <div>
-            <label for="target-lang" class="block text-sm text-gray-400 mb-1">{t("translate.targetLang")}</label>
-            <SearchableSelect noResultsText={t("common.noResults")}
-              options={languages.map(lang => ({
-                value: lang.code,
-                label: lang.nameEn === lang.name ? lang.name : `${lang.nameEn} — ${lang.name}`,
-                searchTerms: `${lang.nameEn} ${lang.name}`,
-                icon: lang.flag
-              }))}
-              value={targetLang}
-              onchange={(v) => targetLang = v}
-              placeholder={t("translate.targetLang")}
-            />
-          </div>
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm text-gray-400 flex items-center gap-2">
-                {t("translate.batchSize")}
-                <button type="button" onclick={() => helpSection = 'batchSize'}
-                  class="text-gray-500 hover:text-green-300 transition-colors" title="Info">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+          {/if}
+          <div
+            class="{!inputPath
+              ? 'opacity-40 pointer-events-none'
+              : ''} transition-opacity space-y-4"
+          >
+            <div>
+              <label for="target-lang" class="block text-sm text-gray-400 mb-1"
+                >{t("translate.targetLang")}</label
+              >
+              <SearchableSelect
+                noResultsText={t("common.noResults")}
+                options={languages.map((lang) => ({
+                  value: lang.code,
+                  label:
+                    lang.nameEn === lang.name
+                      ? lang.name
+                      : `${lang.nameEn} — ${lang.name}`,
+                  searchTerms: `${lang.nameEn} ${lang.name}`,
+                  icon: lang.flag,
+                }))}
+                value={targetLang}
+                onchange={(v) => (targetLang = v)}
+                placeholder={t("translate.targetLang")}
+              />
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-400 flex items-center gap-2">
+                  {t("translate.batchSize")}
+                  <button
+                    type="button"
+                    onclick={() => (helpSection = "batchSize")}
+                    class="text-gray-500 hover:text-green-300 transition-colors"
+                    title="Info"
+                  >
+                    <svg
+                      class="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </button>
+                </span>
+                <span
+                  class="text-white font-mono bg-white/10 px-2 py-0.5 rounded text-xs"
+                  >{batchSize} {t("translate.subPerBatch")}</span
+                >
+              </div>
+              <div class="grid grid-cols-4 gap-2">
+                <button
+                  onclick={() => setBatchPreset("precise")}
+                  class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeBatchPreset ===
+                  'precise'
+                    ? 'bg-green-500/20 border-green-500/50 text-white'
+                    : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}"
+                >
+                  <span class="text-base block mb-0.5">🎯</span>
+                  <span class="font-semibold block"
+                    >{t("translate.batchPrecise")}</span
+                  >
+                  <span class="text-[10px] text-gray-500 block">5 sub</span>
                 </button>
-              </span>
-              <span class="text-white font-mono bg-white/10 px-2 py-0.5 rounded text-xs">{batchSize} {t("translate.subPerBatch")}</span>
+                <button
+                  onclick={() => setBatchPreset("balanced")}
+                  class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeBatchPreset ===
+                  'balanced'
+                    ? 'bg-green-500/20 border-green-500/50 text-white'
+                    : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}"
+                >
+                  <span class="text-base block mb-0.5">⚖️</span>
+                  <span class="font-semibold block"
+                    >{t("translate.batchBalanced")}</span
+                  >
+                  <span class="text-[10px] text-gray-500 block">15 sub</span>
+                </button>
+                <button
+                  onclick={() => setBatchPreset("fast")}
+                  class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeBatchPreset ===
+                  'fast'
+                    ? 'bg-green-500/20 border-green-500/50 text-white'
+                    : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}"
+                >
+                  <span class="text-base block mb-0.5">🚀</span>
+                  <span class="font-semibold block"
+                    >{t("translate.batchFast")}</span
+                  >
+                  <span class="text-[10px] text-gray-500 block">30 sub</span>
+                </button>
+                <button
+                  onclick={() => setBatchPreset("turbo")}
+                  class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeBatchPreset ===
+                  'turbo'
+                    ? 'bg-green-500/20 border-green-500/50 text-white'
+                    : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}"
+                >
+                  <span class="text-base block mb-0.5">⚡</span>
+                  <span class="font-semibold block"
+                    >{t("translate.batchTurbo")}</span
+                  >
+                  <span class="text-[10px] text-gray-500 block">50 sub</span>
+                </button>
+              </div>
             </div>
-            <div class="grid grid-cols-4 gap-2">
-              <button onclick={() => setBatchPreset("precise")}
-                class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeBatchPreset === 'precise' ? 'bg-green-500/20 border-green-500/50 text-white' : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}">
-                <span class="text-base block mb-0.5">🎯</span>
-                <span class="font-semibold block">{t("translate.batchPrecise")}</span>
-                <span class="text-[10px] text-gray-500 block">5 sub</span>
-              </button>
-              <button onclick={() => setBatchPreset("balanced")}
-                class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeBatchPreset === 'balanced' ? 'bg-green-500/20 border-green-500/50 text-white' : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}">
-                <span class="text-base block mb-0.5">⚖️</span>
-                <span class="font-semibold block">{t("translate.batchBalanced")}</span>
-                <span class="text-[10px] text-gray-500 block">15 sub</span>
-              </button>
-              <button onclick={() => setBatchPreset("fast")}
-                class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeBatchPreset === 'fast' ? 'bg-green-500/20 border-green-500/50 text-white' : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}">
-                <span class="text-base block mb-0.5">🚀</span>
-                <span class="font-semibold block">{t("translate.batchFast")}</span>
-                <span class="text-[10px] text-gray-500 block">30 sub</span>
-              </button>
-              <button onclick={() => setBatchPreset("turbo")}
-                class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeBatchPreset === 'turbo' ? 'bg-green-500/20 border-green-500/50 text-white' : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}">
-                <span class="text-base block mb-0.5">⚡</span>
-                <span class="font-semibold block">{t("translate.batchTurbo")}</span>
-                <span class="text-[10px] text-gray-500 block">50 sub</span>
-              </button>
+            <div>
+              <label
+                for="context-input"
+                class="block text-sm text-gray-400 mb-1"
+              >
+                {t("translate.context")}
+                <span class="text-gray-500"
+                  >{t("translate.contextOptional")}</span
+                >
+              </label>
+              <textarea
+                id="context-input"
+                bind:value={titleContext}
+                rows="4"
+                placeholder={t("translate.contextPlaceholder")}
+                class="input-modern w-full text-sm min-h-[7rem] resize-y"
+              ></textarea>
             </div>
-          </div>
-          <div>
-            <label for="context-input" class="block text-sm text-gray-400 mb-1">
-              {t("translate.context")} <span class="text-gray-500">{t("translate.contextOptional")}</span>
-            </label>
-            <textarea id="context-input" bind:value={titleContext} rows="4"
-              placeholder={t("translate.contextPlaceholder")} class="input-modern w-full text-sm min-h-[7rem] resize-y"></textarea>
           </div>
         </div>
       </div>
     {:else if panelId === "files"}
       <div class="glass-card p-5">
-        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2 text-indigo-400">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        <h3
+          class="text-lg font-semibold mb-4 flex items-center gap-2 text-indigo-400"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+            />
           </svg>
           {t("translate.file")}
-          <button type="button" onclick={() => helpSection = 'files'}
-            class="ml-auto text-gray-500 hover:text-indigo-300 transition-colors" title="Info">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <button
+            type="button"
+            onclick={() => (helpSection = "files")}
+            class="ml-auto text-gray-500 hover:text-indigo-300 transition-colors"
+            title="Info"
+          >
+            <svg
+              class="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           </button>
         </h3>
         <div class="space-y-3">
           <div>
-            <label for="input-path" class="block text-sm text-gray-400 mb-1">{t("translate.inputFile")}</label>
+            <label for="input-path" class="block text-sm text-gray-400 mb-1"
+              >{t("translate.inputFile")}</label
+            >
             <div class="flex gap-2">
-              <button type="button" onclick={() => expandedPathField = 'input'}
+              <button
+                type="button"
+                onclick={() => (expandedPathField = "input")}
                 class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate"
-                style="direction: rtl; text-align: left;" title={inputPath || t("translate.selectFile")}>
-                <span class="{inputPath ? 'text-white' : 'text-gray-500'}" style="unicode-bidi: plaintext;">
+                style="direction: rtl; text-align: left;"
+                title={inputPath || t("translate.selectFile")}
+              >
+                <span
+                  class={inputPath ? "text-white" : "text-gray-500"}
+                  style="unicode-bidi: plaintext;"
+                >
                   {inputPath || t("translate.selectFile")}
                 </span>
               </button>
-              <button onclick={selectInputFile} class="btn-primary py-2 px-3" title={t("translate.tooltip.upload")}>
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              <button
+                onclick={selectInputFile}
+                class="btn-primary py-2 px-3"
+                title={t("translate.tooltip.upload")}
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                  />
                 </svg>
               </button>
             </div>
           </div>
           <div>
-            <label for="output-path" class="block text-sm text-gray-400 mb-1">{t("translate.outputFile")}</label>
+            <label for="output-path" class="block text-sm text-gray-400 mb-1"
+              >{t("translate.outputFile")}</label
+            >
             <div class="flex gap-2">
-              <button type="button" onclick={() => expandedPathField = 'output'}
+              <button
+                type="button"
+                onclick={() => (expandedPathField = "output")}
                 class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate"
-                style="direction: rtl; text-align: left;" title={outputPath || t("translate.selectDestination")}>
-                <span class="{outputPath ? 'text-white' : 'text-gray-500'}" style="unicode-bidi: plaintext;">
+                style="direction: rtl; text-align: left;"
+                title={outputPath || t("translate.selectDestination")}
+              >
+                <span
+                  class={outputPath ? "text-white" : "text-gray-500"}
+                  style="unicode-bidi: plaintext;"
+                >
                   {outputPath || t("translate.selectDestination")}
                 </span>
               </button>
-              <button onclick={selectOutputFile} class="btn-secondary py-2 px-3" title={t("translate.tooltip.save")}>
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+              <button
+                onclick={selectOutputFile}
+                class="btn-secondary py-2 px-3"
+                title={t("translate.tooltip.save")}
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                  />
                 </svg>
               </button>
             </div>
           </div>
           {#if fileInfo}
-            <div class="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+            <div
+              class="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg"
+            >
               <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                <div
+                  class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center"
+                >
                   <span class="text-xl">📄</span>
                 </div>
                 <div>
-                  <p class="font-medium text-white">{fileInfo.subtitle_count} {t("translate.subtitles")}</p>
-                  <p class="text-sm text-gray-400 truncate max-w-xs">"{fileInfo.first_subtitle}"</p>
+                  <p class="font-medium text-white">
+                    {fileInfo.subtitle_count}
+                    {t("translate.subtitles")}
+                  </p>
+                  <p class="text-sm text-gray-400 truncate max-w-xs">
+                    "{fileInfo.first_subtitle}"
+                  </p>
                 </div>
               </div>
             </div>
@@ -707,19 +1069,52 @@
     {:else if panelId === "actions"}
       <div class="flex gap-3">
         {#if isTranslating}
-          <button onclick={cancelTranslation} class="btn-danger flex-1 py-4 text-lg">
-            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          <button
+            onclick={cancelTranslation}
+            class="btn-danger flex-1 py-4 text-lg"
+          >
+            <svg
+              class="w-5 h-5 inline mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
             {t("translate.cancel")}
           </button>
         {:else}
-          <button onclick={startTranslation}
-            disabled={!inputPath || !outputPath || !hasValidKey || !selectedModel}
-            class="btn-success flex-1 py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
-            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <button
+            onclick={startTranslation}
+            disabled={!inputPath ||
+              !outputPath ||
+              !hasValidKey ||
+              (selectedProviderFamily !== "custom" && !selectedModel)}
+            class="btn-success flex-1 py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            <svg
+              class="w-5 h-5 inline mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
             {t("translate.start")}
           </button>
@@ -728,23 +1123,43 @@
     {:else if panelId === "progress"}
       <div class="space-y-3">
         {#if isTranslating || progress}
-          <div class="glass-card p-4 animate-fade-in shrink-0 {isTranslating ? 'animate-pulse-glow' : ''}">
+          <div
+            class="glass-card p-4 animate-fade-in shrink-0 {isTranslating
+              ? 'animate-pulse-glow'
+              : ''}"
+          >
             <div class="flex items-center gap-6">
               <div class="flex-1">
                 <div class="progress-modern h-2">
-                  <div class="progress-modern-bar" style="width: {progress?.percentage || 0}%"></div>
+                  <div
+                    class="progress-modern-bar"
+                    style="width: {progress?.percentage || 0}%"
+                  ></div>
                 </div>
               </div>
               <span class="text-gray-400 text-sm whitespace-nowrap">
-                {t("translate.batch")} {progress?.current_batch || 0}/{progress?.total_batches || 0}
+                {t("translate.batch")}
+                {progress?.current_batch || 0}/{progress?.total_batches || 0}
               </span>
-              <span class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              <span
+                class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent"
+              >
                 {Math.round(progress?.percentage || 0)}%
               </span>
               {#if progress?.eta_seconds}
                 <span class="text-gray-500 text-sm flex items-center gap-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   {formatEta(progress.eta_seconds)}
                 </span>
@@ -753,34 +1168,81 @@
           </div>
         {/if}
         {#if result}
-          <div class="glass-card p-4 border-l-4 animate-fade-in shrink-0 {result.success ? 'border-green-500 bg-green-500/5' : 'border-red-500 bg-red-500/5'}">
+          <div
+            class="glass-card p-4 border-l-4 animate-fade-in shrink-0 {result.success
+              ? 'border-green-500 bg-green-500/5'
+              : 'border-red-500 bg-red-500/5'}"
+          >
             <div class="flex items-center gap-3">
               {#if result.success}
-                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                <svg
+                  class="w-5 h-5 text-green-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               {:else}
-                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  class="w-5 h-5 text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               {/if}
               <div class="flex-1">
-                <p class="{result.success ? 'text-green-400' : 'text-red-400'} font-medium">{result.message}</p>
+                <p
+                  class="{result.success
+                    ? 'text-green-400'
+                    : 'text-red-400'} font-medium"
+                >
+                  {result.message}
+                </p>
                 {#if result.output_path}
-                  <p class="text-xs text-gray-500 mt-1 font-mono truncate">📁 {result.output_path}</p>
+                  <p class="text-xs text-gray-500 mt-1 font-mono truncate">
+                    📁 {result.output_path}
+                  </p>
                 {/if}
               </div>
             </div>
           </div>
         {/if}
         {#if error}
-          <div class="glass-card p-4 border border-red-500/30 bg-red-500/10 animate-fade-in shrink-0">
+          <div
+            class="glass-card p-4 border border-red-500/30 bg-red-500/10 animate-fade-in shrink-0"
+          >
             <div class="flex items-center gap-3">
-              <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                class="w-5 h-5 text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               <p class="text-red-300 flex-1 text-sm">{error}</p>
-              <button onclick={() => (error = null)} class="text-red-400 hover:text-red-300">✕</button>
+              <button
+                onclick={() => (error = null)}
+                class="text-red-400 hover:text-red-300">✕</button
+              >
             </div>
           </div>
         {/if}
@@ -788,47 +1250,83 @@
     {:else if panelId === "livePreview"}
       <div class="glass-card p-5 shrink-0" style="min-height: 400px;">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold flex items-center gap-2 text-purple-400">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          <h3
+            class="text-lg font-semibold flex items-center gap-2 text-purple-400"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
             </svg>
             {t("translate.livePreview")}
             {#if translatedPairs.length > 0}
-              <span class="text-xs text-gray-500 font-normal ml-2">({translatedPairs.length} {t("translate.subtitles")})</span>
+              <span class="text-xs text-gray-500 font-normal ml-2"
+                >({translatedPairs.length} {t("translate.subtitles")})</span
+              >
             {/if}
           </h3>
         </div>
         <div class="grid grid-cols-2 gap-4" style="min-height: 340px;">
           <div class="bg-white/5 rounded-xl p-4 flex flex-col">
-            <p class="text-xs text-gray-500 uppercase tracking-wide mb-3 shrink-0">{t("translate.original")}</p>
+            <p
+              class="text-xs text-gray-500 uppercase tracking-wide mb-3 shrink-0"
+            >
+              {t("translate.original")}
+            </p>
             <div class="flex-1 overflow-y-auto space-y-2">
               {#if translatedPairs.length > 0}
                 {#each translatedPairs as pair}
-                  <div class="p-2 bg-black/20 rounded-lg border-l-2 border-gray-600">
-                    <span class="text-[10px] text-gray-600 font-mono">#{pair.id}</span>
+                  <div
+                    class="p-2 bg-black/20 rounded-lg border-l-2 border-gray-600"
+                  >
+                    <span class="text-[10px] text-gray-600 font-mono"
+                      >#{pair.id}</span
+                    >
                     <p class="text-gray-300 text-sm mt-0.5">{pair.original}</p>
                   </div>
                 {/each}
               {:else}
                 <div class="flex items-center justify-center h-full">
-                  <p class="text-gray-600 text-sm">{t("translate.waitingForTranslation")}</p>
+                  <p class="text-gray-600 text-sm">
+                    {t("translate.waitingForTranslation")}
+                  </p>
                 </div>
               {/if}
             </div>
           </div>
           <div class="bg-white/5 rounded-xl p-4 flex flex-col">
-            <p class="text-xs text-gray-500 uppercase tracking-wide mb-3 shrink-0">{t("translate.translated")}</p>
+            <p
+              class="text-xs text-gray-500 uppercase tracking-wide mb-3 shrink-0"
+            >
+              {t("translate.translated")}
+            </p>
             <div class="flex-1 overflow-y-auto space-y-2">
               {#if translatedPairs.length > 0}
                 {#each translatedPairs as pair}
-                  <div class="p-2 bg-green-500/5 rounded-lg border-l-2 border-green-500/50">
-                    <span class="text-[10px] text-green-600/70 font-mono">#{pair.id}</span>
-                    <p class="text-green-300 text-sm mt-0.5">{pair.translated}</p>
+                  <div
+                    class="p-2 bg-green-500/5 rounded-lg border-l-2 border-green-500/50"
+                  >
+                    <span class="text-[10px] text-green-600/70 font-mono"
+                      >#{pair.id}</span
+                    >
+                    <p class="text-green-300 text-sm mt-0.5">
+                      {pair.translated}
+                    </p>
                   </div>
                 {/each}
               {:else}
                 <div class="flex items-center justify-center h-full">
-                  <p class="text-gray-600 text-sm">{t("translate.waitingForTranslation")}</p>
+                  <p class="text-gray-600 text-sm">
+                    {t("translate.waitingForTranslation")}
+                  </p>
                 </div>
               {/if}
             </div>
@@ -839,13 +1337,26 @@
       <div class="glass-card p-4 shrink-0">
         <div class="flex items-center justify-between mb-3">
           <h4 class="text-sm font-medium text-gray-400 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 12h16m-7 6h7"
+              />
             </svg>
             {t("translate.logs")}
           </h4>
           {#if logs.length > 0}
-            <button onclick={clearLogs} class="text-xs text-gray-500 hover:text-gray-400 transition-colors">
+            <button
+              onclick={clearLogs}
+              class="text-xs text-gray-500 hover:text-gray-400 transition-colors"
+            >
               {t("translate.clearLog")}
             </button>
           {/if}
@@ -866,28 +1377,55 @@
   {/snippet}
 
   <div class="flex justify-end mb-1">
-    <button onclick={resetTranslateLayout}
-      class="text-[10px] text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1">
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    <button
+      onclick={resetTranslateLayout}
+      class="text-[10px] text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
+    >
+      <svg
+        class="w-3 h-3"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+        />
       </svg>
       {t("flashcards.resetLayout")}
     </button>
   </div>
 
   <div class="flex-1 grid grid-cols-2 gap-6 min-h-0 overflow-y-auto">
-    <div class="space-y-3 overflow-y-auto pr-1 min-h-[100px]"
+    <div
+      class="space-y-3 overflow-y-auto pr-1 min-h-[100px]"
       ondragover={(e) => trOnDragOverColumn(e, "col1")}
-      ondrop={() => trOnDropColumn("col1")} role="list">
+      ondrop={() => trOnDropColumn("col1")}
+      role="list"
+    >
       {#each translatePanelLayout.col1 as trPanelId, idx (trPanelId)}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div draggable="true"
+        <div
+          draggable="true"
           ondragstart={(e) => trOnDragStart(e, trPanelId)}
           ondragover={(e) => trOnDragOver(e, "col1", idx)}
-          ondrop={(e) => { e.stopPropagation(); trOnDrop("col1", idx); }}
+          ondrop={(e) => {
+            e.stopPropagation();
+            trOnDrop("col1", idx);
+          }}
           ondragend={trOnDragEnd}
-          class="cursor-grab active:cursor-grabbing transition-all duration-150 {trDraggedPanel === trPanelId ? 'opacity-40 scale-[0.98]' : ''} {trDragOverCol === 'col1' && trDragOverIdx === idx && trDraggedPanel !== trPanelId ? 'border-t-2 border-green-400 pt-1' : ''}"
-          role="listitem">
+          class="cursor-grab active:cursor-grabbing transition-all duration-150 {trDraggedPanel ===
+          trPanelId
+            ? 'opacity-40 scale-[0.98]'
+            : ''} {trDragOverCol === 'col1' &&
+          trDragOverIdx === idx &&
+          trDraggedPanel !== trPanelId
+            ? 'border-t-2 border-green-400 pt-1'
+            : ''}"
+          role="listitem"
+        >
           {@render panelContent(trPanelId)}
         </div>
       {/each}
@@ -896,18 +1434,33 @@
       {/if}
     </div>
 
-    <div class="space-y-3 overflow-y-auto pr-1 min-h-[100px]"
+    <div
+      class="space-y-3 overflow-y-auto pr-1 min-h-[100px]"
       ondragover={(e) => trOnDragOverColumn(e, "col2")}
-      ondrop={() => trOnDropColumn("col2")} role="list">
+      ondrop={() => trOnDropColumn("col2")}
+      role="list"
+    >
       {#each translatePanelLayout.col2 as trPanelId, idx (trPanelId)}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div draggable="true"
+        <div
+          draggable="true"
           ondragstart={(e) => trOnDragStart(e, trPanelId)}
           ondragover={(e) => trOnDragOver(e, "col2", idx)}
-          ondrop={(e) => { e.stopPropagation(); trOnDrop("col2", idx); }}
+          ondrop={(e) => {
+            e.stopPropagation();
+            trOnDrop("col2", idx);
+          }}
           ondragend={trOnDragEnd}
-          class="cursor-grab active:cursor-grabbing transition-all duration-150 {trDraggedPanel === trPanelId ? 'opacity-40 scale-[0.98]' : ''} {trDragOverCol === 'col2' && trDragOverIdx === idx && trDraggedPanel !== trPanelId ? 'border-t-2 border-green-400 pt-1' : ''}"
-          role="listitem">
+          class="cursor-grab active:cursor-grabbing transition-all duration-150 {trDraggedPanel ===
+          trPanelId
+            ? 'opacity-40 scale-[0.98]'
+            : ''} {trDragOverCol === 'col2' &&
+          trDragOverIdx === idx &&
+          trDraggedPanel !== trPanelId
+            ? 'border-t-2 border-green-400 pt-1'
+            : ''}"
+          role="listitem"
+        >
           {@render panelContent(trPanelId)}
         </div>
       {/each}
@@ -919,34 +1472,50 @@
 
   {#if helpSection}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
-      role="dialog" aria-modal="true" tabindex="-1"
-      onclick={() => helpSection = null}
-      onkeydown={(e) => { if (e.key === 'Escape') helpSection = null; }}>
+    <div
+      class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      onclick={() => (helpSection = null)}
+      onkeydown={(e) => {
+        if (e.key === "Escape") helpSection = null;
+      }}
+    >
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6"
+      <div
+        class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6"
         onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => e.stopPropagation()}>
+        onkeydown={(e) => e.stopPropagation()}
+      >
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-bold text-white">
-            {#if helpSection === 'options'}{t("translate.options")}
-            {:else if helpSection === 'files'}{t("translate.file")}
-            {:else if helpSection === 'batchSize'}{t("translate.batchSize")}
+            {#if helpSection === "options"}{t("translate.options")}
+            {:else if helpSection === "files"}{t("translate.file")}
+            {:else if helpSection === "batchSize"}{t("translate.batchSize")}
             {/if}
           </h2>
-          <button onclick={() => helpSection = null} class="text-gray-400 hover:text-white text-xl">✕</button>
+          <button
+            onclick={() => (helpSection = null)}
+            class="text-gray-400 hover:text-white text-xl">✕</button
+          >
         </div>
-        <div class="text-gray-300 text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
-          {#if helpSection === 'options'}
+        <div
+          class="text-gray-300 text-sm leading-relaxed max-h-[60vh] overflow-y-auto"
+        >
+          {#if helpSection === "options"}
             {@html t("translate.optionsHelp")}
-          {:else if helpSection === 'files'}
+          {:else if helpSection === "files"}
             {@html t("translate.filesHelp")}
-          {:else if helpSection === 'batchSize'}
+          {:else if helpSection === "batchSize"}
             {@html t("translate.batchSizeHelp")}
           {/if}
         </div>
         <div class="mt-4 flex justify-end">
-          <button onclick={() => helpSection = null} class="btn-primary py-1.5 px-4 text-sm">OK</button>
+          <button
+            onclick={() => (helpSection = null)}
+            class="btn-primary py-1.5 px-4 text-sm">OK</button
+          >
         </div>
       </div>
     </div>
@@ -954,31 +1523,48 @@
 
   {#if expandedPathField}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
-      role="dialog" aria-modal="true" tabindex="-1"
-      onclick={() => expandedPathField = null}
-      onkeydown={(e) => { if (e.key === 'Escape') expandedPathField = null; }}>
+    <div
+      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      onclick={() => (expandedPathField = null)}
+      onkeydown={(e) => {
+        if (e.key === "Escape") expandedPathField = null;
+      }}
+    >
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl p-5 animate-fade-in"
+      <div
+        class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl p-5 animate-fade-in"
         onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => e.stopPropagation()}>
+        onkeydown={(e) => e.stopPropagation()}
+      >
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-sm font-semibold text-gray-300">
-            {#if expandedPathField === 'input'}{t("translate.inputFile")}
-            {:else if expandedPathField === 'output'}{t("translate.outputFile")}
+            {#if expandedPathField === "input"}{t("translate.inputFile")}
+            {:else if expandedPathField === "output"}{t("translate.outputFile")}
             {/if}
           </h3>
-          <button onclick={() => expandedPathField = null} class="text-gray-400 hover:text-white text-lg leading-none">✕</button>
+          <button
+            onclick={() => (expandedPathField = null)}
+            class="text-gray-400 hover:text-white text-lg leading-none"
+            >✕</button
+          >
         </div>
         <div class="bg-gray-800/80 rounded-lg p-3 border border-gray-700/50">
-          <p class="text-sm text-white font-mono break-all select-all leading-relaxed">
-            {#if expandedPathField === 'input'}{inputPath || '—'}
-            {:else if expandedPathField === 'output'}{outputPath || '—'}
+          <p
+            class="text-sm text-white font-mono break-all select-all leading-relaxed"
+          >
+            {#if expandedPathField === "input"}{inputPath || "—"}
+            {:else if expandedPathField === "output"}{outputPath || "—"}
             {/if}
           </p>
         </div>
         <div class="mt-3 flex justify-end">
-          <button onclick={() => expandedPathField = null} class="btn-primary py-1.5 px-4 text-xs">OK</button>
+          <button
+            onclick={() => (expandedPathField = null)}
+            class="btn-primary py-1.5 px-4 text-xs">OK</button
+          >
         </div>
       </div>
     </div>
