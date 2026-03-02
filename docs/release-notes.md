@@ -1,1 +1,1 @@
-##### Updated translations and polishing - added series control
+##### first pre-alpha release - testing the github actions
