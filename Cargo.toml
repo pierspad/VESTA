@@ -1,0 +1,26 @@
+[workspace]
+resolver = "2"
+members = [
+    "core/*",
+    "lib/*",
+    "cli/*",
+    "apps/srt-gui/src-tauri",
+]
+
+[workspace.dependencies]
+anyhow = "1.0"
+clap = { version = "4.4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.35", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+
+# Internal crates
+srt-parser = { path = "./core/srt-parser", version = "0.3.0" }
+srt-extract = { path = "./lib/srt-extract", version = "0.3.0" }
+srt-translate = { path = "./lib/srt-translate", version = "0.3.0" }
+srt-sync = { path = "./lib/srt-sync", version = "0.3.0" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 16

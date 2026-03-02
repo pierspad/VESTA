@@ -1,0 +1,45 @@
+[package]
+name = "vesta"
+version = "0.3.0"
+edition = "2021"
+description = "Video Extraction, Sync & Translation for Anki"
+authors = ["Pierpaolo Spadafora <pierpaolospadafora@proton.me>"]
+license = "GPL-3.0-only"
+
+[lib]
+name = "vesta_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = ["protocol-asset"] }
+tauri-plugin-shell = "2.0"
+tauri-plugin-dialog = "2.0"
+tauri-plugin-fs = "2.0"
+tauri-plugin-http = "2.0"
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+tokio-util = "0.7"
+urlencoding = "2"
+zip = "2"
+tempfile = "3"
+dirs = "5"
+whisper-rs = "0.15"
+hound = "3"
+
+# Dipendenze dal workspace
+srt-parser = { path = "../../../core/srt-parser" }
+srt-translate = { path = "../../../lib/srt-translate" }
+srt-sync = { path = "../../../lib/srt-sync" }
+axum = "0.8.8"
+tower-http = { version = "0.6.8", features = ["cors", "fs"] }
+tower = "0.5.3"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+

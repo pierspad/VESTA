@@ -1,0 +1,24 @@
+[package]
+name = "srt-translate-cli"
+version = "0.1.0"
+edition = "2021"
+description = "CLI tool for translating SRT subtitle files using LLM APIs"
+authors = ["Your Name <your.email@example.com>"]
+license = "GPL-3.0"
+repository = "https://github.com/pierspad/auto_sub_srt"
+readme = "README.md"
+
+[[bin]]
+name = "srt-translate"
+path = "src/main.rs"
+
+[dependencies]
+srt-parser = { path = "../../core/srt-parser" }
+srt-translate = { path = "../../lib/srt-translate" }
+anyhow.workspace = true
+clap.workspace = true
+tokio.workspace = true
+dotenvy = "0.15"
+toml = "0.8"
+serde.workspace = true
+regex = "1"

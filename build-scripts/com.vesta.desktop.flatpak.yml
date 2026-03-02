@@ -1,0 +1,30 @@
+app-id: com.vesta.desktop
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+command: vesta
+
+finish-args:
+  # Display
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  # Audio (per riproduzione video/audio sottotitoli)
+  - --socket=pulseaudio
+  # Rete (per traduzione online)
+  - --share=network
+  # Accesso ai file dell'utente (caricamento SRT, video, ecc.)
+  - --filesystem=home
+  # GPU acceleration
+  - --device=dri
+
+modules:
+  - name: vesta
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 flatpak-files/vesta /app/bin/vesta
+      - install -Dm644 flatpak-files/com.vesta.desktop.png /app/share/icons/hicolor/512x512/apps/com.vesta.desktop.png
+      - install -Dm644 flatpak-files/com.vesta.desktop.desktop /app/share/applications/com.vesta.desktop.desktop
+    sources:
+      - type: dir
+        path: .

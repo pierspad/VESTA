@@ -1,0 +1,19 @@
+[package]
+name = "srt-extract-cli"
+version = "0.1.0"
+edition = "2021"
+description = "CLI tool for extracting and formatting SRT subtitle data"
+authors = ["Your Name <your.email@example.com>"]
+license = "GPL-3.0"
+repository = "https://github.com/pierspad/auto_sub_srt"
+readme = "README.md"
+
+[[bin]]
+name = "srt-extract"
+path = "src/main.rs"
+
+[dependencies]
+srt-parser = { path = "../../core/srt-parser" }
+srt-extract = { path = "../../lib/srt-extract" }
+anyhow.workspace = true
+clap.workspace = true

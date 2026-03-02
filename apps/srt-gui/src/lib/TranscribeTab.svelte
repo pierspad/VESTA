@@ -1,0 +1,1310 @@
+<script lang="ts">
+  import { invoke } from "@tauri-apps/api/core";
+  import { listen } from "@tauri-apps/api/event";
+  import { open, save } from "@tauri-apps/plugin-dialog";
+  import { onDestroy, onMount } from "svelte";
+  import { locale } from "./i18n";
+  import { languages as allLanguages } from "./models";
+  import SearchableSelect from "./SearchableSelect.svelte";
+
+  let t = $derived($locale);
+
+  let inputPath = $state("");
+  let outputPath = $state("");
+  let selectedModel = $state("base");
+  let selectedLanguage = $state("auto");
+  let translateToEnglish = $state(false);
+  let wordTimestamps = $state(true);
+  let maxSegmentLength = $state(30);
+
+  const segmentPresets = [
+    { id: "short", value: 10 },
+    { id: "medium", value: 20 },
+    { id: "standard", value: 30 },
+    { id: "long", value: 60 },
+  ] as const;
+  let activeSegmentPreset = $derived(
+    segmentPresets.find(p => p.value === maxSegmentLength)?.id ?? null
+  );
+  function setSegmentPreset(presetId: string) {
+    const preset = segmentPresets.find(p => p.id === presetId);
+    if (preset) maxSegmentLength = preset.value;
+  }
+
+  let isTranscribing = $state(false);
+  let isDownloading = $state(false);
+  let progress = $state(0);
+  let progressMessage = $state("");
+  let progressStage = $state("");
+  let error = $state<string | null>(null);
+  let result = $state<{
+    success: boolean;
+    message: string;
+    output_path?: string;
+    subtitle_count?: number;
+  } | null>(null);
+
+  let snackbarMessage = $state<string | null>(null);
+  let snackbarTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
+
+  function showSnackbar(message: string) {
+    if (snackbarTimeout) clearTimeout(snackbarTimeout);
+    snackbarMessage = message;
+    snackbarTimeout = setTimeout(() => { snackbarMessage = null; }, 3500);
+  }
+
+  interface LogEntry {
+    id: number;
+    timestamp: string;
+    message: string;
+    type:
+      | "info"
+      | "success"
+      | "warning"
+      | "error"
+      | "progress"
+      | "file"
+      | "download";
+  }
+  let logIdCounter = 0;
+  let logs = $state<LogEntry[]>([]);
+
+  let helpSection = $state<string | null>(null);
+
+  let showInputPathDialog = $state(false);
+  let showOutputPathDialog = $state(false);
+  let editInputPath = $state("");
+  let editOutputPath = $state("");
+  let inputPathError = $state<string | null>(null);
+  let outputPathError = $state<string | null>(null);
+  let expandedPathField = $state<string | null>(null);
+
+  let backends = $state<{
+    ffmpeg: boolean;
+    whisper_cpp: boolean;
+    python_whisper: boolean;
+    any_whisper: boolean;
+    whisper_binary: string | null;
+  } | null>(null);
+
+  let whisperModels = $state<
+    {
+      id: string;
+      name: string;
+      size: string;
+      speed: string;
+      downloaded: boolean;
+    }[]
+  >([
+    {
+      id: "tiny",
+      name: "Tiny",
+      size: "~75MB",
+      speed: "~32x",
+      downloaded: false,
+    },
+    {
+      id: "base",
+      name: "Base",
+      size: "~150MB",
+      speed: "~16x",
+      downloaded: false,
+    },
+    {
+      id: "small",
+      name: "Small",
+      size: "~500MB",
+      speed: "~6x",
+      downloaded: false,
+    },
+    {
+      id: "medium",
+      name: "Medium",
+      size: "~1.5GB",
+      speed: "~2x",
+      downloaded: false,
+    },
+    {
+      id: "large",
+      name: "Large",
+      size: "~3GB",
+      speed: "~1x",
+      downloaded: false,
+    },
+  ]);
+
+  // Languages for transcription - use the same list as translation tab, with auto-detect option
+  let transcriptionLanguages = $derived([
+    { code: "auto", name: t("transcribe.autoDetect"), nameEn: "Auto-detect", flag: "🌐" },
+    ...allLanguages,
+  ]);
+
+  let unlistenProgress: (() => void) | null = null;
+
+  onMount(async () => {
+    try {
+      backends = await invoke<typeof backends>("transcribe_check_backends");
+    } catch (e) {
+      console.error("Could not check backends:", e);
+    }
+
+    await refreshModels();
+
+    unlistenProgress = await listen<{
+      stage: string;
+      message: string;
+      percentage: number;
+    }>("transcribe-progress", (event) => {
+      const p = event.payload;
+      progress = Math.round(p.percentage);
+      progressMessage = p.message;
+      progressStage = p.stage;
+      if (p.stage === "download") {
+        // Distinguish download-in-progress from download-complete
+        if (p.percentage >= 100) {
+          addLog(p.message, "success");
+        } else {
+          addLog(p.message, "download");
+        }
+      } else if (p.stage !== "done") {
+        addLog(p.message, "progress");
+      }
+    });
+  });
+
+  onDestroy(() => {
+    unlistenProgress?.();
+  });
+
+  async function refreshModels() {
+    try {
+      const models = await invoke<typeof whisperModels>(
+        "transcribe_list_models",
+      );
+      whisperModels = models;
+    } catch (e) {
+      console.error("Could not list models:", e);
+    }
+  }
+
+  function addLog(message: string, type: LogEntry["type"] = "info") {
+    const timestamp = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+    logs = [...logs, { id: ++logIdCounter, timestamp, message, type }];
+  }
+
+  function clearLogs() {
+    logs = [];
+    logIdCounter = 0;
+  }
+
+  function logStyle(type: LogEntry["type"]): {
+    bg: string;
+    border: string;
+    text: string;
+    icon: string;
+  } {
+    switch (type) {
+      case "success":
+        return {
+          bg: "bg-green-500/10",
+          border: "border-green-500/30",
+          text: "text-green-300",
+          icon: "✅",
+        };
+      case "warning":
+        return {
+          bg: "bg-amber-500/10",
+          border: "border-amber-500/30",
+          text: "text-amber-300",
+          icon: "⚠️",
+        };
+      case "error":
+        return {
+          bg: "bg-red-500/10",
+          border: "border-red-500/30",
+          text: "text-red-300",
+          icon: "❌",
+        };
+      case "progress":
+        return {
+          bg: "bg-gray-500/5",
+          border: "border-gray-700/30",
+          text: "text-gray-400",
+          icon: "⚙️",
+        };
+      case "file":
+        return {
+          bg: "bg-cyan-500/10",
+          border: "border-cyan-500/30",
+          text: "text-cyan-300",
+          icon: "📁",
+        };
+      case "download":
+        return {
+          bg: "bg-indigo-500/10",
+          border: "border-indigo-500/30",
+          text: "text-indigo-300",
+          icon: "⬇️",
+        };
+      default:
+        return {
+          bg: "bg-gray-500/5",
+          border: "border-gray-700/30",
+          text: "text-gray-400",
+          icon: "ℹ️",
+        };
+    }
+  }
+
+  async function selectInputFile() {
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [
+          {
+            name: t("transcribe.audioVideoFiles"),
+            extensions: [
+              "mp4",
+              "mkv",
+              "avi",
+              "webm",
+              "mp3",
+              "wav",
+              "m4a",
+              "flac",
+              "ogg",
+            ],
+          },
+        ],
+      });
+
+      if (selected) {
+        inputPath = selected as string;
+        if (!outputPath) {
+          const basePath = inputPath.replace(/\.[^/.]+$/, "");
+          outputPath = `${basePath}.srt`;
+        }
+        addLog(
+          `${t("transcribe.fileSelected")}: ${inputPath.split("/").pop()}`,
+          "file",
+        );
+      }
+    } catch (e) {
+      error = `${t("transcribe.errorSelectingFile")}: ${e}`;
+    }
+  }
+
+  async function selectOutputFile() {
+    try {
+      const selected = await save({
+        filters: [{ name: "SRT Files", extensions: ["srt"] }],
+        defaultPath: outputPath || undefined,
+      });
+
+      if (selected) {
+        outputPath = selected;
+      }
+    } catch (e) {
+      error = `${t("transcribe.errorSelectingFile")}: ${e}`;
+    }
+  }
+
+  function openInputPathDialog() {
+    editInputPath = inputPath;
+    inputPathError = null;
+    showInputPathDialog = true;
+  }
+
+  function openOutputPathDialog() {
+    editOutputPath = outputPath;
+    outputPathError = null;
+    showOutputPathDialog = true;
+  }
+
+  async function confirmInputPath() {
+    let cleaned = editInputPath.trim().replace(/\/+$/, "");
+    if (!cleaned) {
+      inputPathError = "Path cannot be empty";
+      return;
+    }
+    try {
+      const exists = await invoke<boolean>("transcribe_check_file_exists", {
+        path: cleaned,
+      });
+      if (!exists) {
+        inputPathError = `File not found: ${cleaned}`;
+        return;
+      }
+      inputPath = cleaned;
+      if (!outputPath) {
+        const basePath = inputPath.replace(/\.[^/.]+$/, "");
+        outputPath = `${basePath}.srt`;
+      }
+      showInputPathDialog = false;
+      addLog(
+        `${t("transcribe.fileSelected")}: ${inputPath.split("/").pop()}`,
+        "file",
+      );
+    } catch (e) {
+      inputPathError = `Error: ${e}`;
+    }
+  }
+
+  async function confirmOutputPath() {
+    let cleaned = editOutputPath.trim().replace(/\/+$/, "");
+    if (!cleaned) {
+      outputPathError = "Path cannot be empty";
+      return;
+    }
+    const parentDir = cleaned.substring(0, cleaned.lastIndexOf("/"));
+    if (parentDir) {
+      try {
+        const exists = await invoke<boolean>("transcribe_check_file_exists", {
+          path: parentDir,
+        });
+        if (!exists) {
+          outputPathError = `Directory not found: ${parentDir}`;
+          return;
+        }
+      } catch (e) {
+        outputPathError = `Error: ${e}`;
+        return;
+      }
+    }
+    outputPath = cleaned;
+    showOutputPathDialog = false;
+  }
+
+  async function downloadModel(modelId: string) {
+    if (isDownloading || isTranscribing) return;
+    isDownloading = true;
+
+    try {
+      await invoke<boolean>("transcribe_download_model", { modelId });
+      showSnackbar(`Model ${modelId} downloaded successfully`);
+      await refreshModels();
+    } catch (e) {
+      addLog(`Failed to download model ${modelId}: ${e}`, "error");
+    } finally {
+      isDownloading = false;
+      // Reset progress bar so it doesn't persist after download
+      progress = 0;
+      progressMessage = "";
+      progressStage = "";
+    }
+  }
+
+  async function startTranscription() {
+    if (!inputPath || !outputPath) {
+      error = t("transcribe.selectFilesFirst");
+      return;
+    }
+
+    error = null;
+    result = null;
+    progress = 0;
+    isTranscribing = true;
+    addLog(`${t("transcribe.starting")} (model: ${selectedModel})`, "info");
+
+    const startTime = Date.now();
+
+    try {
+      const res = await invoke<{
+        success: boolean;
+        message: string;
+        output_path?: string;
+        subtitle_count?: number;
+      }>("transcribe_start", {
+        config: {
+          input_path: inputPath,
+          output_path: outputPath,
+          model: selectedModel,
+          language: selectedLanguage,
+          translate_to_english: translateToEnglish,
+          word_timestamps: wordTimestamps,
+          max_segment_length: maxSegmentLength,
+        },
+      });
+      result = res;
+      addLog(res.message, "success");
+      await refreshModels();
+    } catch (e: any) {
+      error = `${e}`;
+      addLog(`Error: ${e}`, "error");
+    } finally {
+      isTranscribing = false;
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const hh = String(Math.floor(elapsed / 3600)).padStart(2, "0");
+      const mm = String(Math.floor((elapsed % 3600) / 60)).padStart(2, "0");
+      const ss = String(elapsed % 60).padStart(2, "0");
+      addLog(`⏱ ${hh}:${mm}:${ss}`, "info");
+    }
+  }
+
+  async function cancelTranscription() {
+    try {
+      await invoke("transcribe_cancel");
+      isTranscribing = false;
+      progress = 0;
+      progressMessage = "";
+      addLog(t("transcribe.cancelled"), "warning");
+    } catch (e) {
+      error = `Error: ${e}`;
+    }
+  }
+
+  async function uninstallModel(modelId: string) {
+    if (isDownloading || isTranscribing) return;
+    try {
+      await invoke<boolean>("transcribe_uninstall_model", { modelId });
+      addLog(`${t("transcribe.modelUninstalled")}: ${modelId}`, "success");
+      await refreshModels();
+    } catch (e) {
+      addLog(`${t("transcribe.errorUninstalling")} ${modelId}: ${e}`, "error");
+    }
+  }
+
+  let contextMenu = $state<{ x: number; y: number; modelId: string; downloaded: boolean } | null>(null);
+
+  function openContextMenu(e: MouseEvent, model: { id: string; downloaded: boolean }) {
+    e.preventDefault();
+    contextMenu = { x: e.clientX, y: e.clientY, modelId: model.id, downloaded: model.downloaded };
+  }
+
+  function closeContextMenu() {
+    contextMenu = null;
+  }
+
+  function handleModelDblClick(model: { id: string; downloaded: boolean }) {
+    if (!model.downloaded && !isDownloading && !isTranscribing) {
+      downloadModel(model.id);
+    }
+  }
+
+  function resetTranscription() {
+    inputPath = "";
+    outputPath = "";
+    isTranscribing = false;
+    isDownloading = false;
+    progress = 0;
+    progressMessage = "";
+    progressStage = "";
+    error = null;
+    result = null;
+    clearLogs();
+  }
+
+  const TRANSCRIBE_PANEL_IDS = [
+    "whisperModel",
+    "options",
+    "files",
+    "actions",
+    "progress",
+    "logs",
+  ] as const;
+
+  type TranscribePanelId = (typeof TRANSCRIBE_PANEL_IDS)[number];
+
+  interface TranscribeColumnLayout {
+    col1: TranscribePanelId[];
+    col2: TranscribePanelId[];
+  }
+
+  const TRANSCRIBE_DEFAULT_LAYOUT: TranscribeColumnLayout = {
+    col1: ["whisperModel", "options"],
+    col2: ["files", "actions", "progress", "logs"],
+  };
+
+  function loadTranscribeLayout(): TranscribeColumnLayout {
+    try {
+      const saved = localStorage.getItem("srt-transcribe-layout-v1");
+      if (saved) {
+        const parsed = JSON.parse(saved) as TranscribeColumnLayout;
+        const all = [...parsed.col1, ...parsed.col2];
+        const valid =
+          TRANSCRIBE_PANEL_IDS.every((id) => all.includes(id)) &&
+          all.length === TRANSCRIBE_PANEL_IDS.length;
+        if (valid) return parsed;
+      }
+    } catch {}
+    return { ...TRANSCRIBE_DEFAULT_LAYOUT };
+  }
+
+  function saveTranscribeLayout(layout: TranscribeColumnLayout) {
+    localStorage.setItem("srt-transcribe-layout-v1", JSON.stringify(layout));
+  }
+
+  let transcribePanelLayout = $state<TranscribeColumnLayout>(loadTranscribeLayout());
+
+  let tDraggedPanel = $state<TranscribePanelId | null>(null);
+  let tDragOverCol = $state<"col1" | "col2" | null>(null);
+  let tDragOverIdx = $state<number | null>(null);
+
+  function tOnDragStart(e: DragEvent, panelId: TranscribePanelId) {
+    const target = e.target as HTMLElement;
+    if (target?.tagName === "INPUT" && (target as HTMLInputElement).type === "range") {
+      e.preventDefault();
+      return;
+    }
+    tDraggedPanel = panelId;
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", panelId);
+    }
+  }
+
+  function tOnDragOver(e: DragEvent, col: "col1" | "col2", idx: number) {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    tDragOverCol = col;
+    tDragOverIdx = idx;
+  }
+
+  function tOnDragOverColumn(e: DragEvent, col: "col1" | "col2") {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    tDragOverCol = col;
+    if (tDragOverIdx === null) {
+      tDragOverIdx = transcribePanelLayout[col].length;
+    }
+  }
+
+  function tOnDrop(col: "col1" | "col2", idx: number) {
+    if (!tDraggedPanel) return;
+    const newLayout = { ...transcribePanelLayout };
+    for (const c of ["col1", "col2"] as const) {
+      const i = newLayout[c].indexOf(tDraggedPanel);
+      if (i !== -1) {
+        newLayout[c] = [...newLayout[c]];
+        newLayout[c].splice(i, 1);
+        if (c === col && i < idx) idx--;
+        break;
+      }
+    }
+    newLayout[col] = [...newLayout[col]];
+    newLayout[col].splice(idx, 0, tDraggedPanel);
+    transcribePanelLayout = newLayout;
+    saveTranscribeLayout(transcribePanelLayout);
+    tDraggedPanel = null;
+    tDragOverCol = null;
+    tDragOverIdx = null;
+  }
+
+  function tOnDropColumn(col: "col1" | "col2") {
+    tOnDrop(col, transcribePanelLayout[col].length);
+  }
+
+  function tOnDragEnd() {
+    tDraggedPanel = null;
+    tDragOverCol = null;
+    tDragOverIdx = null;
+  }
+
+  function resetTranscribeLayout() {
+    transcribePanelLayout = {
+      col1: [...TRANSCRIBE_DEFAULT_LAYOUT.col1],
+      col2: [...TRANSCRIBE_DEFAULT_LAYOUT.col2],
+    };
+    saveTranscribeLayout(transcribePanelLayout);
+  }
+</script>
+
+<div
+  class="h-full flex flex-col p-6 overflow-y-auto bg-gradient-to-br from-gray-900 via-gray-900 to-gray-950"
+>
+  <!-- FFmpeg Warning (whisper-rs is always available natively) -->
+  {#if backends && !backends.ffmpeg}
+    <div
+      class="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center gap-3 shrink-0"
+    >
+      <svg
+        class="w-5 h-5 text-amber-400 flex-shrink-0"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+        />
+      </svg>
+      <div class="flex-1">
+        <p class="text-amber-300 text-sm font-medium">
+          {t("transcribe.ffmpegMissing")}
+        </p>
+        <p class="text-amber-200/60 text-xs mt-1">
+          {t("transcribe.ffmpegMissingDesc")}
+        </p>
+      </div>
+    </div>
+  {/if}
+
+  {#if isTranscribing || result || error}
+    <div class="flex items-center justify-end mb-4 shrink-0">
+      <button
+        onclick={resetTranscription}
+        disabled={isTranscribing || isDownloading}
+        class="py-1.5 px-4 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
+        title={t("transcribe.newTranscriptionDesc")}
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+        {t("transcribe.newTranscription")}
+      </button>
+    </div>
+  {/if}
+
+  {#snippet panelContent(panelId: TranscribePanelId)}
+    {#if panelId === "whisperModel"}
+      <div class="glass-card p-5">
+        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          {t("transcribe.whisperModel")}
+          <button type="button" onclick={() => (helpSection = "whisperModel")} class="ml-auto text-gray-500 hover:text-cyan-300 transition-colors" title="Info">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+        </h3>
+        <div class="grid grid-cols-5 gap-2">
+          {#each whisperModels as model}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div
+              onclick={() => (selectedModel = model.id)}
+              ondblclick={() => handleModelDblClick(model)}
+              oncontextmenu={(e) => openContextMenu(e, model)}
+              onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") selectedModel = model.id; }}
+              role="radio" aria-checked={selectedModel === model.id} tabindex="0"
+              class="p-3 rounded-lg text-center transition-all duration-200 border relative cursor-pointer
+                {selectedModel === model.id ? 'bg-cyan-500/20 border-cyan-500/50 text-white' : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}"
+            >
+              <div class="absolute top-1 right-1">
+                {#if model.downloaded}
+                  <svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                  </svg>
+                {:else}
+                  <button onclick={(e) => { e.stopPropagation(); downloadModel(model.id); }}
+                    class="text-amber-400 hover:text-cyan-400 transition-colors animate-pulse"
+                    title={t("transcribe.clickToDownload")} disabled={isDownloading}>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </button>
+                {/if}
+              </div>
+              <div class="font-bold text-sm">{t(`transcribe.model${model.id.charAt(0).toUpperCase()}${model.id.slice(1)}`) || model.name}</div>
+              <div class="text-[10px] text-gray-500 mt-1">{model.size}</div>
+              {#if !model.downloaded}
+                <div class="text-[9px] text-amber-400/70 mt-0.5">{t("transcribe.notDownloaded")}</div>
+              {/if}
+            </div>
+          {/each}
+        </div>
+        <div class="mt-3 p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/20">
+          <div class="flex items-center gap-2">
+            <span class="text-cyan-400">💡</span>
+            <span class="text-sm text-cyan-200">
+              {t("transcribe.speed")}: {whisperModels.find((m) => m.id === selectedModel)?.speed || ""}
+            </span>
+          </div>
+        </div>
+      </div>
+    {:else if panelId === "options"}
+      <div class="glass-card p-5">
+        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          {t("transcribe.options")}
+          <button type="button" onclick={() => (helpSection = "options")} class="ml-auto text-gray-500 hover:text-blue-300 transition-colors" title="Info">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+        </h3>
+        <div class="space-y-4">
+          <div>
+            <span class="block text-sm text-gray-400 mb-1">{t("transcribe.sourceLanguage")}</span>
+            <SearchableSelect noResultsText={t("common.noResults")}
+              options={transcriptionLanguages.map((lang) => ({
+                value: lang.code,
+                label: lang.nameEn === lang.name ? lang.name : `${lang.nameEn} — ${lang.name}`,
+                searchTerms: `${lang.nameEn} ${lang.name}`,
+                icon: lang.flag,
+              }))}
+              value={selectedLanguage}
+              onchange={(v) => (selectedLanguage = v)}
+              placeholder={t("transcribe.sourceLanguage")}
+            />
+          </div>
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+            <div>
+              <span class="text-gray-200 text-sm">{t("transcribe.wordTimestamps")}</span>
+              <p class="text-xs text-gray-500">{t("transcribe.wordTimestampsDesc")}</p>
+            </div>
+            <button onclick={() => (wordTimestamps = !wordTimestamps)}
+              class="w-12 h-6 rounded-full transition-all duration-200 relative {wordTimestamps ? 'bg-cyan-500' : 'bg-gray-600'}"
+              aria-label="Toggle word timestamps">
+              <div class="absolute w-5 h-5 bg-white rounded-full top-0.5 transition-all duration-200 {wordTimestamps ? 'left-6' : 'left-0.5'}"></div>
+            </button>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm text-gray-400 flex items-center gap-2">
+                {t("transcribe.maxSegmentLength")}
+                <button type="button" onclick={() => (helpSection = "segmentLength")}
+                  class="text-gray-500 hover:text-cyan-300 transition-colors" title="Info">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+              </span>
+              <span class="text-white font-mono bg-white/10 px-2 py-0.5 rounded text-xs">{maxSegmentLength}s</span>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+              <button onclick={() => setSegmentPreset("short")}
+                class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeSegmentPreset === 'short' ? 'bg-cyan-500/20 border-cyan-500/50 text-white' : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}">
+                <span class="text-base block mb-0.5">✂️</span>
+                <span class="font-semibold block">{t("transcribe.segmentShort")}</span>
+                <span class="text-[10px] text-gray-500 block">10s</span>
+              </button>
+              <button onclick={() => setSegmentPreset("medium")}
+                class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeSegmentPreset === 'medium' ? 'bg-cyan-500/20 border-cyan-500/50 text-white' : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}">
+                <span class="text-base block mb-0.5">📝</span>
+                <span class="font-semibold block">{t("transcribe.segmentMedium")}</span>
+                <span class="text-[10px] text-gray-500 block">20s</span>
+              </button>
+              <button onclick={() => setSegmentPreset("standard")}
+                class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeSegmentPreset === 'standard' ? 'bg-cyan-500/20 border-cyan-500/50 text-white' : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}">
+                <span class="text-base block mb-0.5">📄</span>
+                <span class="font-semibold block">{t("transcribe.segmentStandard")}</span>
+                <span class="text-[10px] text-gray-500 block">30s</span>
+              </button>
+              <button onclick={() => setSegmentPreset("long")}
+                class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeSegmentPreset === 'long' ? 'bg-cyan-500/20 border-cyan-500/50 text-white' : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}">
+                <span class="text-base block mb-0.5">📖</span>
+                <span class="font-semibold block">{t("transcribe.segmentLong")}</span>
+                <span class="text-[10px] text-gray-500 block">60s</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    {:else if panelId === "files"}
+      <div class="glass-card p-5">
+        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          {t("transcribe.files")}
+          <button type="button" onclick={() => (helpSection = "files")} class="ml-auto text-gray-500 hover:text-indigo-300 transition-colors" title="Info">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+        </h3>
+        <div class="space-y-3">
+          <div>
+            <span class="block text-sm text-gray-400 mb-1">{t("transcribe.inputFile")}</span>
+            <div class="flex gap-2">
+              <button onclick={() => (expandedPathField = "input")}
+                class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate"
+                style="direction: rtl; text-align: left;" title={inputPath || t("transcribe.noInputMediaSelected")}>
+                <span class={inputPath ? "text-white" : "text-gray-500"} style="unicode-bidi: plaintext;">
+                  {inputPath || t("transcribe.noInputMediaSelected")}
+                </span>
+              </button>
+              <button onclick={selectInputFile} class="btn-primary py-2 px-3" title={t("transcribe.selectFile")}>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div>
+            <span class="block text-sm text-gray-400 mb-1">{t("transcribe.outputFile")}</span>
+            <div class="flex gap-2">
+              <button onclick={() => (expandedPathField = "output")}
+                class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate"
+                style="direction: rtl; text-align: left;" title={outputPath || t("transcribe.noOutputFileSelected")}>
+                <span class={outputPath ? "text-white" : "text-gray-500"} style="unicode-bidi: plaintext;">
+                  {outputPath || t("transcribe.noOutputFileSelected")}
+                </span>
+              </button>
+              <button onclick={selectOutputFile} class="btn-secondary py-2 px-3" title={t("transcribe.selectDestination")}>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          {#if inputPath}
+            <div class="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                  <span class="text-xl">🎬</span>
+                </div>
+                <div>
+                  <p class="font-medium text-white">{inputPath.split("/").pop()}</p>
+                  <p class="text-sm text-gray-400">{t("transcribe.readyToProcess")}</p>
+                </div>
+              </div>
+            </div>
+          {/if}
+        </div>
+      </div>
+    {:else if panelId === "actions"}
+      <div class="space-y-3">
+        <div class="flex gap-3">
+          {#if isTranscribing}
+            <button onclick={cancelTranscription} class="btn-danger flex-1 py-4 text-lg">
+              <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              {t("transcribe.cancel")}
+            </button>
+          {:else}
+            <button onclick={startTranscription} disabled={!inputPath || !outputPath}
+              class="btn-success flex-1 py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+              <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {t("transcribe.startTranscription")}
+            </button>
+          {/if}
+        </div>
+        {#if !whisperModels.find((m) => m.id === selectedModel)?.downloaded}
+          <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <div class="flex items-start gap-2">
+              <span class="text-amber-400">⚠️</span>
+              <div class="flex-1 flex flex-col items-center text-center">
+                <p class="text-xs text-amber-200">{t("transcribe.modelDownloadNote")}</p>
+                <button
+                  onclick={() => downloadModel(selectedModel)}
+                  disabled={isDownloading}
+                  class="mt-2 btn-primary py-1.5 px-3 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  {t("transcribe.modelDownloadAction")}
+                </button>
+              </div>
+            </div>
+          </div>
+        {/if}
+      </div>
+    {:else if panelId === "progress"}
+      <div class="space-y-3">
+        {#if isTranscribing || progress > 0}
+          <div class="glass-card p-4 shrink-0 {isTranscribing ? 'animate-pulse-glow' : ''}">
+            <div class="flex items-center gap-4">
+              <div class="flex-1">
+                <div class="progress-modern h-2">
+                  <div class="progress-modern-bar bg-gradient-to-r from-cyan-500 to-blue-500" style="width: {progress}%"></div>
+                </div>
+              </div>
+              <span class="text-lg font-bold text-cyan-400">{progress}%</span>
+            </div>
+            {#if progressMessage}
+              <p class="text-gray-400 text-xs mt-2">{progressMessage}</p>
+            {/if}
+          </div>
+        {/if}
+        {#if result}
+          <div class="glass-card p-4 shrink-0 border-l-4 {result.success ? 'border-green-500 bg-green-500/5' : 'border-red-500 bg-red-500/5'}">
+            <div class="flex items-center gap-3">
+              {#if result.success}
+                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              {:else}
+                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              {/if}
+              <p class="{result.success ? 'text-green-400' : 'text-red-400'} font-medium">{result.message}</p>
+              {#if result.output_path}
+                <p class="text-xs text-gray-500 mt-1 font-mono truncate">📁 {result.output_path}</p>
+              {/if}
+            </div>
+          </div>
+        {/if}
+        {#if error}
+          <div class="glass-card p-4 shrink-0 border border-red-500/30 bg-red-500/10">
+            <div class="flex items-center gap-3">
+              <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p class="text-red-300 flex-1 text-sm">{error}</p>
+              <button onclick={() => (error = null)} class="text-red-400 hover:text-red-300">✕</button>
+            </div>
+          </div>
+        {/if}
+      </div>
+    {:else if panelId === "logs"}
+      <div class="glass-card p-4 flex flex-col" style="min-height: 120px; max-height: 300px;">
+        <div class="flex items-center justify-between mb-2 shrink-0">
+          <h4 class="text-xs font-semibold text-gray-400">{t("transcribe.log")}</h4>
+          {#if logs.length > 0}
+            <button onclick={clearLogs} class="text-xs text-gray-500 hover:text-gray-400">{t("transcribe.clearLog")}</button>
+          {/if}
+        </div>
+        <div class="flex-1 min-h-0 overflow-y-auto space-y-1.5">
+          {#if logs.length > 0}
+            {#each logs as log (log.id)}
+              {@const style = logStyle(log.type)}
+              <div class="p-2 rounded-lg border {style.bg} {style.border} flex items-start gap-2 animate-fade-in">
+                <span class="text-xs flex-shrink-0">{style.icon}</span>
+                <p class="text-xs {style.text} leading-tight break-words whitespace-pre-wrap flex-1 min-w-0">{log.message}</p>
+                <span class="text-[10px] text-gray-600 flex-shrink-0">{log.timestamp}</span>
+              </div>
+            {/each}
+          {:else}
+            <p class="text-gray-600 text-xs p-2">{t("transcribe.noLog")}</p>
+          {/if}
+        </div>
+      </div>
+    {/if}
+  {/snippet}
+
+  <div class="flex justify-end mb-1">
+    <button onclick={resetTranscribeLayout}
+      class="text-[10px] text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1">
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      {t("flashcards.resetLayout")}
+    </button>
+  </div>
+
+  <div class="flex-1 grid grid-cols-2 gap-6 min-h-0 overflow-y-auto">
+    <div class="space-y-3 overflow-y-auto pr-1 min-h-[100px]"
+      ondragover={(e) => tOnDragOverColumn(e, "col1")}
+      ondrop={() => tOnDropColumn("col1")} role="list">
+      {#each transcribePanelLayout.col1 as tPanelId, idx (tPanelId)}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div draggable="true"
+          ondragstart={(e) => tOnDragStart(e, tPanelId)}
+          ondragover={(e) => tOnDragOver(e, "col1", idx)}
+          ondrop={(e) => { e.stopPropagation(); tOnDrop("col1", idx); }}
+          ondragend={tOnDragEnd}
+          class="cursor-grab active:cursor-grabbing transition-all duration-150 {tDraggedPanel === tPanelId ? 'opacity-40 scale-[0.98]' : ''} {tDragOverCol === 'col1' && tDragOverIdx === idx && tDraggedPanel !== tPanelId ? 'border-t-2 border-cyan-400 pt-1' : ''}"
+          role="listitem">
+          {@render panelContent(tPanelId)}
+        </div>
+      {/each}
+      {#if tDraggedPanel && tDragOverCol === "col1" && tDragOverIdx === transcribePanelLayout.col1.length}
+        <div class="h-1 bg-cyan-400 rounded-full mx-4 transition-all"></div>
+      {/if}
+    </div>
+
+    <div class="space-y-3 overflow-y-auto pr-1 min-h-[100px]"
+      ondragover={(e) => tOnDragOverColumn(e, "col2")}
+      ondrop={() => tOnDropColumn("col2")} role="list">
+      {#each transcribePanelLayout.col2 as tPanelId, idx (tPanelId)}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div draggable="true"
+          ondragstart={(e) => tOnDragStart(e, tPanelId)}
+          ondragover={(e) => tOnDragOver(e, "col2", idx)}
+          ondrop={(e) => { e.stopPropagation(); tOnDrop("col2", idx); }}
+          ondragend={tOnDragEnd}
+          class="cursor-grab active:cursor-grabbing transition-all duration-150 {tDraggedPanel === tPanelId ? 'opacity-40 scale-[0.98]' : ''} {tDragOverCol === 'col2' && tDragOverIdx === idx && tDraggedPanel !== tPanelId ? 'border-t-2 border-cyan-400 pt-1' : ''}"
+          role="listitem">
+          {@render panelContent(tPanelId)}
+        </div>
+      {/each}
+      {#if tDraggedPanel && tDragOverCol === "col2" && tDragOverIdx === transcribePanelLayout.col2.length}
+        <div class="h-1 bg-cyan-400 rounded-full mx-4 transition-all"></div>
+      {/if}
+    </div>
+  </div>
+
+  {#if showInputPathDialog}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      onclick={() => (showInputPathDialog = false)}
+      onkeydown={(e) => {
+        if (e.key === "Escape") showInputPathDialog = false;
+      }}
+    >
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-xl p-6"
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => {
+          if (e.key === "Enter") confirmInputPath();
+          e.stopPropagation();
+        }}
+      >
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white">
+            {t("transcribe.inputFile")}
+          </h2>
+          <button
+            onclick={() => (showInputPathDialog = false)}
+            class="text-gray-400 hover:text-white text-xl">✕</button
+          >
+        </div>
+        <p class="text-xs text-gray-400 mb-3">
+          {t("transcribe.inputPathDesc")}
+        </p>
+        <input
+          type="text"
+          bind:value={editInputPath}
+          class="input-modern w-full text-sm mb-2"
+          placeholder="/path/to/audio-or-video.mp4"
+        />
+        {#if inputPathError}
+          <p class="text-red-400 text-xs mb-2">{inputPathError}</p>
+        {/if}
+        <div class="flex justify-end gap-2 mt-4">
+          <button
+            onclick={() => (showInputPathDialog = false)}
+            class="btn-secondary py-1.5 px-4 text-sm"
+          >
+            {t("settings.modal.cancel")}
+          </button>
+          <button
+            onclick={confirmInputPath}
+            class="btn-primary py-1.5 px-4 text-sm">OK</button
+          >
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if showOutputPathDialog}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      onclick={() => (showOutputPathDialog = false)}
+      onkeydown={(e) => {
+        if (e.key === "Escape") showOutputPathDialog = false;
+      }}
+    >
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-xl p-6"
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => {
+          if (e.key === "Enter") confirmOutputPath();
+          e.stopPropagation();
+        }}
+      >
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white">
+            {t("transcribe.outputFile")}
+          </h2>
+          <button
+            onclick={() => (showOutputPathDialog = false)}
+            class="text-gray-400 hover:text-white text-xl">✕</button
+          >
+        </div>
+        <p class="text-xs text-gray-400 mb-3">
+          {t("transcribe.outputPathDesc")}
+        </p>
+        <input
+          type="text"
+          bind:value={editOutputPath}
+          class="input-modern w-full text-sm mb-2"
+          placeholder="/path/to/output.srt"
+        />
+        {#if outputPathError}
+          <p class="text-red-400 text-xs mb-2">{outputPathError}</p>
+        {/if}
+        <div class="flex justify-end gap-2 mt-4">
+          <button
+            onclick={() => (showOutputPathDialog = false)}
+            class="btn-secondary py-1.5 px-4 text-sm"
+          >
+            {t("settings.modal.cancel")}
+          </button>
+          <button
+            onclick={confirmOutputPath}
+            class="btn-primary py-1.5 px-4 text-sm">OK</button
+          >
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if helpSection}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      onclick={() => (helpSection = null)}
+      onkeydown={(e) => {
+        if (e.key === "Escape") helpSection = null;
+      }}
+    >
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6"
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}
+      >
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white">
+            {#if helpSection === "whisperModel"}{t("transcribe.whisperModel")}
+            {:else if helpSection === "options"}{t("transcribe.options")}
+            {:else if helpSection === "files"}{t("transcribe.files")}
+            {:else if helpSection === "segmentLength"}{t("transcribe.maxSegmentLength")}
+            {/if}
+          </h2>
+          <button
+            onclick={() => (helpSection = null)}
+            class="text-gray-400 hover:text-white text-xl">✕</button
+          >
+        </div>
+        <div
+          class="text-gray-300 text-sm leading-relaxed max-h-[60vh] overflow-y-auto help-content"
+        >
+          {#if helpSection === "whisperModel"}
+            {@html t("transcribe.whisperModelHelp")}
+          {:else if helpSection === "options"}
+            {@html t("transcribe.optionsHelp")}
+          {:else if helpSection === "files"}
+            {@html t("transcribe.filesHelp")}
+          {:else if helpSection === "segmentLength"}
+            {@html t("transcribe.segmentHelp")}
+          {/if}
+        </div>
+        <div class="mt-4 flex justify-end">
+          <button
+            onclick={() => (helpSection = null)}
+            class="btn-primary py-1.5 px-4 text-sm">OK</button
+          >
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if expandedPathField}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      onclick={() => (expandedPathField = null)}
+      onkeydown={(e) => {
+        if (e.key === "Escape") expandedPathField = null;
+      }}
+    >
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl p-5 animate-fade-in"
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}
+      >
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold text-gray-300">
+            {#if expandedPathField === "input"}{t("transcribe.inputFile")}
+            {:else if expandedPathField === "output"}{t(
+                "transcribe.outputFile",
+              )}
+            {/if}
+          </h3>
+          <button
+            onclick={() => (expandedPathField = null)}
+            class="text-gray-400 hover:text-white text-lg leading-none"
+            >✕</button
+          >
+        </div>
+        <div class="bg-gray-800/80 rounded-lg p-3 border border-gray-700/50">
+          <p
+            class="text-sm text-white font-mono break-all select-all leading-relaxed"
+          >
+            {#if expandedPathField === "input"}{inputPath || "—"}
+            {:else if expandedPathField === "output"}{outputPath || "—"}
+            {/if}
+          </p>
+        </div>
+        <div class="mt-3 flex justify-end gap-2">
+          <button
+            onclick={() => {
+              const field = expandedPathField;
+              expandedPathField = null;
+              if (field === "input") openInputPathDialog();
+              else if (field === "output") openOutputPathDialog();
+            }}
+            class="btn-secondary py-1.5 px-4 text-xs"
+          >
+            ✏️ {t("transcribe.editPath")}
+          </button>
+          <button
+            onclick={() => (expandedPathField = null)}
+            class="btn-primary py-1.5 px-4 text-xs">OK</button
+          >
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if contextMenu}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="fixed inset-0 z-50"
+      onclick={closeContextMenu}
+      oncontextmenu={(e) => { e.preventDefault(); closeContextMenu(); }}
+      onkeydown={(e) => { if (e.key === "Escape") closeContextMenu(); }}
+      role="presentation"
+      tabindex="-1"
+    >
+      <div
+        class="absolute bg-gray-800 border border-white/20 rounded-lg shadow-xl py-1 min-w-[180px] animate-fade-in"
+        style="left: {contextMenu.x}px; top: {contextMenu.y}px;"
+      >
+        {#if !contextMenu.downloaded}
+          <button
+            onclick={() => { downloadModel(contextMenu!.modelId); closeContextMenu(); }}
+            disabled={isDownloading}
+            class="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-cyan-500/20 hover:text-cyan-300 flex items-center gap-2 transition-colors disabled:opacity-50"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            {t("transcribe.downloadModel")}
+          </button>
+        {:else}
+          <button
+            onclick={() => { uninstallModel(contextMenu!.modelId); closeContextMenu(); }}
+            disabled={isDownloading || isTranscribing}
+            class="w-full text-left px-4 py-2 text-sm text-red-300 hover:bg-red-500/20 hover:text-red-200 flex items-center gap-2 transition-colors disabled:opacity-50"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            {t("transcribe.uninstallModel")}
+          </button>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
+  {#if snackbarMessage}
+    <div class="fixed bottom-4 left-1/2 -translate-x-1/2 glass-card bg-green-500/20 border border-green-500/30 text-green-200 px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-fade-in z-50">
+      <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+      <span>{snackbarMessage}</span>
+      <button onclick={() => (snackbarMessage = null)} class="text-green-400 hover:text-green-300 ml-2" aria-label="Close"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+    </div>
+  {/if}
+</div>

@@ -1,0 +1,999 @@
+<script lang="ts">
+  import { invoke } from "@tauri-apps/api/core";
+  import { listen } from "@tauri-apps/api/event";
+  import { open, save } from "@tauri-apps/plugin-dialog";
+  import { onDestroy, onMount } from "svelte";
+  import { locale } from "./i18n";
+  import { getModelsForProvider, languages, loadAndValidateApiKeys, type ApiKeyConfig } from "./models";
+  import SearchableSelect from "./SearchableSelect.svelte";
+
+  interface Props {
+    onGoToSettings?: () => void;
+  }
+
+  let { onGoToSettings }: Props = $props();
+
+  let t = $derived($locale);
+
+  interface SrtFileInfo {
+    path: string;
+    subtitle_count: number;
+    first_subtitle: string;
+    last_subtitle: string;
+  }
+
+  interface TranslateConfig {
+    input_path: string;
+    output_path: string;
+    target_lang: string;
+    api_keys: string[];
+    api_type: string;
+    batch_size: number;
+    title_context: string | null;
+    api_url: string | null;
+    model: string | null;
+  }
+
+  interface TranslateProgressEvent {
+    message: string;
+    current_batch: number;
+    total_batches: number;
+    percentage: number;
+    eta_seconds: number | null;
+  }
+
+  interface TranslateResult {
+    success: boolean;
+    message: string;
+    output_path: string | null;
+    translated_count: number;
+  }
+
+  interface ModelInfo {
+    id: string;
+    name: string;
+    provider: string;
+  }
+
+  let inputPath = $state("");
+  let outputPath = $state("");
+  let targetLang = $state("it");
+  let previousTargetLang = "it";
+  let selectedProviderFamily = $state("");
+  let batchSize = $state(15);
+  let titleContext = $state("");
+  let selectedModel = $state("");
+
+  const batchPresets = [
+    { id: "precise", value: 5 },
+    { id: "balanced", value: 15 },
+    { id: "fast", value: 30 },
+    { id: "turbo", value: 50 },
+  ] as const;
+  let activeBatchPreset = $derived(
+    batchPresets.find(p => p.value === batchSize)?.id ?? null
+  );
+  function setBatchPreset(presetId: string) {
+    const preset = batchPresets.find(p => p.id === presetId);
+    if (preset) batchSize = preset.value;
+  }
+
+  let fileInfo = $state<SrtFileInfo | null>(null);
+  let isTranslating = $state(false);
+  let progress = $state<TranslateProgressEvent | null>(null);
+  let logs = $state<string[]>([]);
+  let error = $state<string | null>(null);
+  let result = $state<TranslateResult | null>(null);
+  let expandedPathField = $state<string | null>(null);
+
+  let helpSection = $state<string | null>(null);
+  
+  // Live subtitle preview - array of translated subtitle pairs
+  interface SubtitlePair {
+    id: number;
+    original: string;
+    translated: string;
+  }
+  let translatedPairs = $state<SubtitlePair[]>([]);
+  let previewRefreshInterval: ReturnType<typeof setInterval> | null = null;
+
+  let apiKeys = $state<ApiKeyConfig[]>([]);
+  
+  let unlistenProgress: (() => void) | null = null;
+  let unlistenComplete: (() => void) | null = null;
+
+  let providerOptions = $derived.by(() => {
+     const opts = [{ id: "local", name: t("provider.local") }];
+     opts.push({ id: "google", name: t("provider.google") });
+     return opts;
+  });
+
+  let availableModels = $derived.by(() => {
+    if (!selectedProviderFamily) return [];
+    if (selectedProviderFamily === "local") {
+      return getModelsForProvider("local");
+    }
+    if (selectedProviderFamily === "google") {
+      return getModelsForProvider("google");
+    }
+    return [];
+  });
+
+  $effect(() => {
+    const currentLang = targetLang;
+    if (currentLang !== previousTargetLang) {
+      if (inputPath && outputPath) {
+        if (outputPath.endsWith(`.${previousTargetLang}.srt`)) {
+          outputPath = outputPath.replace(new RegExp(`\\.${previousTargetLang}\\.srt$`, 'i'), `.${currentLang}.srt`);
+        }
+      } else if (inputPath && !outputPath) {
+        outputPath = inputPath.replace(/\.srt$/i, `.${currentLang}.srt`);
+      }
+      previousTargetLang = currentLang;
+    }
+  });
+
+  // Auto-select first model when provider changes (if current model invalid)
+  $effect(() => {
+    if (availableModels.length > 0) {
+       const currentValid = availableModels.find(m => m.id === selectedModel);
+       if (!currentValid) {
+         selectedModel = availableModels[0].id;
+       }
+    } else {
+        selectedModel = "";
+    }
+  });
+
+  $effect(() => {
+      if (!selectedProviderFamily && providerOptions.length > 0) {
+          selectedProviderFamily = "local"; // Default to Local LLM
+      }
+  });
+
+  let hasValidKey = $derived.by(() => {
+      if (selectedProviderFamily === "local") return true; 
+      if (selectedProviderFamily === "google") {
+        return apiKeys.some(k => k.apiType === "google");
+      }
+      return false;
+  });
+
+  function handleStorageChange(e: StorageEvent) {
+    if (e.key === "srt-tools-api-keys") {
+      loadApiKeys();
+    }
+  }
+
+  onMount(async () => {
+    loadApiKeys();
+
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Also listen for custom event for same-window updates
+    window.addEventListener("apikeys-updated", loadApiKeys);
+
+    unlistenProgress = await listen<TranslateProgressEvent>(
+      "translate-progress",
+      (event) => {
+        progress = event.payload;
+        addLog(event.payload.message);
+      }
+    );
+
+    unlistenComplete = await listen<TranslateResult>(
+      "translate-complete",
+      (event) => {
+        result = event.payload;
+        isTranslating = false;
+        stopPreviewRefresh();
+        refreshTranslatedPreview();
+        if (!event.payload.success || event.payload.translated_count > 0) {
+          progress = null;
+        }
+        addLog(`✅ ${event.payload.message}`);
+      }
+    );
+  });
+
+  onDestroy(() => {
+    window.removeEventListener("storage", handleStorageChange);
+    window.removeEventListener("apikeys-updated", loadApiKeys);
+    unlistenProgress?.();
+    unlistenComplete?.();
+    if (previewRefreshInterval) {
+      clearInterval(previewRefreshInterval);
+      previewRefreshInterval = null;
+    }
+  });
+
+  function loadApiKeys() {
+    apiKeys = loadAndValidateApiKeys();
+  }
+
+  async function refreshTranslatedPreview() {
+    if (!inputPath || !outputPath) return;
+    
+    try {
+      const pairs = await invoke<SubtitlePair[]>("get_latest_translated_subtitles", {
+        inputPath: inputPath,
+        outputPath: outputPath,
+        count: 10 // Show last 10 translated subtitles
+      });
+      translatedPairs = pairs;
+    } catch (e) {
+      // Silently ignore errors (file may not exist yet)
+      console.debug("Preview refresh:", e);
+    }
+  }
+
+  function startPreviewRefresh() {
+    if (previewRefreshInterval) return;
+    previewRefreshInterval = setInterval(refreshTranslatedPreview, 2000); // Refresh every 2 seconds
+  }
+
+  function stopPreviewRefresh() {
+    if (previewRefreshInterval) {
+      clearInterval(previewRefreshInterval);
+      previewRefreshInterval = null;
+    }
+  }
+
+  function addLog(message: string) {
+    const timestamp = new Date().toLocaleTimeString();
+    logs = [...logs, `[${timestamp}] ${message}`];
+  }
+
+  async function selectInputFile() {
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: "SRT Files", extensions: ["srt"] }],
+      });
+
+      if (selected) {
+        inputPath = selected as string;
+        await loadFileInfo();
+
+        if (!outputPath) {
+          outputPath = inputPath.replace(/\.srt$/i, `.${targetLang}.srt`);
+        }
+      }
+    } catch (e) {
+      error = `${t("translate.errorSelectingFile")} ${e}`;
+    }
+  }
+
+  async function selectOutputFile() {
+    try {
+      const selected = await save({
+        filters: [{ name: "SRT Files", extensions: ["srt"] }],
+        defaultPath: outputPath || undefined,
+      });
+
+      if (selected) {
+        outputPath = selected;
+      }
+    } catch (e) {
+      error = `${t("translate.errorSelectingFile")} ${e}`;
+    }
+  }
+
+  async function loadFileInfo() {
+    if (!inputPath) return;
+
+    try {
+      fileInfo = await invoke<SrtFileInfo>("load_srt_for_translate", {
+        path: inputPath,
+      });
+      addLog(`📄 ${t("translate.loadedFile", { count: fileInfo.subtitle_count })}`);
+    } catch (e) {
+      error = `${t("translate.errorLoading")} ${e}`;
+      fileInfo = null;
+    }
+  }
+
+  async function startTranslation() {
+    if (!inputPath || !outputPath || !selectedModel) {
+      error = t("translate.selectFileAndKey");
+      return;
+    }
+
+    if (!hasValidKey) {
+        // Should not happen as button is disabled
+        error = t("translate.noApiWarning");
+        return;
+    }
+
+    error = null;
+    result = null;
+    progress = null;
+    isTranslating = true;
+    translatedPairs = [];
+    addLog(`🚀 ${t("translate.starting")}`);
+    startPreviewRefresh();
+
+    let keysToSend: string[] = [];
+    if (selectedProviderFamily === "local") {
+        keysToSend = []; // Local doesn't need API keys
+    } else if (selectedProviderFamily === "google") {
+        // Collect ALL Google keys (round-robin rotation)
+        keysToSend = apiKeys
+            .filter(k => k.apiType === "google")
+            .map(k => k.apiKey.trim())
+            .filter(k => k.length > 0);
+    }
+    
+    if (keysToSend.length > 0) {
+        addLog(`🔑 Using ${keysToSend.length} API key(s)`);
+        const hasValidGoogleKeys = keysToSend.some(k => k.startsWith('AIza'));
+        if (!hasValidGoogleKeys && selectedProviderFamily === "google") {
+            addLog(`⚠️ Warning: No valid Google AI keys found. Google API keys should start with 'AIza...'`);
+        }
+    } else if (selectedProviderFamily !== "local") {
+        addLog(`⚠️ No valid API keys found for ${selectedProviderFamily}`);
+    }
+    
+    let apiUrl: string | null = null;
+    if (selectedProviderFamily === "local") {
+         const localKey = apiKeys.find(k => k.apiType === "local");
+         if (localKey && localKey.apiUrl) apiUrl = localKey.apiUrl;
+    } else if (selectedProviderFamily === "google") {
+        apiUrl = "https://generativelanguage.googleapis.com/v1beta";
+    }
+
+    const config: TranslateConfig = {
+      input_path: inputPath,
+      output_path: outputPath,
+      target_lang: targetLang,
+      api_keys: keysToSend,
+      api_type: selectedProviderFamily, // "local" or "google"
+      batch_size: batchSize,
+      title_context: titleContext || null,
+      api_url: apiUrl,
+      model: selectedModel || null,
+    };
+
+    try {
+      const res = await invoke<TranslateResult>("start_translation", {
+        config,
+      });
+      result = res;
+      isTranslating = false;
+    } catch (e: any) {
+      let msg = e ? e.toString() : "Unknown error";
+      const errorLower = msg.toLowerCase();
+      
+      let userMsg = msg;
+      
+      if (errorLower.includes("429") || errorLower.includes("quota") || errorLower.includes("rate limit")) {
+          userMsg = t("translate.error.ratelimit");
+      } else if (errorLower.includes("401") || errorLower.includes("unauthorized") || errorLower.includes("api key")) {
+          userMsg = t("translate.error.apikey");
+      } else if (errorLower.includes("json") || errorLower.includes("parse")) {
+          userMsg = t("translate.error.json");
+      }
+      
+      error = `${t("translate.errorTranslating")} ${userMsg}`;
+      isTranslating = false;
+      addLog(`❌ ${t("translate.error")}: ${msg}`);
+    }
+  }
+
+  async function cancelTranslation() {
+    try {
+      await invoke("cancel_translation");
+      isTranslating = false;
+      progress = null;
+      stopPreviewRefresh();
+      addLog(`⚠️ ${t("translate.cancelled")}`);
+    } catch (e) {
+      error = `${t("translate.errorCancelling")} ${e}`;
+    }
+  }
+
+  function formatEta(seconds: number | null): string {
+    if (seconds === null) return "...";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}m ${secs}s`;
+  }
+
+  function clearLogs() {
+    logs = [];
+  }
+
+  function handleGoToSettings() {
+    if (onGoToSettings) {
+      onGoToSettings();
+    }
+  }
+
+  const TRANSLATE_PANEL_IDS = [
+    "options",
+    "files",
+    "actions",
+    "progress",
+    "livePreview",
+    "logs",
+  ] as const;
+
+  type TranslatePanelId = (typeof TRANSLATE_PANEL_IDS)[number];
+
+  interface TranslateColumnLayout {
+    col1: TranslatePanelId[];
+    col2: TranslatePanelId[];
+  }
+
+  const TRANSLATE_DEFAULT_LAYOUT: TranslateColumnLayout = {
+    col1: ["options", "logs"],
+    col2: ["files", "actions", "progress", "livePreview"],
+  };
+
+  function loadTranslateLayout(): TranslateColumnLayout {
+    try {
+      const saved = localStorage.getItem("srt-translate-layout-v1");
+      if (saved) {
+        const parsed = JSON.parse(saved) as TranslateColumnLayout;
+        const all = [...parsed.col1, ...parsed.col2];
+        const valid =
+          TRANSLATE_PANEL_IDS.every((id) => all.includes(id)) &&
+          all.length === TRANSLATE_PANEL_IDS.length;
+        if (valid) return parsed;
+      }
+    } catch {}
+    return { ...TRANSLATE_DEFAULT_LAYOUT };
+  }
+
+  function saveTranslateLayout(layout: TranslateColumnLayout) {
+    localStorage.setItem("srt-translate-layout-v1", JSON.stringify(layout));
+  }
+
+  let translatePanelLayout = $state<TranslateColumnLayout>(loadTranslateLayout());
+
+  let trDraggedPanel = $state<TranslatePanelId | null>(null);
+  let trDragOverCol = $state<"col1" | "col2" | null>(null);
+  let trDragOverIdx = $state<number | null>(null);
+
+  function trOnDragStart(e: DragEvent, panelId: TranslatePanelId) {
+    const target = e.target as HTMLElement;
+    if (target?.tagName === "INPUT" && (target as HTMLInputElement).type === "range") {
+      e.preventDefault();
+      return;
+    }
+    trDraggedPanel = panelId;
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", panelId);
+    }
+  }
+
+  function trOnDragOver(e: DragEvent, col: "col1" | "col2", idx: number) {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    trDragOverCol = col;
+    trDragOverIdx = idx;
+  }
+
+  function trOnDragOverColumn(e: DragEvent, col: "col1" | "col2") {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    trDragOverCol = col;
+    if (trDragOverIdx === null) {
+      trDragOverIdx = translatePanelLayout[col].length;
+    }
+  }
+
+  function trOnDrop(col: "col1" | "col2", idx: number) {
+    if (!trDraggedPanel) return;
+    const newLayout = { ...translatePanelLayout };
+    for (const c of ["col1", "col2"] as const) {
+      const i = newLayout[c].indexOf(trDraggedPanel);
+      if (i !== -1) {
+        newLayout[c] = [...newLayout[c]];
+        newLayout[c].splice(i, 1);
+        if (c === col && i < idx) idx--;
+        break;
+      }
+    }
+    newLayout[col] = [...newLayout[col]];
+    newLayout[col].splice(idx, 0, trDraggedPanel);
+    translatePanelLayout = newLayout;
+    saveTranslateLayout(translatePanelLayout);
+    trDraggedPanel = null;
+    trDragOverCol = null;
+    trDragOverIdx = null;
+  }
+
+  function trOnDropColumn(col: "col1" | "col2") {
+    trOnDrop(col, translatePanelLayout[col].length);
+  }
+
+  function trOnDragEnd() {
+    trDraggedPanel = null;
+    trDragOverCol = null;
+    trDragOverIdx = null;
+  }
+
+  function resetTranslateLayout() {
+    translatePanelLayout = {
+      col1: [...TRANSLATE_DEFAULT_LAYOUT.col1],
+      col2: [...TRANSLATE_DEFAULT_LAYOUT.col2],
+    };
+    saveTranslateLayout(translatePanelLayout);
+  }
+</script>
+
+<div class="h-full flex flex-col p-6 overflow-y-auto translate-tab-scroll">
+
+  {#if !hasValidKey && selectedProviderFamily !== "local"}
+    <div class="mb-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl animate-fade-in">
+      <p class="text-amber-300">
+        ⚠️ {t("translate.noApiWarning")} 
+        <button 
+          onclick={handleGoToSettings}
+          class="underline hover:text-amber-200 font-medium transition-colors"
+        >
+          {t("translate.goToSettings")}
+        </button> 
+        {t("translate.toAddOne")}
+      </p>
+    </div>
+  {/if}
+
+  {#snippet panelContent(panelId: TranslatePanelId)}
+    {#if panelId === "options"}
+      <div class="glass-card p-5">
+        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2 text-green-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+          </svg>
+          {t("translate.options")}
+          <button type="button" onclick={() => helpSection = 'options'}
+            class="ml-auto text-gray-500 hover:text-green-300 transition-colors" title="Info">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+        </h3>
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="provider-select" class="block text-sm text-gray-400 mb-1">{t("translate.provider")}</label>
+              <SearchableSelect noResultsText={t("common.noResults")}
+                options={providerOptions.map(p => ({ value: p.id, label: p.name }))}
+                value={selectedProviderFamily}
+                onchange={(v) => selectedProviderFamily = v}
+                placeholder={t("translate.provider")}
+              />
+            </div>
+            <div>
+              <label for="model-select" class="block text-sm text-gray-400 mb-1">{t("translate.model")}</label>
+              <SearchableSelect noResultsText={t("common.noResults")}
+                options={availableModels.map(m => ({ value: m.id, label: m.name }))}
+                value={selectedModel}
+                onchange={(v) => selectedModel = v}
+                placeholder={t("translate.model")}
+              />
+            </div>
+          </div>
+          <div>
+            <label for="target-lang" class="block text-sm text-gray-400 mb-1">{t("translate.targetLang")}</label>
+            <SearchableSelect noResultsText={t("common.noResults")}
+              options={languages.map(lang => ({
+                value: lang.code,
+                label: lang.nameEn === lang.name ? lang.name : `${lang.nameEn} — ${lang.name}`,
+                searchTerms: `${lang.nameEn} ${lang.name}`,
+                icon: lang.flag
+              }))}
+              value={targetLang}
+              onchange={(v) => targetLang = v}
+              placeholder={t("translate.targetLang")}
+            />
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm text-gray-400 flex items-center gap-2">
+                {t("translate.batchSize")}
+                <button type="button" onclick={() => helpSection = 'batchSize'}
+                  class="text-gray-500 hover:text-green-300 transition-colors" title="Info">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+              </span>
+              <span class="text-white font-mono bg-white/10 px-2 py-0.5 rounded text-xs">{batchSize} {t("translate.subPerBatch")}</span>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+              <button onclick={() => setBatchPreset("precise")}
+                class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeBatchPreset === 'precise' ? 'bg-green-500/20 border-green-500/50 text-white' : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}">
+                <span class="text-base block mb-0.5">🎯</span>
+                <span class="font-semibold block">{t("translate.batchPrecise")}</span>
+                <span class="text-[10px] text-gray-500 block">5 sub</span>
+              </button>
+              <button onclick={() => setBatchPreset("balanced")}
+                class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeBatchPreset === 'balanced' ? 'bg-green-500/20 border-green-500/50 text-white' : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}">
+                <span class="text-base block mb-0.5">⚖️</span>
+                <span class="font-semibold block">{t("translate.batchBalanced")}</span>
+                <span class="text-[10px] text-gray-500 block">15 sub</span>
+              </button>
+              <button onclick={() => setBatchPreset("fast")}
+                class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeBatchPreset === 'fast' ? 'bg-green-500/20 border-green-500/50 text-white' : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}">
+                <span class="text-base block mb-0.5">🚀</span>
+                <span class="font-semibold block">{t("translate.batchFast")}</span>
+                <span class="text-[10px] text-gray-500 block">30 sub</span>
+              </button>
+              <button onclick={() => setBatchPreset("turbo")}
+                class="p-2 rounded-lg text-center transition-all duration-200 border text-xs {activeBatchPreset === 'turbo' ? 'bg-green-500/20 border-green-500/50 text-white' : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400 hover:text-white'}">
+                <span class="text-base block mb-0.5">⚡</span>
+                <span class="font-semibold block">{t("translate.batchTurbo")}</span>
+                <span class="text-[10px] text-gray-500 block">50 sub</span>
+              </button>
+            </div>
+          </div>
+          <div>
+            <label for="context-input" class="block text-sm text-gray-400 mb-1">
+              {t("translate.context")} <span class="text-gray-500">{t("translate.contextOptional")}</span>
+            </label>
+            <textarea id="context-input" bind:value={titleContext} rows="4"
+              placeholder={t("translate.contextPlaceholder")} class="input-modern w-full text-sm min-h-[7rem] resize-y"></textarea>
+          </div>
+        </div>
+      </div>
+    {:else if panelId === "files"}
+      <div class="glass-card p-5">
+        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2 text-indigo-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          {t("translate.file")}
+          <button type="button" onclick={() => helpSection = 'files'}
+            class="ml-auto text-gray-500 hover:text-indigo-300 transition-colors" title="Info">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+        </h3>
+        <div class="space-y-3">
+          <div>
+            <label for="input-path" class="block text-sm text-gray-400 mb-1">{t("translate.inputFile")}</label>
+            <div class="flex gap-2">
+              <button type="button" onclick={() => expandedPathField = 'input'}
+                class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate"
+                style="direction: rtl; text-align: left;" title={inputPath || t("translate.selectFile")}>
+                <span class="{inputPath ? 'text-white' : 'text-gray-500'}" style="unicode-bidi: plaintext;">
+                  {inputPath || t("translate.selectFile")}
+                </span>
+              </button>
+              <button onclick={selectInputFile} class="btn-primary py-2 px-3" title={t("translate.tooltip.upload")}>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div>
+            <label for="output-path" class="block text-sm text-gray-400 mb-1">{t("translate.outputFile")}</label>
+            <div class="flex gap-2">
+              <button type="button" onclick={() => expandedPathField = 'output'}
+                class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate"
+                style="direction: rtl; text-align: left;" title={outputPath || t("translate.selectDestination")}>
+                <span class="{outputPath ? 'text-white' : 'text-gray-500'}" style="unicode-bidi: plaintext;">
+                  {outputPath || t("translate.selectDestination")}
+                </span>
+              </button>
+              <button onclick={selectOutputFile} class="btn-secondary py-2 px-3" title={t("translate.tooltip.save")}>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          {#if fileInfo}
+            <div class="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                  <span class="text-xl">📄</span>
+                </div>
+                <div>
+                  <p class="font-medium text-white">{fileInfo.subtitle_count} {t("translate.subtitles")}</p>
+                  <p class="text-sm text-gray-400 truncate max-w-xs">"{fileInfo.first_subtitle}"</p>
+                </div>
+              </div>
+            </div>
+          {/if}
+        </div>
+      </div>
+    {:else if panelId === "actions"}
+      <div class="flex gap-3">
+        {#if isTranslating}
+          <button onclick={cancelTranslation} class="btn-danger flex-1 py-4 text-lg">
+            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            {t("translate.cancel")}
+          </button>
+        {:else}
+          <button onclick={startTranslation}
+            disabled={!inputPath || !outputPath || !hasValidKey || !selectedModel}
+            class="btn-success flex-1 py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {t("translate.start")}
+          </button>
+        {/if}
+      </div>
+    {:else if panelId === "progress"}
+      <div class="space-y-3">
+        {#if isTranslating || progress}
+          <div class="glass-card p-4 animate-fade-in shrink-0 {isTranslating ? 'animate-pulse-glow' : ''}">
+            <div class="flex items-center gap-6">
+              <div class="flex-1">
+                <div class="progress-modern h-2">
+                  <div class="progress-modern-bar" style="width: {progress?.percentage || 0}%"></div>
+                </div>
+              </div>
+              <span class="text-gray-400 text-sm whitespace-nowrap">
+                {t("translate.batch")} {progress?.current_batch || 0}/{progress?.total_batches || 0}
+              </span>
+              <span class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                {Math.round(progress?.percentage || 0)}%
+              </span>
+              {#if progress?.eta_seconds}
+                <span class="text-gray-500 text-sm flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {formatEta(progress.eta_seconds)}
+                </span>
+              {/if}
+            </div>
+          </div>
+        {/if}
+        {#if result}
+          <div class="glass-card p-4 border-l-4 animate-fade-in shrink-0 {result.success ? 'border-green-500 bg-green-500/5' : 'border-red-500 bg-red-500/5'}">
+            <div class="flex items-center gap-3">
+              {#if result.success}
+                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              {:else}
+                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              {/if}
+              <div class="flex-1">
+                <p class="{result.success ? 'text-green-400' : 'text-red-400'} font-medium">{result.message}</p>
+                {#if result.output_path}
+                  <p class="text-xs text-gray-500 mt-1 font-mono truncate">📁 {result.output_path}</p>
+                {/if}
+              </div>
+            </div>
+          </div>
+        {/if}
+        {#if error}
+          <div class="glass-card p-4 border border-red-500/30 bg-red-500/10 animate-fade-in shrink-0">
+            <div class="flex items-center gap-3">
+              <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p class="text-red-300 flex-1 text-sm">{error}</p>
+              <button onclick={() => (error = null)} class="text-red-400 hover:text-red-300">✕</button>
+            </div>
+          </div>
+        {/if}
+      </div>
+    {:else if panelId === "livePreview"}
+      <div class="glass-card p-5 shrink-0" style="min-height: 400px;">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold flex items-center gap-2 text-purple-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {t("translate.livePreview")}
+            {#if translatedPairs.length > 0}
+              <span class="text-xs text-gray-500 font-normal ml-2">({translatedPairs.length} {t("translate.subtitles")})</span>
+            {/if}
+          </h3>
+        </div>
+        <div class="grid grid-cols-2 gap-4" style="min-height: 340px;">
+          <div class="bg-white/5 rounded-xl p-4 flex flex-col">
+            <p class="text-xs text-gray-500 uppercase tracking-wide mb-3 shrink-0">{t("translate.original")}</p>
+            <div class="flex-1 overflow-y-auto space-y-2">
+              {#if translatedPairs.length > 0}
+                {#each translatedPairs as pair}
+                  <div class="p-2 bg-black/20 rounded-lg border-l-2 border-gray-600">
+                    <span class="text-[10px] text-gray-600 font-mono">#{pair.id}</span>
+                    <p class="text-gray-300 text-sm mt-0.5">{pair.original}</p>
+                  </div>
+                {/each}
+              {:else}
+                <div class="flex items-center justify-center h-full">
+                  <p class="text-gray-600 text-sm">{t("translate.waitingForTranslation")}</p>
+                </div>
+              {/if}
+            </div>
+          </div>
+          <div class="bg-white/5 rounded-xl p-4 flex flex-col">
+            <p class="text-xs text-gray-500 uppercase tracking-wide mb-3 shrink-0">{t("translate.translated")}</p>
+            <div class="flex-1 overflow-y-auto space-y-2">
+              {#if translatedPairs.length > 0}
+                {#each translatedPairs as pair}
+                  <div class="p-2 bg-green-500/5 rounded-lg border-l-2 border-green-500/50">
+                    <span class="text-[10px] text-green-600/70 font-mono">#{pair.id}</span>
+                    <p class="text-green-300 text-sm mt-0.5">{pair.translated}</p>
+                  </div>
+                {/each}
+              {:else}
+                <div class="flex items-center justify-center h-full">
+                  <p class="text-gray-600 text-sm">{t("translate.waitingForTranslation")}</p>
+                </div>
+              {/if}
+            </div>
+          </div>
+        </div>
+      </div>
+    {:else if panelId === "logs"}
+      <div class="glass-card p-4 shrink-0">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-sm font-medium text-gray-400 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+            </svg>
+            {t("translate.logs")}
+          </h4>
+          {#if logs.length > 0}
+            <button onclick={clearLogs} class="text-xs text-gray-500 hover:text-gray-400 transition-colors">
+              {t("translate.clearLog")}
+            </button>
+          {/if}
+        </div>
+        <div class="max-h-40 overflow-y-auto bg-black/20 rounded-lg p-3">
+          {#if logs.length > 0}
+            <div class="space-y-1">
+              {#each logs as log}
+                <p class="text-gray-500 text-xs font-mono">{log}</p>
+              {/each}
+            </div>
+          {:else}
+            <p class="text-gray-600 text-xs">{t("translate.noLog")}</p>
+          {/if}
+        </div>
+      </div>
+    {/if}
+  {/snippet}
+
+  <div class="flex justify-end mb-1">
+    <button onclick={resetTranslateLayout}
+      class="text-[10px] text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1">
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      {t("flashcards.resetLayout")}
+    </button>
+  </div>
+
+  <div class="flex-1 grid grid-cols-2 gap-6 min-h-0 overflow-y-auto">
+    <div class="space-y-3 overflow-y-auto pr-1 min-h-[100px]"
+      ondragover={(e) => trOnDragOverColumn(e, "col1")}
+      ondrop={() => trOnDropColumn("col1")} role="list">
+      {#each translatePanelLayout.col1 as trPanelId, idx (trPanelId)}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div draggable="true"
+          ondragstart={(e) => trOnDragStart(e, trPanelId)}
+          ondragover={(e) => trOnDragOver(e, "col1", idx)}
+          ondrop={(e) => { e.stopPropagation(); trOnDrop("col1", idx); }}
+          ondragend={trOnDragEnd}
+          class="cursor-grab active:cursor-grabbing transition-all duration-150 {trDraggedPanel === trPanelId ? 'opacity-40 scale-[0.98]' : ''} {trDragOverCol === 'col1' && trDragOverIdx === idx && trDraggedPanel !== trPanelId ? 'border-t-2 border-green-400 pt-1' : ''}"
+          role="listitem">
+          {@render panelContent(trPanelId)}
+        </div>
+      {/each}
+      {#if trDraggedPanel && trDragOverCol === "col1" && trDragOverIdx === translatePanelLayout.col1.length}
+        <div class="h-1 bg-green-400 rounded-full mx-4 transition-all"></div>
+      {/if}
+    </div>
+
+    <div class="space-y-3 overflow-y-auto pr-1 min-h-[100px]"
+      ondragover={(e) => trOnDragOverColumn(e, "col2")}
+      ondrop={() => trOnDropColumn("col2")} role="list">
+      {#each translatePanelLayout.col2 as trPanelId, idx (trPanelId)}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div draggable="true"
+          ondragstart={(e) => trOnDragStart(e, trPanelId)}
+          ondragover={(e) => trOnDragOver(e, "col2", idx)}
+          ondrop={(e) => { e.stopPropagation(); trOnDrop("col2", idx); }}
+          ondragend={trOnDragEnd}
+          class="cursor-grab active:cursor-grabbing transition-all duration-150 {trDraggedPanel === trPanelId ? 'opacity-40 scale-[0.98]' : ''} {trDragOverCol === 'col2' && trDragOverIdx === idx && trDraggedPanel !== trPanelId ? 'border-t-2 border-green-400 pt-1' : ''}"
+          role="listitem">
+          {@render panelContent(trPanelId)}
+        </div>
+      {/each}
+      {#if trDraggedPanel && trDragOverCol === "col2" && trDragOverIdx === translatePanelLayout.col2.length}
+        <div class="h-1 bg-green-400 rounded-full mx-4 transition-all"></div>
+      {/if}
+    </div>
+  </div>
+
+  {#if helpSection}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6"
+      role="dialog" aria-modal="true" tabindex="-1"
+      onclick={() => helpSection = null}
+      onkeydown={(e) => { if (e.key === 'Escape') helpSection = null; }}>
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6"
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white">
+            {#if helpSection === 'options'}{t("translate.options")}
+            {:else if helpSection === 'files'}{t("translate.file")}
+            {:else if helpSection === 'batchSize'}{t("translate.batchSize")}
+            {/if}
+          </h2>
+          <button onclick={() => helpSection = null} class="text-gray-400 hover:text-white text-xl">✕</button>
+        </div>
+        <div class="text-gray-300 text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
+          {#if helpSection === 'options'}
+            {@html t("translate.optionsHelp")}
+          {:else if helpSection === 'files'}
+            {@html t("translate.filesHelp")}
+          {:else if helpSection === 'batchSize'}
+            {@html t("translate.batchSizeHelp")}
+          {/if}
+        </div>
+        <div class="mt-4 flex justify-end">
+          <button onclick={() => helpSection = null} class="btn-primary py-1.5 px-4 text-sm">OK</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if expandedPathField}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
+      role="dialog" aria-modal="true" tabindex="-1"
+      onclick={() => expandedPathField = null}
+      onkeydown={(e) => { if (e.key === 'Escape') expandedPathField = null; }}>
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl p-5 animate-fade-in"
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold text-gray-300">
+            {#if expandedPathField === 'input'}{t("translate.inputFile")}
+            {:else if expandedPathField === 'output'}{t("translate.outputFile")}
+            {/if}
+          </h3>
+          <button onclick={() => expandedPathField = null} class="text-gray-400 hover:text-white text-lg leading-none">✕</button>
+        </div>
+        <div class="bg-gray-800/80 rounded-lg p-3 border border-gray-700/50">
+          <p class="text-sm text-white font-mono break-all select-all leading-relaxed">
+            {#if expandedPathField === 'input'}{inputPath || '—'}
+            {:else if expandedPathField === 'output'}{outputPath || '—'}
+            {/if}
+          </p>
+        </div>
+        <div class="mt-3 flex justify-end">
+          <button onclick={() => expandedPathField = null} class="btn-primary py-1.5 px-4 text-xs">OK</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+</div>
+
+<style>
+  .translate-tab-scroll {
+    background: #111827;
+    contain: layout style;
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateZ(0);
+    will-change: scroll-position;
+    backface-visibility: hidden;
+  }
+</style>

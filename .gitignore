@@ -1,0 +1,36 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+# Configuration files with sensitive data
+.env
+*.key
+config.toml 
+
+Helpful_Source_code_subs2srs
+Source_code_subs2srs
+Test_Subs/Detour-1945-Public_domain.mkv
+
+# File video/audio grandi
+*.mkv
+*.mp4
+*.avi
+*.mov
+*.wav
+*.mp3
+*.flac
+.directory
