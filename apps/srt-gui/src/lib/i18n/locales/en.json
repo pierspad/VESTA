@@ -530,6 +530,7 @@
   "provider.google.desc": "Google Gemini native API (requires AIza... key)",
   "provider.openai.desc": "GPT-4, GPT-4o, GPT-3.5 (Coming Soon)",
   "provider.anthropic.desc": "Claude 3.5, Claude 3 (Coming Soon)",
+  "provider.custom.desc": "Any OpenAI-compatible endpoint",
   "settings.soonBadge": "Soon",
   "settings.modal.providerGoogle": "Google Gemini",
   "settings.modal.providerGoogleDesc": "Gemini 3.1 Pro, 3 Flash",
@@ -575,5 +576,7 @@
   "flashcards.processingEpisode": "Processing episode {current} of {total}...",
   "flashcards.mergingApkg": "Merging episode packages into a single APKG...",
   "flashcards.mergeFailed": "Failed to merge APKG",
-  "flashcards.seriesComplete": "Series processing complete! ({total} episodes)"
+  "flashcards.seriesComplete": "Series processing complete! ({total} episodes)",
+  "translate.customModelPlaceholder": "Or enter a custom model ID...",
+  "translate.usingCustomModel": "Using custom model"
 }

@@ -3169,7 +3169,11 @@
         </div>
       </div>
     {:else if panelId === "exportFormat"}
-      <div class="glass-card p-4">
+      <div
+        class="glass-card p-4 {!hasAnyFiles
+          ? 'opacity-50 pointer-events-none'
+          : ''}"
+      >
         <h3
           class="text-sm font-semibold mb-3 flex items-center gap-2 text-sky-400"
         >
@@ -3382,7 +3386,11 @@
         </div>
       </div>
     {:else if panelId === "cpuCores"}
-      <div class="glass-card p-4">
+      <div
+        class="glass-card p-4 {!hasAnyFiles
+          ? 'opacity-50 pointer-events-none'
+          : ''}"
+      >
         <h3
           class="text-sm font-semibold mb-3 flex items-center gap-2 text-orange-400"
         >

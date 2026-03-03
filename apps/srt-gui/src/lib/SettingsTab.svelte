@@ -14,16 +14,31 @@
     type ModelInfo,
   } from "./models";
 
-  const allProviderIds = ["local", "google", "openai", "anthropic"];
+  const allProviderIds = ["local", "custom", "google"];
 
   let apiKeys = $state<ApiKeyConfig[]>([]);
-  let selectedProviderType = $state<string>("google"); // "local" or "google"
+  let selectedProviderType = $state<string>("google"); // "local", "google", or "custom"
   let selectedFamily = $state<string | null>(null);
 
   let showAddKey = $state(false);
   let showAddModel = $state(false);
-  let error = $state<string | null>(null);
-  let success = $state<string | null>(null);
+
+  // Snackbar notification system (replaces inline error/success banners)
+  let snackbarMessage = $state<string | null>(null);
+  let snackbarType = $state<"error" | "success">("success");
+  let snackbarTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
+
+  function showSnackbar(
+    message: string,
+    type: "error" | "success" = "success",
+  ) {
+    if (snackbarTimeout) clearTimeout(snackbarTimeout);
+    snackbarMessage = message;
+    snackbarType = type;
+    snackbarTimeout = setTimeout(() => {
+      snackbarMessage = null;
+    }, 3500);
+  }
 
   let t = $derived($locale);
 
@@ -118,22 +133,29 @@
 
   function addApiKey() {
     if (!newKeyName.trim()) {
-      error = t("settings.errorNameRequired");
+      showSnackbar(t("settings.errorNameRequired"), "error");
       return;
     }
 
-    if (newKeyType === "local" && !newKeyUrl.trim()) {
-      error = t("settings.errorEndpointRequired");
+    if (
+      (newKeyType === "local" || newKeyType === "custom") &&
+      !newKeyUrl.trim()
+    ) {
+      showSnackbar(t("settings.errorEndpointRequired"), "error");
       return;
     }
 
-    if (newKeyType !== "local" && !newKeyValue.trim()) {
-      error = t("settings.errorKeyRequired");
+    if (
+      newKeyType !== "local" &&
+      newKeyType !== "custom" &&
+      !newKeyValue.trim()
+    ) {
+      showSnackbar(t("settings.errorKeyRequired"), "error");
       return;
     }
 
     if (newKeyType === "google" && !newKeyValue.trim().startsWith("AIza")) {
-      error = t("settings.errorInvalidGoogleKey");
+      showSnackbar(t("settings.errorInvalidGoogleKey"), "error");
       return;
     }
 
@@ -157,7 +179,7 @@
           : k,
       );
       saveApiKeys();
-      success = t("settings.keyUpdated");
+      showSnackbar(t("settings.keyUpdated"));
     } else {
       // Add new key
       const newKey: ApiKeyConfig = {
@@ -170,7 +192,7 @@
       };
       apiKeys = [...apiKeys, newKey];
       saveApiKeys();
-      success = t("settings.keyAdded");
+      showSnackbar(t("settings.keyAdded"));
     }
 
     newKeyName = "";
@@ -178,8 +200,6 @@
     newKeyUrl = "";
     editKeyId = null;
     showAddKey = false;
-
-    setTimeout(() => (success = null), 3000);
   }
 
   let deleteConfirmId = $state<string | null>(null);
@@ -218,8 +238,7 @@
     }
 
     saveApiKeys();
-    success = t("settings.keyDeleted");
-    setTimeout(() => (success = null), 3000);
+    showSnackbar(t("settings.keyDeleted"));
     cancelDelete();
   }
 
@@ -322,23 +341,20 @@
     </div>
   </div>
 
-  {#if error}
+  <!-- Snackbar notification at the bottom -->
+  {#if snackbarMessage}
     <div
-      class="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-3 animate-fade-in shrink-0"
+      class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-fade-in
+        {snackbarType === 'error'
+        ? 'bg-red-500/90 text-white border border-red-400/50'
+        : 'bg-emerald-500/90 text-white border border-emerald-400/50'}"
+      style="backdrop-filter: blur(12px);"
     >
-      <span class="text-red-300 flex-1">{error}</span>
+      <span class="text-sm font-medium">{snackbarMessage}</span>
       <button
-        onclick={() => (error = null)}
-        class="text-red-400 hover:text-red-300">✕</button
+        onclick={() => (snackbarMessage = null)}
+        class="text-white/70 hover:text-white ml-2">✕</button
       >
-    </div>
-  {/if}
-
-  {#if success}
-    <div
-      class="mb-4 p-4 bg-green-500/10 border border-green-500/30 rounded-xl flex items-center gap-3 animate-fade-in shrink-0"
-    >
-      <span class="text-green-300">{success}</span>
     </div>
   {/if}
 
@@ -425,7 +441,23 @@
                     />
                   </svg>
                 {:else}
-                  <span class="text-sm">🌐</span>
+                  <svg
+                    class="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    ><path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    /><path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    /></svg
+                  >
                 {/if}
                 <span class="truncate"
                   >{t(`provider.${pid}`) || provider?.name || pid}</span
@@ -768,6 +800,7 @@
               >{t("settings.modal.provider")}</span
             >
             <div class="grid grid-cols-2 gap-3">
+              <!-- Server Locale — centered, spanning 2 columns -->
               <button
                 type="button"
                 onclick={() => {
@@ -776,7 +809,7 @@
                   newKeyUrl = providers.local.defaultApiUrl || "";
                   newKeyValue = "";
                 }}
-                class="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 border text-left
+                class="col-span-2 flex items-center gap-3 p-3 rounded-lg transition-all duration-200 border text-left justify-center
                   {newKeyType === 'local'
                   ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
                   : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400'}"
@@ -808,6 +841,50 @@
                 </div>
               </button>
 
+              <!-- Provider Personalizzato -->
+              <button
+                type="button"
+                onclick={() => {
+                  newKeyType = "custom";
+                  newKeyName = "";
+                  newKeyUrl = "";
+                  newKeyValue = "";
+                }}
+                class="flex items-center gap-3 p-3 rounded-lg transition-all duration-200 border text-left
+                  {newKeyType === 'custom'
+                  ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
+                  : 'bg-white/5 hover:bg-white/10 border-transparent text-gray-400'}"
+              >
+                <div
+                  class="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center text-white shadow-lg"
+                >
+                  <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    ><path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    /><path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    /></svg
+                  >
+                </div>
+                <div class="flex flex-col">
+                  <span class="text-sm font-bold">{t("provider.custom")}</span>
+                  <span class="text-[10px] opacity-70 leading-tight"
+                    >{t("provider.custom.desc")}</span
+                  >
+                </div>
+              </button>
+
+              <!-- Google Gemini -->
               <button
                 type="button"
                 onclick={() => {
@@ -848,62 +925,6 @@
                   >
                 </div>
               </button>
-
-              <button
-                type="button"
-                disabled
-                class="relative flex items-center gap-3 p-3 rounded-lg border text-left bg-white/5 border-transparent text-gray-600 opacity-50 cursor-not-allowed"
-              >
-                <div
-                  class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white shadow-lg opacity-50"
-                >
-                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                      d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073z"
-                    />
-                  </svg>
-                </div>
-                <div class="flex flex-col">
-                  <span class="text-sm font-bold"
-                    >{t("settings.modal.providerOpenai")}</span
-                  >
-                  <span class="text-[10px] opacity-70 leading-tight"
-                    >{t("settings.modal.providerOpenaiDesc")}</span
-                  >
-                </div>
-                <span
-                  class="absolute -top-1 -right-1 text-[8px] bg-amber-500/80 text-white px-1.5 py-0.5 rounded font-bold"
-                  >{t("settings.soonBadge")}</span
-                >
-              </button>
-
-              <button
-                type="button"
-                disabled
-                class="relative flex items-center gap-3 p-3 rounded-lg border text-left bg-white/5 border-transparent text-gray-600 opacity-50 cursor-not-allowed"
-              >
-                <div
-                  class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-lg opacity-50"
-                >
-                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                      d="M17.304 3.541h-3.672l6.696 16.918H24l-6.696-16.918zm-10.608 0L0 20.459h3.744l1.368-3.576h7.056l1.368 3.576h3.744L10.584 3.541H6.696zm.096 10.454l2.4-6.252 2.376 6.252H6.792z"
-                    />
-                  </svg>
-                </div>
-                <div class="flex flex-col">
-                  <span class="text-sm font-bold"
-                    >{t("settings.modal.providerAnthropic")}</span
-                  >
-                  <span class="text-[10px] opacity-70 leading-tight"
-                    >{t("settings.modal.providerAnthropicDesc")}</span
-                  >
-                </div>
-                <span
-                  class="absolute -top-1 -right-1 text-[8px] bg-amber-500/80 text-white px-1.5 py-0.5 rounded font-bold"
-                  >{t("settings.soonBadge")}</span
-                >
-              </button>
             </div>
           </div>
 
@@ -923,7 +944,7 @@
               />
             </div>
 
-            {#if newKeyType === "local"}
+            {#if newKeyType === "local" || newKeyType === "custom"}
               <div>
                 <label
                   for="api-url"
@@ -935,8 +956,9 @@
                   id="api-url"
                   type="text"
                   bind:value={newKeyUrl}
-                  placeholder={providers[newKeyType]?.defaultApiUrl ||
-                    "https://..."}
+                  placeholder={newKeyType === "local"
+                    ? providers[newKeyType]?.defaultApiUrl || "https://..."
+                    : "https://api.example.com/v1/chat/completions"}
                   class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all placeholder-gray-600 font-mono"
                 />
               </div>
@@ -947,14 +969,22 @@
                 <label
                   for="api-key"
                   class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5"
-                  >{t("settings.modal.apiKey")}</label
+                  >{t("settings.modal.apiKey")}
+                  {#if newKeyType === "custom"}<span
+                      class="text-gray-600 normal-case font-normal"
+                      >({t("settings.modal.optional")})</span
+                    >{/if}</label
                 >
                 <div class="relative">
                   <input
                     id="api-key"
                     type={showNewKeyPassword ? "text" : "password"}
                     bind:value={newKeyValue}
-                    placeholder={newKeyType === "google" ? "AIza..." : "sk-..."}
+                    placeholder={newKeyType === "google"
+                      ? "AIza..."
+                      : newKeyType === "custom"
+                        ? t("settings.modal.notRequiredForLocal")
+                        : "sk-..."}
                     class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 pr-20 text-sm text-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all placeholder-gray-600 font-mono"
                   />
                   <div

@@ -79,7 +79,12 @@
   let helpSection = $state<string | null>(null);
 
   // Panel layout (drag & drop)
-  const SYNC_PANEL_IDS = ["wizard", "status", "subtitleList"] as const;
+  const SYNC_PANEL_IDS = [
+    "toolbar",
+    "wizard",
+    "status",
+    "subtitleList",
+  ] as const;
 
   type SyncPanelId = (typeof SYNC_PANEL_IDS)[number];
 
@@ -89,7 +94,7 @@
   }
 
   const SYNC_DEFAULT_LAYOUT: SyncColumnLayout = {
-    col1: ["wizard"],
+    col1: ["toolbar", "wizard"],
     col2: ["status", "subtitleList"],
   };
 
@@ -997,144 +1002,158 @@
     </button>
   </div>
 
-  <!-- Top Bar -->
-  <div class="flex items-center gap-4 p-4 glass-card mt-1 mb-0 flex-shrink-0">
-    <div class="flex items-center gap-2 flex-1 max-w-lg">
-      <button
-        onclick={selectSrtFile}
-        class="flex-1 btn-primary py-2 px-4 flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
-        title={t("sync.tooltip.loadSrt")}
-      >
-        <svg
-          class="w-8 h-8"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          ><path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          /></svg
-        >
-        {t("sync.loadSrt")}
-      </button>
-      <div class="text-gray-500 {status?.is_loaded ? 'text-indigo-400' : ''}">
-        <svg
-          class="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          ><path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M13 7l5 5m0 0l-5 5m5-5H6"
-          /></svg
-        >
-      </div>
-      <button
-        onclick={selectAudioFile}
-        disabled={!status?.is_loaded}
-        class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-30 disabled:cursor-not-allowed py-2 px-4 rounded-xl font-medium flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/30"
-        title={t("sync.tooltip.loadVideo")}
-      >
-        <svg
-          class="w-8 h-8"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          ><path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-          /><path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          /></svg
-        >
-        {t("sync.loadAudio")}
-      </button>
-    </div>
-
-    <div class="flex-1"></div>
-
-    {#if status?.is_loaded || audioSrc}
-      <button
-        onclick={() => (showResetModal = true)}
-        class="py-1.5 px-4 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors text-sm font-medium flex items-center gap-2"
-        title={t("sync.newSyncDesc")}
-      >
-        <svg
-          class="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          ><path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-          /></svg
-        >
-        {t("sync.newSync")}
-      </button>
-    {/if}
-
-    <button
-      onclick={loadSession}
-      class="btn-secondary py-2 px-4 flex items-center gap-2"
-      title={t("sync.tooltipLoadSession")}
-    >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-        ><path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-        /></svg
-      >
-      {t("sync.loadSession")}
-    </button>
-    <button
-      onclick={saveSession}
-      disabled={!status?.is_loaded}
-      class="btn-secondary py-2 px-4 flex items-center gap-2 disabled:opacity-50"
-      title={t("sync.tooltipSaveSession")}
-    >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-        ><path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-        /></svg
-      >
-      {t("sync.saveSession")}
-    </button>
-    <button
-      onclick={saveFile}
-      disabled={!status?.is_loaded}
-      class="btn-success py-2 px-4 flex items-center gap-2 disabled:opacity-50"
-      title={t("sync.tooltipSaveFile")}
-    >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-        ><path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M5 13l4 4L19 7"
-        /></svg
-      >
-      {t("sync.saveFile")}
-    </button>
-  </div>
-
   {#snippet panelContent(panelId: SyncPanelId)}
-    {#if panelId === "wizard"}
+    {#if panelId === "toolbar"}
+      <!-- Toolbar Panel (draggable) -->
+      <div class="glass-card flex items-center gap-4 p-4 flex-shrink-0">
+        <div class="flex items-center gap-2 flex-1 max-w-lg">
+          <button
+            onclick={selectSrtFile}
+            class="flex-1 btn-primary py-2 px-4 flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
+            title={t("sync.tooltip.loadSrt")}
+          >
+            <svg
+              class="w-8 h-8"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              ><path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              /></svg
+            >
+            {t("sync.loadSrt")}
+          </button>
+          <div
+            class="text-gray-500 {status?.is_loaded ? 'text-indigo-400' : ''}"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              ><path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 7l5 5m0 0l-5 5m5-5H6"
+              /></svg
+            >
+          </div>
+          <button
+            onclick={selectAudioFile}
+            disabled={!status?.is_loaded}
+            class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-30 disabled:cursor-not-allowed py-2 px-4 rounded-xl font-medium flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/30"
+            title={t("sync.tooltip.loadVideo")}
+          >
+            <svg
+              class="w-8 h-8"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              ><path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+              /><path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              /></svg
+            >
+            {t("sync.loadAudio")}
+          </button>
+        </div>
+
+        <div class="flex-1"></div>
+
+        {#if status?.is_loaded || audioSrc}
+          <button
+            onclick={() => (showResetModal = true)}
+            class="py-1.5 px-4 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors text-sm font-medium flex items-center gap-2"
+            title={t("sync.newSyncDesc")}
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              ><path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              /></svg
+            >
+            {t("sync.newSync")}
+          </button>
+        {/if}
+
+        <button
+          onclick={loadSession}
+          class="btn-secondary py-2 px-4 flex items-center gap-2"
+          title={t("sync.tooltipLoadSession")}
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+            /></svg
+          >
+          {t("sync.loadSession")}
+        </button>
+        <button
+          onclick={saveSession}
+          disabled={!status?.is_loaded}
+          class="btn-secondary py-2 px-4 flex items-center gap-2 disabled:opacity-50"
+          title={t("sync.tooltipSaveSession")}
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+            /></svg
+          >
+          {t("sync.saveSession")}
+        </button>
+        <button
+          onclick={saveFile}
+          disabled={!status?.is_loaded}
+          class="btn-success py-2 px-4 flex items-center gap-2 disabled:opacity-50"
+          title={t("sync.tooltipSaveFile")}
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 13l4 4L19 7"
+            /></svg
+          >
+          {t("sync.saveFile")}
+        </button>
+      </div>
+    {:else if panelId === "wizard"}
       <div class="glass-card relative flex flex-col h-full overflow-hidden">
         <div
           class="p-3 border-b border-white/10 flex items-center gap-2 flex-shrink-0"
@@ -1785,8 +1804,17 @@
     {/if}
   {/snippet}
 
+  <!-- Toolbar Panel (full-width, above the grid) -->
+  {#each [...syncPanelLayout.col1, ...syncPanelLayout.col2] as sPanelId}
+    {#if sPanelId === "toolbar"}
+      <div class="mb-3">
+        {@render panelContent("toolbar")}
+      </div>
+    {/if}
+  {/each}
+
   <!-- Main Grid: 2 Columns (Drag-and-Drop Reorderable) -->
-  <div class="flex-1 grid grid-cols-2 gap-6 pt-2 min-h-0 overflow-hidden">
+  <div class="flex-1 grid grid-cols-2 gap-6 min-h-0 overflow-hidden">
     <div
       class="flex flex-col gap-3 overflow-y-auto min-h-[100px]"
       ondragover={(e) => sOnDragOverColumn(e, "col1")}
@@ -1794,28 +1822,30 @@
       role="list"
     >
       {#each syncPanelLayout.col1 as sPanelId, idx (sPanelId)}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div
-          draggable="true"
-          ondragstart={(e) => sOnDragStart(e, sPanelId)}
-          ondragover={(e) => sOnDragOver(e, "col1", idx)}
-          ondrop={(e) => {
-            e.stopPropagation();
-            sOnDrop("col1", idx);
-          }}
-          ondragend={sOnDragEnd}
-          class="cursor-grab active:cursor-grabbing transition-all duration-150 flex-1 flex flex-col {sDraggedPanel ===
-          sPanelId
-            ? 'opacity-40 scale-[0.98]'
-            : ''} {sDragOverCol === 'col1' &&
-          sDragOverIdx === idx &&
-          sDraggedPanel !== sPanelId
-            ? 'border-t-2 border-cyan-400 pt-1'
-            : ''}"
-          role="listitem"
-        >
-          {@render panelContent(sPanelId)}
-        </div>
+        {#if sPanelId !== "toolbar"}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            draggable="true"
+            ondragstart={(e) => sOnDragStart(e, sPanelId)}
+            ondragover={(e) => sOnDragOver(e, "col1", idx)}
+            ondrop={(e) => {
+              e.stopPropagation();
+              sOnDrop("col1", idx);
+            }}
+            ondragend={sOnDragEnd}
+            class="cursor-grab active:cursor-grabbing transition-all duration-150 flex-1 flex flex-col {sDraggedPanel ===
+            sPanelId
+              ? 'opacity-40 scale-[0.98]'
+              : ''} {sDragOverCol === 'col1' &&
+            sDragOverIdx === idx &&
+            sDraggedPanel !== sPanelId
+              ? 'border-t-2 border-cyan-400 pt-1'
+              : ''}"
+            role="listitem"
+          >
+            {@render panelContent(sPanelId)}
+          </div>
+        {/if}
       {/each}
       {#if sDraggedPanel && sDragOverCol === "col1" && sDragOverIdx === syncPanelLayout.col1.length}
         <div class="h-1 bg-cyan-400 rounded-full mx-4 transition-all"></div>
@@ -1829,30 +1859,32 @@
       role="list"
     >
       {#each syncPanelLayout.col2 as sPanelId, idx (sPanelId)}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div
-          draggable="true"
-          ondragstart={(e) => sOnDragStart(e, sPanelId)}
-          ondragover={(e) => sOnDragOver(e, "col2", idx)}
-          ondrop={(e) => {
-            e.stopPropagation();
-            sOnDrop("col2", idx);
-          }}
-          ondragend={sOnDragEnd}
-          class="cursor-grab active:cursor-grabbing transition-all duration-150 {sPanelId ===
-          'subtitleList'
-            ? 'flex-1 flex flex-col'
-            : ''} {sDraggedPanel === sPanelId
-            ? 'opacity-40 scale-[0.98]'
-            : ''} {sDragOverCol === 'col2' &&
-          sDragOverIdx === idx &&
-          sDraggedPanel !== sPanelId
-            ? 'border-t-2 border-cyan-400 pt-1'
-            : ''}"
-          role="listitem"
-        >
-          {@render panelContent(sPanelId)}
-        </div>
+        {#if sPanelId !== "toolbar"}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            draggable="true"
+            ondragstart={(e) => sOnDragStart(e, sPanelId)}
+            ondragover={(e) => sOnDragOver(e, "col2", idx)}
+            ondrop={(e) => {
+              e.stopPropagation();
+              sOnDrop("col2", idx);
+            }}
+            ondragend={sOnDragEnd}
+            class="cursor-grab active:cursor-grabbing transition-all duration-150 {sPanelId ===
+            'subtitleList'
+              ? 'flex-1 flex flex-col'
+              : ''} {sDraggedPanel === sPanelId
+              ? 'opacity-40 scale-[0.98]'
+              : ''} {sDragOverCol === 'col2' &&
+            sDragOverIdx === idx &&
+            sDraggedPanel !== sPanelId
+              ? 'border-t-2 border-cyan-400 pt-1'
+              : ''}"
+            role="listitem"
+          >
+            {@render panelContent(sPanelId)}
+          </div>
+        {/if}
       {/each}
       {#if sDraggedPanel && sDragOverCol === "col2" && sDragOverIdx === syncPanelLayout.col2.length}
         <div class="h-1 bg-cyan-400 rounded-full mx-4 transition-all"></div>

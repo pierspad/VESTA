@@ -81,6 +81,17 @@ export const providers: Record<string, ProviderInfo> = {
     defaultApiUrl: "https://api.anthropic.com/v1",
     enabled: false, // Coming soon
   },
+  custom: {
+    id: "custom",
+    name: "Provider Personalizzato",
+    icon: "custom",
+    color: "from-gray-500 to-gray-600",
+    description: "Qualsiasi endpoint compatibile OpenAI (URL + API key opzionale)",
+    requiresApiKey: false,
+    requiresApiUrl: true,
+    defaultApiUrl: "",
+    enabled: true,
+  },
   openrouter: {
     id: "openrouter",
     name: "OpenRouter",
@@ -95,35 +106,62 @@ export const providers: Record<string, ProviderInfo> = {
 };
 
 // Solo provider abilitati
-export const providerOrder = ["local", "google"];
+export const providerOrder = ["local", "google", "custom"];
 
 // Modelli per provider
 export const modelsByProvider: Record<string, ModelInfo[]> = {
   local: [
+    // --- Meta Llama ---
     {
-      id: "llama3.2",
-      name: "Llama 3.2",
+      id: "llama3.3",
+      name: "Llama 3.3 70B",
       provider: "local",
       family: "Meta",
       familyInfo: { type: "open-weights", badge: "Open" },
-      description: "Meta open-weight latest local model",
+      description: "Ultimo modello Meta 70B, eccellente per traduzioni",
       recommended: true,
     },
     {
-      id: "llama3.1",
-      name: "Llama 3.1",
+      id: "llama3.2",
+      name: "Llama 3.2 3B",
       provider: "local",
       family: "Meta",
       familyInfo: { type: "open-weights", badge: "Open" },
-      description: "Versione precedente utile per traduzioni",
+      description: "Compatto e veloce, 3B parametri",
     },
+    {
+      id: "llama3.2:1b",
+      name: "Llama 3.2 1B",
+      provider: "local",
+      family: "Meta",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Ultra-leggero 1B, per risorse limitate",
+    },
+    {
+      id: "llama3.1",
+      name: "Llama 3.1 8B",
+      provider: "local",
+      family: "Meta",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "8B parametri, buon bilanciamento qualità/velocità",
+    },
+    {
+      id: "llama3.1:70b",
+      name: "Llama 3.1 70B",
+      provider: "local",
+      family: "Meta",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "70B parametri, qualità elevata",
+    },
+    // --- Mistral ---
     {
       id: "mistral-small-3.1",
       name: "Mistral Small 3.1",
       provider: "local",
       family: "Mistral",
       familyInfo: { type: "open-weights", badge: "Open" },
-      description: "Mistral Small 3.1 locale",
+      description: "Mistral Small 3.1, 24B parametri",
+      recommended: true,
     },
     {
       id: "mistral-medium-3",
@@ -134,36 +172,244 @@ export const modelsByProvider: Record<string, ModelInfo[]> = {
       description: "Mistral Medium 3 locale",
     },
     {
+      id: "mistral-nemo",
+      name: "Mistral Nemo 12B",
+      provider: "local",
+      family: "Mistral",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "12B, ottimo per multilingue e traduzioni",
+    },
+    {
       id: "mixtral-8x7b",
       name: "Mixtral 8x7B",
       provider: "local",
       family: "Mistral",
       familyInfo: { type: "open-weights", badge: "Open" },
-      description: "Mixtral MoE per uso locale",
+      description: "Mixtral MoE, 46.7B totali (12.9B attivi)",
     },
     {
+      id: "codestral",
+      name: "Codestral 22B",
+      provider: "local",
+      family: "Mistral",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Specializzato in codice ma buono anche per testo",
+    },
+    // --- DeepSeek ---
+    {
+      id: "deepseek-r1",
+      name: "DeepSeek R1",
+      provider: "local",
+      family: "DeepSeek",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "Ragionamento avanzato, eccellente per traduzioni complesse",
+      recommended: true,
+    },
+    {
+      id: "deepseek-r1:8b",
+      name: "DeepSeek R1 8B",
+      provider: "local",
+      family: "DeepSeek",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "Versione compatta 8B del modello R1",
+    },
+    {
+      id: "deepseek-r1:14b",
+      name: "DeepSeek R1 14B",
+      provider: "local",
+      family: "DeepSeek",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "14B parametri, buon bilanciamento",
+    },
+    {
+      id: "deepseek-r1:32b",
+      name: "DeepSeek R1 32B",
+      provider: "local",
+      family: "DeepSeek",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "32B parametri, qualità superiore",
+    },
+    {
+      id: "deepseek-r1:70b",
+      name: "DeepSeek R1 70B",
+      provider: "local",
+      family: "DeepSeek",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "70B parametri, massima qualità",
+    },
+    {
+      id: "deepseek-v3",
+      name: "DeepSeek V3",
+      provider: "local",
+      family: "DeepSeek",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "MoE 671B totali, modello flagship",
+    },
+    // --- Qwen ---
+    {
       id: "qwen2.5",
-      name: "Qwen 2.5",
+      name: "Qwen 2.5 7B",
       provider: "local",
       family: "Qwen",
       familyInfo: { type: "open-source", badge: "OSS" },
-      description: "Ottimo per multilingue locale",
+      description: "7B, ottimo per multilingue",
     },
     {
-      id: "gemma3-27b-local",
-      name: "Gemma 3 27B Local",
+      id: "qwen2.5:14b",
+      name: "Qwen 2.5 14B",
+      provider: "local",
+      family: "Qwen",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "14B, bilanciamento qualità/velocità",
+    },
+    {
+      id: "qwen2.5:32b",
+      name: "Qwen 2.5 32B",
+      provider: "local",
+      family: "Qwen",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "32B, qualità elevata per multilingue",
+    },
+    {
+      id: "qwen2.5:72b",
+      name: "Qwen 2.5 72B",
+      provider: "local",
+      family: "Qwen",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "72B, massima qualità Qwen",
+    },
+    {
+      id: "qwq",
+      name: "QwQ 32B",
+      provider: "local",
+      family: "Qwen",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "Modello di ragionamento Qwen 32B",
+    },
+    // --- Google Gemma ---
+    {
+      id: "gemma3:27b",
+      name: "Gemma 3 27B",
       provider: "local",
       family: "Google",
       familyInfo: { type: "open-weights", badge: "Open" },
-      description: "Gemma 3 27B (open)",
+      description: "Top di gamma open, eccellente ragionamento",
+    },
+    {
+      id: "gemma3:12b",
+      name: "Gemma 3 12B",
+      provider: "local",
+      family: "Google",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Bilanciato, ottime performance",
+    },
+    {
+      id: "gemma3:4b",
+      name: "Gemma 3 4B",
+      provider: "local",
+      family: "Google",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Compatto, veloce per task semplici",
+    },
+    {
+      id: "gemma3:1b",
+      name: "Gemma 3 1B",
+      provider: "local",
+      family: "Google",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Nano modello, massima velocità",
+    },
+    // --- Microsoft ---
+    {
+      id: "phi4",
+      name: "Phi-4 14B",
+      provider: "local",
+      family: "Microsoft",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Ultimo modello Microsoft, 14B parametri",
+    },
+    {
+      id: "phi3.5",
+      name: "Phi-3.5 Mini",
+      provider: "local",
+      family: "Microsoft",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "3.8B, compatto e performante",
     },
     {
       id: "phi3",
-      name: "Phi-3",
+      name: "Phi-3 3.8B",
       provider: "local",
       family: "Microsoft",
       familyInfo: { type: "open-weights", badge: "Open" },
       description: "Microsoft compatto locale",
+    },
+    // --- Cohere ---
+    {
+      id: "command-r",
+      name: "Command R 35B",
+      provider: "local",
+      family: "Cohere",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Ottimizzato per RAG e conversazione",
+    },
+    {
+      id: "command-r-plus",
+      name: "Command R+ 104B",
+      provider: "local",
+      family: "Cohere",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "104B, massima qualità Cohere",
+    },
+    // --- 01.AI ---
+    {
+      id: "yi:34b",
+      name: "Yi 1.5 34B",
+      provider: "local",
+      family: "01.AI",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Eccellente per cinese, inglese e multilingue",
+    },
+    {
+      id: "yi:9b",
+      name: "Yi 1.5 9B",
+      provider: "local",
+      family: "01.AI",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Compatto, buono per multilingue",
+    },
+    // --- Community Models ---
+    {
+      id: "nous-hermes2",
+      name: "Nous Hermes 2",
+      provider: "local",
+      family: "Community",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Fine-tuned Llama, ottimo per istruzioni",
+    },
+    {
+      id: "dolphin-mixtral",
+      name: "Dolphin Mixtral",
+      provider: "local",
+      family: "Community",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Mixtral uncensored, versatile",
+    },
+    {
+      id: "solar",
+      name: "Solar 10.7B",
+      provider: "local",
+      family: "Upstage",
+      familyInfo: { type: "open-weights", badge: "Open" },
+      description: "Upstage Solar, ottimo per task generali",
+    },
+    {
+      id: "internlm2",
+      name: "InternLM2 20B",
+      provider: "local",
+      family: "Shanghai AI Lab",
+      familyInfo: { type: "open-source", badge: "OSS" },
+      description: "Forte in multilingue e ragionamento",
     },
   ],
 
@@ -266,7 +512,7 @@ export interface CustomModel {
 export interface ApiKeyConfig {
   id: string;
   name: string;
-  apiType: "local" | "google" | "openrouter" | "openai" | "anthropic";
+  apiType: "local" | "google" | "openrouter" | "openai" | "anthropic" | "custom";
   apiKey: string;
   apiUrl?: string;
   modelName?: string;  // Nome modello preferito
