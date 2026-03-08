@@ -68,16 +68,16 @@
   <!-- Main Content - use CSS visibility to preserve state -->
   <div class="flex-1 overflow-hidden relative">
     <div class="absolute inset-0" class:hidden={activeTab !== "translate"}>
-      <TranslateTab onGoToSettings={() => (activeTab = "settings")} />
+      <TranslateTab onGoToSettings={() => (activeTab = "settings")} active={activeTab === "translate"} />
     </div>
     <div class="absolute inset-0" class:hidden={activeTab !== "sync"}>
-      <SyncTab />
+      <SyncTab active={activeTab === "sync"} />
     </div>
     <div class="absolute inset-0" class:hidden={activeTab !== "transcribe"}>
       <TranscribeTab />
     </div>
     <div class="absolute inset-0" class:hidden={activeTab !== "flashcards"}>
-      <FlashcardsTab />
+      <FlashcardsTab active={activeTab === "flashcards"} />
     </div>
     <div class="absolute inset-0" class:hidden={activeTab !== "settings"}>
       <SettingsTab />

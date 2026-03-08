@@ -5,6 +5,12 @@
   import { onMount } from "svelte";
   import { locale } from "./i18n";
 
+  interface Props {
+    active?: boolean;
+  }
+
+  let { active = true }: Props = $props();
+
   let t = $derived($locale);
 
   interface SubtitleInfo {
@@ -866,6 +872,7 @@
     let unlistenDragDrop: (() => void) | null = null;
     getCurrentWebview()
       .onDragDropEvent((event) => {
+        if (!active) return;
         if (event.payload.type === "over") isDraggingOver = true;
         else if (event.payload.type === "drop") {
           isDraggingOver = false;

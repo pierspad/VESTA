@@ -14,6 +14,12 @@
 
   const SUBTITLE_EXTENSIONS = ["srt", "ass", "ssa", "vtt"];
 
+  interface Props {
+    active?: boolean;
+  }
+
+  let { active = true }: Props = $props();
+
   let t = $derived($locale);
 
   let targetSubsPath = $state("");
@@ -926,6 +932,7 @@
   let unlisten: (() => void) | null = null;
   let unlistenDragDrop: (() => void) | null = null;
   let removeTemplateListener: (() => void) | null = null;
+  let isDraggingOver = $state(false);
 
   function syncNoteTypeNameFromTemplates() {
     noteTypeName = loadCardTemplates().noteTypeName;
@@ -1194,9 +1201,12 @@
     // Listen for OS-level file drag and drop
     try {
       unlistenDragDrop = await getCurrentWebview().onDragDropEvent((event) => {
-        if (event.payload.type === "drop" && event.payload.paths) {
-          handleFileDrop(event.payload.paths);
-        }
+        if (!active) return;
+        if (event.payload.type === "over") isDraggingOver = true;
+        else if (event.payload.type === "drop") {
+          isDraggingOver = false;
+          if (event.payload.paths) handleFileDrop(event.payload.paths);
+        } else if (event.payload.type === "leave") isDraggingOver = false;
       });
     } catch (e) {
       console.warn("Failed to set up drag-drop listener:", e);
@@ -1908,10 +1918,40 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="h-full flex flex-col p-6 overflow-y-auto flashcards-scroll bg-gradient-to-br from-gray-900 via-gray-900 to-gray-950"
+  class="h-full flex flex-col p-6 overflow-y-auto flashcards-scroll bg-gradient-to-br from-gray-900 via-gray-900 to-gray-950 relative"
   ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; }}
-  ondrop={(e) => e.preventDefault()}
+  ondrop={(e) => { e.preventDefault(); isDraggingOver = false; }}
+  ondragleave={(e) => {
+    const rt = e.relatedTarget as HTMLElement | null;
+    const ct = e.currentTarget as HTMLElement;
+    if (rt && ct.contains(rt)) return;
+    isDraggingOver = false;
+  }}
 >
+  {#if isDraggingOver}
+    <div
+      class="absolute inset-0 z-50 bg-purple-500/10 border-2 border-dashed border-purple-400 rounded-2xl flex items-center justify-center pointer-events-none"
+    >
+      <div class="text-center">
+        <svg
+          class="w-16 h-16 mx-auto mb-3 text-purple-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          ><path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+          /></svg
+        >
+        <p class="text-lg font-medium text-purple-300">
+          {t("flashcards.dropFileHere")}
+        </p>
+        <p class="text-sm text-gray-400 mt-1">{t("flashcards.dropFileHint")}</p>
+      </div>
+    </div>
+  {/if}
   {#if ffmpegAvailable === false}
     <div
       class="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center gap-3"
