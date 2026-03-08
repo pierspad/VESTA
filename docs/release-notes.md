@@ -1,1 +1,1 @@
-##### second pre-alpha release - testing the github actions
+##### small fixes, polishing and windows build fixed
