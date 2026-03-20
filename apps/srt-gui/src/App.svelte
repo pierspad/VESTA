@@ -12,11 +12,27 @@
   import TranslateTab from "./lib/TranslateTab.svelte";
   import AlignTab from "./lib/AlignTab.svelte";
 
-  let activeTab = $state<"translate" | "sync" | "transcribe" | "align" | "flashcards" | "settings" | "shortcuts">("translate");
+  let activeTab = $state<"translate" | "sync" | "transcribe" | "align" | "flashcards" | "settings" | "shortcuts">("flashcards");
   let sidebarCollapsed = $state(false);
 
-  const MIN_WIDTH = 1440;
-  const MIN_HEIGHT = 940;
+  const MIN_WIDTH = 760;
+  const MIN_HEIGHT = 620;
+  // Hysteresis: collapse early while shrinking, expand only when there's plenty
+  // of space while growing. This keeps columns as the first thing to recover.
+  const SIDEBAR_COLLAPSE_FIRST_WIDTH = 1560;
+  // Keep sidebar collapsed on common desktop widths so content can use
+  // all horizontal space first; auto-expand only on very wide displays.
+  const SIDEBAR_EXPAND_LAST_WIDTH = 2200;
+
+  function applyResponsiveSidebar(logicalWidth: number) {
+    if (logicalWidth <= SIDEBAR_COLLAPSE_FIRST_WIDTH) {
+      sidebarCollapsed = true;
+      return;
+    }
+    if (logicalWidth >= SIDEBAR_EXPAND_LAST_WIDTH) {
+      sidebarCollapsed = false;
+    }
+  }
 
   // Enforce minimum window size at runtime (Linux WMs may ignore config)
   onMount(() => {
@@ -28,6 +44,8 @@
       const physMinW = Math.round(MIN_WIDTH * scaleFactor);
       const physMinH = Math.round(MIN_HEIGHT * scaleFactor);
 
+      applyResponsiveSidebar(window.innerWidth);
+
       await appWindow.setMinSize(new PhysicalSize(physMinW, physMinH)).catch(() => {});
 
       // Fallback: enforce min size on resize events for WMs that ignore setMinSize
@@ -37,6 +55,7 @@
           const h = Math.max(size.height, physMinH);
           await appWindow.setSize(new PhysicalSize(w, h)).catch(() => {});
         }
+        applyResponsiveSidebar(size.width / scaleFactor);
       });
     })();
 
@@ -60,7 +79,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <main
-  class="flex h-screen min-w-[1440px] min-h-[940px] bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 text-gray-100"
+  class="flex h-screen min-w-[760px] min-h-[620px] bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 text-gray-100"
   ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; }}
   ondrop={(e) => e.preventDefault()}
 >

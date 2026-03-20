@@ -493,6 +493,118 @@ pub fn sync_suggest_media_for_srt(srt_path: String) -> Result<Option<String>, St
     }
 }
 
+/// Suggerisce in modo best-effort un file sottotitoli "companion"
+/// nella stessa cartella del file sorgente (es. lingua diversa).
+#[tauri::command]
+pub fn sync_suggest_companion_subtitle_for_srt(srt_path: String) -> Result<Option<String>, String> {
+    let srt = Path::new(&srt_path);
+    let parent = match srt.parent() {
+        Some(p) => p,
+        None => return Ok(None),
+    };
+    let srt_stem = match srt.file_stem().and_then(|s| s.to_str()) {
+        Some(s) if !s.is_empty() => s,
+        _ => return Ok(None),
+    };
+
+    let source_tokens = normalized_tokens(srt_stem);
+    let source_joined = source_tokens.join(" ");
+    let source_ep = extract_episode_number(srt_stem);
+    let source_lang = extract_lang_code(srt_stem);
+    let source_role = extract_subtitle_role(srt_stem);
+    let source_stem_simplified = simplify_subtitle_stem(srt_stem);
+
+    let mut candidates: Vec<(PathBuf, i32)> = Vec::new();
+    let entries = fs::read_dir(parent).map_err(|e| e.to_string())?;
+    for entry in entries {
+        let entry = match entry {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        let path = entry.path();
+        if !path.is_file() || !is_subtitle_path(&path) {
+            continue;
+        }
+        if path == srt {
+            continue;
+        }
+
+        let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
+            continue;
+        };
+
+        let candidate_tokens = normalized_tokens(stem);
+        if candidate_tokens.is_empty() {
+            continue;
+        }
+        let candidate_joined = candidate_tokens.join(" ");
+        let candidate_ep = extract_episode_number(stem);
+        let candidate_lang = extract_lang_code(stem);
+        let candidate_role = extract_subtitle_role(stem);
+        let candidate_stem_simplified = simplify_subtitle_stem(stem);
+
+        let mut score: i32 = 0;
+
+        if stem.eq_ignore_ascii_case(srt_stem) {
+            score += 90;
+        }
+        if !source_stem_simplified.is_empty()
+            && source_stem_simplified.eq_ignore_ascii_case(&candidate_stem_simplified)
+        {
+            score += 80;
+        }
+        if !source_joined.is_empty() && !candidate_joined.is_empty() {
+            if candidate_joined.contains(&source_joined) || source_joined.contains(&candidate_joined) {
+                score += 35;
+            }
+        }
+
+        score += token_overlap_score(&source_tokens, &candidate_tokens);
+
+        match (source_ep, candidate_ep) {
+            (Some(a), Some(b)) if a == b => score += 30,
+            (Some(_), Some(_)) => score -= 20,
+            _ => {}
+        }
+
+        match (source_lang.as_deref(), candidate_lang.as_deref()) {
+            (Some(a), Some(b)) if a != b => score += 22,
+            (Some(a), Some(b)) if a == b => score -= 12,
+            _ => {}
+        }
+
+        match (source_role.as_deref(), candidate_role.as_deref()) {
+            (Some("original"), Some("reference")) | (Some("reference"), Some("original")) => {
+                score += 25
+            }
+            (Some(a), Some(b)) if a == b => score -= 8,
+            _ => {}
+        }
+
+        candidates.push((path, score));
+    }
+
+    if candidates.is_empty() {
+        return Ok(None);
+    }
+
+    candidates.sort_by(|a, b| b.1.cmp(&a.1));
+
+    let (best_path, best_score) = &candidates[0];
+    let confident = if let Some((_, second_score)) = candidates.get(1) {
+        *best_score >= 45
+            && (*best_score >= second_score.saturating_add(10) || *second_score < 40)
+    } else {
+        *best_score >= 45
+    };
+
+    if confident {
+        Ok(Some(best_path.to_string_lossy().to_string()))
+    } else {
+        Ok(None)
+    }
+}
+
 fn is_media_path(path: &Path) -> bool {
     let ext = path
         .extension()
@@ -521,6 +633,16 @@ fn is_media_path(path: &Path) -> bool {
             | "opus"
             | "m4b"
     )
+}
+
+fn is_subtitle_path(path: &Path) -> bool {
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    matches!(ext.as_str(), "srt" | "ass" | "ssa" | "vtt")
 }
 
 fn normalized_tokens(name: &str) -> Vec<String> {
@@ -594,6 +716,84 @@ fn extract_episode_number(name: &str) -> Option<u32> {
     }
 
     None
+}
+
+fn extract_lang_code(name: &str) -> Option<String> {
+    const LANG_CODES: &[&str] = &[
+        "it", "ita", "en", "eng", "ja", "jpn", "es", "spa", "fr", "fra", "de", "ger", "ru",
+        "rus", "pt", "por", "zh", "zho", "ko", "kor",
+    ];
+
+    let lower = name.to_ascii_lowercase();
+    for token in lower.split(|c: char| !c.is_ascii_alphanumeric()) {
+        if LANG_CODES.contains(&token) {
+            return Some(token.to_string());
+        }
+    }
+    None
+}
+
+fn extract_subtitle_role(name: &str) -> Option<&'static str> {
+    let lower = name.to_ascii_lowercase();
+    let has_original = ["native", "original", "orig", "source"]
+        .iter()
+        .any(|k| lower.contains(k));
+    if has_original {
+        return Some("original");
+    }
+
+    let has_reference = ["translated", "translation", "tradotto", "traduzione", "reference", "ref"]
+        .iter()
+        .any(|k| lower.contains(k));
+    if has_reference {
+        return Some("reference");
+    }
+
+    None
+}
+
+fn simplify_subtitle_stem(name: &str) -> String {
+    let tokens: Vec<String> = name
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|t| !t.is_empty())
+        .map(|t| t.to_ascii_lowercase())
+        .filter(|t| {
+            !matches!(
+                t.as_str(),
+                "native"
+                    | "original"
+                    | "orig"
+                    | "source"
+                    | "translated"
+                    | "translation"
+                    | "tradotto"
+                    | "traduzione"
+                    | "reference"
+                    | "ref"
+                    | "srt"
+                    | "sub"
+                    | "subs"
+                    | "subtitle"
+                    | "subtitles"
+                    | "it"
+                    | "ita"
+                    | "en"
+                    | "eng"
+                    | "ja"
+                    | "jpn"
+                    | "es"
+                    | "spa"
+                    | "fr"
+                    | "fra"
+                    | "de"
+                    | "ger"
+                    | "ru"
+                    | "rus"
+            )
+        })
+        .collect();
+
+    tokens.join(" ")
 }
 
 /// Helper per estrarre lo stato dall'engine

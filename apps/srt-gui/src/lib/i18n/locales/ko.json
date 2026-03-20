@@ -668,5 +668,15 @@
   "translate.localServerUrl": "서버 URL",
   "translate.fetchModels": "모델 가져오기",
   "translate.fetchModelsHint": "'모델 가져오기'를 클릭하여 서버에서 사용 가능한 모델을 로드합니다.",
-  "translate.modelsFound": "사용 가능한 모델"
+  "translate.modelsFound": "사용 가능한 모델",
+  "shortcuts.action.alignCyclePerPage": "표시 중인 자막 순환 (5/10/15)",
+  "shortcuts.action.alignNextPage": "다음 자막 페이지",
+  "shortcuts.action.alignPrevPage": "이전 자막 페이지",
+  "shortcuts.action.alignSave": "결과 저장",
+  "shortcuts.action.alignSwapFiles": "대상 파일과 원본 파일 교체",
+  "shortcuts.action.alignUndo": "마지막 편집 실행 취소",
+  "shortcuts.category.alignment": "📐 정렬",
+  "shortcuts.category.alignment.desc": "자막 정렬 탭용 단축키",
+  "transcribe.whisperModelDesc": "로컬 전사용 모델을 다운로드하세요. 모델을 클릭해 다운로드하고 기본값으로 설정하세요.",
+  "flashcards.filesHelpMovie": "<p>자막 파일을 불러오고 출력 폴더를 선택하세요. 이 도움말은 영화 모드용입니다.</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>대상 자막</strong> <span class='text-red-400'>*</span> — <em>학습 중인</em> 언어 (필수)</li><li><strong class='text-blue-400'>모국어 자막</strong> — 모국어 / 번역 (선택 사항)</li><li><strong class='text-purple-400'>미디어 파일</strong> — 클립과 스크린샷 추출용 비디오 또는 오디오 소스</li><li><strong class='text-amber-400'>출력 폴더</strong> <span class='text-red-400'>*</span> — 생성된 파일이 저장되는 위치</li></ul>"
 }

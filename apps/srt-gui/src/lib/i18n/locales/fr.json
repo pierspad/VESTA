@@ -676,5 +676,15 @@
   "sync.tooltipOffset": "Affinez le temps des sous-titres. Les valeurs positives retardent les sous-titres, les négatives les affichent plus tôt.",
   "sync.tooltipConfirmAnchor": "Marquez le sous-titre actuel comme point de synchronisation (Entrée). Les ancrages sont des points de référence utilisés pour interpoler le temps des sous-titres proches.",
   "sync.tooltipPrevAnchor": "Aller à l'ancrage précédent",
-  "sync.tooltipNextAnchor": "Aller à l'ancrage suivant"
+  "sync.tooltipNextAnchor": "Aller à l'ancrage suivant",
+  "shortcuts.action.alignCyclePerPage": "Faire défiler les sous-titres visibles (5/10/15)",
+  "shortcuts.action.alignNextPage": "Page suivante des sous-titres",
+  "shortcuts.action.alignPrevPage": "Page précédente des sous-titres",
+  "shortcuts.action.alignSave": "Enregistrer le résultat",
+  "shortcuts.action.alignSwapFiles": "Échanger les fichiers cible et source",
+  "shortcuts.action.alignUndo": "Annuler la dernière modification",
+  "shortcuts.category.alignment": "📐 Alignement",
+  "shortcuts.category.alignment.desc": "Raccourcis pour l'onglet d'alignement des sous-titres",
+  "transcribe.whisperModelDesc": "Téléchargez des modèles pour la transcription locale. Cliquez sur un modèle pour le télécharger et le définir par défaut.",
+  "flashcards.filesHelpMovie": "<p>Chargez les fichiers de sous-titres et choisissez un dossier de sortie. Cette aide concerne le mode Film.</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>Sous-titres cibles</strong> <span class='text-red-400'>*</span> — la langue que vous <em>étudiez</em> (requis)</li><li><strong class='text-blue-400'>Sous-titres natifs</strong> — votre langue maternelle / traduction (optionnel)</li><li><strong class='text-purple-400'>Fichier multimédia</strong> — source vidéo ou audio pour extraire des clips et captures</li><li><strong class='text-amber-400'>Dossier de sortie</strong> <span class='text-red-400'>*</span> — emplacement des fichiers générés</li></ul>"
 }

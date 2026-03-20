@@ -676,5 +676,15 @@
   "sync.tooltipOffset": "Passen Sie das Untertitel-Timing an. Positive Werte verzögern Untertitel, negative Werte zeigen sie früher an.",
   "sync.tooltipConfirmAnchor": "Markieren Sie den aktuellen Untertitel als Synchronisierungspunkt (Enter). Anker sind Referenzpunkte für die Interpolation in der Nähe liegender Untertitel-Zeitpunkte.",
   "sync.tooltipPrevAnchor": "Zum vorherigen Anker springen",
-  "sync.tooltipNextAnchor": "Zum nächsten Anker springen"
+  "sync.tooltipNextAnchor": "Zum nächsten Anker springen",
+  "shortcuts.action.alignCyclePerPage": "Sichtbare Untertitel durchschalten (5/10/15)",
+  "shortcuts.action.alignNextPage": "Nächste Untertitelseite",
+  "shortcuts.action.alignPrevPage": "Vorherige Untertitelseite",
+  "shortcuts.action.alignSave": "Ergebnis speichern",
+  "shortcuts.action.alignSwapFiles": "Ziel- und Quelldateien tauschen",
+  "shortcuts.action.alignUndo": "Letzte Bearbeitung rückgängig machen",
+  "shortcuts.category.alignment": "📐 Ausrichtung",
+  "shortcuts.category.alignment.desc": "Tastenkürzel für den Tab zur Untertitel-Ausrichtung",
+  "transcribe.whisperModelDesc": "Lade Modelle für die lokale Transkription herunter. Klicke auf ein Modell, um es herunterzuladen und als Standard festzulegen.",
+  "flashcards.filesHelpMovie": "<p>Laden Sie Untertiteldateien und wählen Sie einen Ausgabeordner. Dieser Hilfetext gilt für den Film-Modus.</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>Ziel-Subs</strong> <span class='text-red-400'>*</span> — die Sprache, die Sie <em>lernen</em> (erforderlich)</li><li><strong class='text-blue-400'>Native Subs</strong> — Ihre Muttersprache / Übersetzung (optional)</li><li><strong class='text-purple-400'>Mediendatei</strong> — Video- oder Audioquelle für Clips und Screenshots</li><li><strong class='text-amber-400'>Ausgabeordner</strong> <span class='text-red-400'>*</span> — Speicherort der generierten Dateien</li></ul>"
 }

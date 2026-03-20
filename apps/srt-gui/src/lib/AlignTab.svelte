@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { invoke } from '@tauri-apps/api/core';
   import { open, save } from '@tauri-apps/plugin-dialog';
   import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
   import { t } from './i18n';
@@ -36,6 +37,29 @@
   let error = $state("");
   let success = $state("");
 
+  interface ActivityLogEntry {
+    id: number;
+    timestamp: string;
+    message: string;
+    level: 'info' | 'success' | 'warning' | 'error';
+  }
+  let activityLogs = $state<ActivityLogEntry[]>([]);
+  let activityLogId = 0;
+
+  function addActivityLog(message: string, level: ActivityLogEntry['level'] = 'info') {
+    const timestamp = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    activityLogs = [...activityLogs, { id: ++activityLogId, timestamp, message, level }].slice(-80);
+  }
+
+  function clearActivityLogs() {
+    activityLogs = [];
+    activityLogId = 0;
+  }
+
   // Expanded path modal
   let expandedPathField = $state<string | null>(null);
 
@@ -71,6 +95,7 @@
     try {
       const parsed = JSON.parse(snapshot) as Subtitle[];
       sourceSubs = parsed;
+      addActivityLog('Undo applied', 'warning');
     } catch {}
   }
 
@@ -256,8 +281,36 @@
       targetPath = path;
       normalizeAlignments();
       error = "";
+      addActivityLog(`Target loaded: ${getFileName(path)} (${targetSubs.length} subtitles)`, 'success');
     } catch (e) {
       error = `Error loading target: ${e}`;
+      addActivityLog(`Target load failed: ${e}`, 'error');
+    }
+  }
+
+  async function tryAutoSelectSourceForTarget(targetSrtPath: string) {
+    if (sourcePath) return;
+    try {
+      const suggested = await invoke<string | null>("sync_suggest_companion_subtitle_for_srt", {
+        srtPath: targetSrtPath,
+      });
+      if (!suggested || suggested === targetSrtPath) return;
+      await loadSource(suggested);
+    } catch {
+      // Best-effort suggestion only.
+    }
+  }
+
+  async function tryAutoSelectTargetForSource(sourceSrtPath: string) {
+    if (targetPath) return;
+    try {
+      const suggested = await invoke<string | null>("sync_suggest_companion_subtitle_for_srt", {
+        srtPath: sourceSrtPath,
+      });
+      if (!suggested || suggested === sourceSrtPath) return;
+      await loadTarget(suggested);
+    } catch {
+      // Best-effort suggestion only.
     }
   }
 
@@ -269,8 +322,10 @@
       normalizeAlignments();
       undoStack = []; // Reset undo on new file load
       error = "";
+      addActivityLog(`Source loaded: ${getFileName(path)} (${sourceSubs.length} subtitles)`, 'success');
     } catch (e) {
       error = `Error loading source: ${e}`;
+      addActivityLog(`Source load failed: ${e}`, 'error');
     }
   }
 
@@ -280,6 +335,7 @@
     });
     if (selected && !Array.isArray(selected)) {
       await loadTarget(selected);
+      await tryAutoSelectSourceForTarget(selected);
     }
   }
 
@@ -289,6 +345,7 @@
     });
     if (selected && !Array.isArray(selected)) {
       await loadSource(selected);
+      await tryAutoSelectTargetForSource(selected);
     }
   }
 
@@ -302,6 +359,7 @@
     sourceSubs = tempSubs;
     
     normalizeAlignments();
+    addActivityLog('Target and source swapped', 'info');
   }
 
   async function saveSource() {
@@ -316,10 +374,12 @@
         const content = serializeSrt(sourceSubs);
         await writeTextFile(savePath, content);
         success = `File saved to ${savePath}`;
+        addActivityLog(`Aligned file saved: ${getFileName(savePath)}`, 'success');
         setTimeout(() => success = "", 3000);
       }
     } catch (e) {
       error = `Error saving file: ${e}`;
+      addActivityLog(`Save failed: ${e}`, 'error');
     }
   }
 

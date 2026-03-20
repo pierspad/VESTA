@@ -668,5 +668,15 @@
   "sync.tooltipConfirmAnchor": "Oznacz obecny napis jako punkt synchronizacji (Enter). Punkty zakotwiczenia to punkty odniesienia używane do interpolacji czasów bliskich napisów.",
   "sync.tooltipPrevAnchor": "Przejdź do poprzedniego punktu zakotwiczenia",
   "sync.tooltipNextAnchor": "Przejdź do następnego punktu zakotwiczenia",
-  "sync.needVideoForAnchor": "Załaduj wideo przed potwierdzeniem punktów zakotwiczenia."
+  "sync.needVideoForAnchor": "Załaduj wideo przed potwierdzeniem punktów zakotwiczenia.",
+  "shortcuts.action.alignCyclePerPage": "Przełącz widoczne napisy (5/10/15)",
+  "shortcuts.action.alignNextPage": "Następna strona napisów",
+  "shortcuts.action.alignPrevPage": "Poprzednia strona napisów",
+  "shortcuts.action.alignSave": "Zapisz wynik",
+  "shortcuts.action.alignSwapFiles": "Zamień pliki docelowy i źródłowy",
+  "shortcuts.action.alignUndo": "Cofnij ostatnią edycję",
+  "shortcuts.category.alignment": "📐 Wyrównanie",
+  "shortcuts.category.alignment.desc": "Skróty dla karty wyrównywania napisów",
+  "transcribe.whisperModelDesc": "Pobierz modele do lokalnej transkrypcji. Kliknij model, aby go pobrać i ustawić jako domyślny.",
+  "flashcards.filesHelpMovie": "<p>Wczytaj pliki napisów i wybierz folder wyjściowy. Ta pomoc dotyczy trybu filmu.</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>Napisy docelowe</strong> <span class='text-red-400'>*</span> — język, którego się <em>uczysz</em> (wymagane)</li><li><strong class='text-blue-400'>Napisy ojczyste</strong> — język ojczysty / tłumaczenie (opcjonalne)</li><li><strong class='text-purple-400'>Plik multimedialny</strong> — źródło wideo lub audio do wycinania klipów i zrzutów</li><li><strong class='text-amber-400'>Folder wyjściowy</strong> <span class='text-red-400'>*</span> — miejsce zapisu wygenerowanych plików</li></ul>"
 }

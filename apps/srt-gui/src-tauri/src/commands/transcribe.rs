@@ -41,6 +41,7 @@ pub struct TranscribeResult {
     pub message: String,
     pub output_path: Option<String>,
     pub subtitle_count: usize,
+    pub detected_language: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -352,6 +353,46 @@ fn write_srt(segments: &[RawSegment], output_path: &str) -> Result<usize> {
     Ok(segments.len())
 }
 
+fn apply_language_suffix_to_srt_path(output_path: &str, language: &str) -> String {
+    let lang = language.trim().to_lowercase();
+    if lang.is_empty() {
+        return output_path.to_string();
+    }
+
+    let path = Path::new(output_path);
+    let Some(file_name_os) = path.file_name() else {
+        return output_path.to_string();
+    };
+
+    let file_name = file_name_os.to_string_lossy();
+    if !file_name.to_lowercase().ends_with(".srt") {
+        return output_path.to_string();
+    }
+
+    let stem = &file_name[..file_name.len() - 4];
+    let mut replaced = false;
+    let mut new_stem = stem.to_string();
+
+    if let Some(idx) = stem.rfind(['-', '_', '.']) {
+        let token = &stem[idx + 1..];
+        let is_lang_like = (token.len() == 2 || token.len() == 3)
+            && token.chars().all(|c| c.is_ascii_alphabetic());
+        if is_lang_like {
+            new_stem = format!("{}{}{}", &stem[..idx], &stem[idx..=idx], lang);
+            replaced = true;
+        }
+    }
+
+    if !replaced {
+        new_stem = format!("{}.{}", stem, lang);
+    }
+
+    let new_file_name = format!("{}.srt", new_stem);
+    let mut new_path = path.parent().map_or_else(PathBuf::new, PathBuf::from);
+    new_path.push(new_file_name);
+    new_path.to_string_lossy().to_string()
+}
+
 /// Run transcription using whisper-rs (native Rust bindings for whisper.cpp)
 fn run_whisper_rs(
     app: &AppHandle,
@@ -421,6 +462,17 @@ fn run_whisper_rs(
     
     // Extract segments
     let n_segments = state.full_n_segments();
+
+    let detected_language = if config.language == "auto" {
+        let lang_id = state.full_lang_id_from_state();
+        if lang_id >= 0 {
+            whisper_rs::get_lang_str(lang_id).map(|s| s.to_string())
+        } else {
+            None
+        }
+    } else {
+        Some(config.language.clone())
+    };
     
     app.emit("transcribe-progress", TranscribeProgressEvent {
         stage: "transcribe".to_string(),
@@ -460,18 +512,33 @@ fn run_whisper_rs(
     
     app.emit("transcribe-progress", TranscribeProgressEvent {
         stage: "writing".to_string(),
-        message: "Writing SRT file...".to_string(),
+        message: if let Some(lang) = &detected_language {
+            format!("Writing SRT file (language: {})...", lang)
+        } else {
+            "Writing SRT file...".to_string()
+        },
         percentage: 90.0,
     }).ok();
     
+    let effective_output_path = if config.language == "auto" {
+        if let Some(lang) = &detected_language {
+            apply_language_suffix_to_srt_path(&config.output_path, lang)
+        } else {
+            config.output_path.clone()
+        }
+    } else {
+        config.output_path.clone()
+    };
+
     // Write SRT
-    let count = write_srt(&segments, &config.output_path)?;
+    let count = write_srt(&segments, &effective_output_path)?;
     
     Ok(TranscribeResult {
         success: true,
         message: format!("Transcription completed: {} segments", count),
-        output_path: Some(config.output_path.clone()),
+        output_path: Some(effective_output_path),
         subtitle_count: count,
+        detected_language,
     })
 }
 

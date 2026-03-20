@@ -668,5 +668,15 @@
   "translate.localServerUrl": "सर्वर URL",
   "translate.fetchModels": "मॉडल प्राप्त करें",
   "translate.fetchModelsHint": "अपने सर्वर से उपलब्ध मॉडल लोड करने के लिए 'मॉडल प्राप्त करें' पर क्लिक करें।",
-  "translate.modelsFound": "मॉडल उपलब्ध"
+  "translate.modelsFound": "मॉडल उपलब्ध",
+  "shortcuts.action.alignCyclePerPage": "दृश्यमान उपशीर्षकों में चक्र करें (5/10/15)",
+  "shortcuts.action.alignNextPage": "अगला उपशीर्षक पृष्ठ",
+  "shortcuts.action.alignPrevPage": "पिछला उपशीर्षक पृष्ठ",
+  "shortcuts.action.alignSave": "परिणाम सहेजें",
+  "shortcuts.action.alignSwapFiles": "लक्ष्य और स्रोत फ़ाइलें अदल-बदल करें",
+  "shortcuts.action.alignUndo": "अंतिम संपादन पूर्ववत करें",
+  "shortcuts.category.alignment": "📐 संरेखण",
+  "shortcuts.category.alignment.desc": "उपशीर्षक संरेखण टैब के लिए शॉर्टकट्स",
+  "transcribe.whisperModelDesc": "स्थानीय ट्रांसक्रिप्शन के लिए मॉडल डाउनलोड करें। किसी मॉडल पर क्लिक करके उसे डाउनलोड करें और डिफ़ॉल्ट के रूप में सेट करें।",
+  "flashcards.filesHelpMovie": "<p>सबटाइटल फ़ाइलें लोड करें और एक आउटपुट फ़ोल्डर चुनें। यह सहायता मूवी मोड के लिए है।</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>लक्ष्य सबटाइटल</strong> <span class='text-red-400'>*</span> — वह भाषा जिसे आप <em>सीख रहे हैं</em> (आवश्यक)</li><li><strong class='text-blue-400'>मूल भाषा सबटाइटल</strong> — आपकी मातृभाषा / अनुवाद (वैकल्पिक)</li><li><strong class='text-purple-400'>मीडिया फ़ाइल</strong> — क्लिप और स्क्रीनशॉट निकालने के लिए वीडियो या ऑडियो स्रोत</li><li><strong class='text-amber-400'>आउटपुट फ़ोल्डर</strong> <span class='text-red-400'>*</span> — जहाँ बने हुए फ़ाइल सेव होंगे</li></ul>"
 }

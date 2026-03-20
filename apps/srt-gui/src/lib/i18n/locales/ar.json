@@ -668,5 +668,15 @@
   "translate.localServerUrl": "عنوان URL الخادم",
   "translate.fetchModels": "جلب النماذج",
   "translate.fetchModelsHint": "انقر على 'جلب النماذج' لتحميل النماذج المتاحة من خادمك.",
-  "translate.modelsFound": "نماذج متاحة"
+  "translate.modelsFound": "نماذج متاحة",
+  "shortcuts.action.alignCyclePerPage": "تبديل الترجمات المرئية (5/10/15)",
+  "shortcuts.action.alignNextPage": "صفحة الترجمة التالية",
+  "shortcuts.action.alignPrevPage": "صفحة الترجمة السابقة",
+  "shortcuts.action.alignSave": "حفظ النتيجة",
+  "shortcuts.action.alignSwapFiles": "تبديل ملفي الهدف والمصدر",
+  "shortcuts.action.alignUndo": "التراجع عن آخر تعديل",
+  "shortcuts.category.alignment": "📐 المحاذاة",
+  "shortcuts.category.alignment.desc": "اختصارات تبويب محاذاة الترجمة",
+  "transcribe.whisperModelDesc": "نزّل النماذج للتفريغ المحلي. انقر على نموذج لتنزيله وتعيينه كافتراضي.",
+  "flashcards.filesHelpMovie": "<p>حمّل ملفات الترجمة واختر مجلد الإخراج. هذه المساعدة خاصة بوضع الفيلم.</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>ترجمات الهدف</strong> <span class='text-red-400'>*</span> — اللغة التي <em>تدرسها</em> (مطلوب)</li><li><strong class='text-blue-400'>ترجمات اللغة الأم</strong> — لغتك الأم / الترجمة (اختياري)</li><li><strong class='text-purple-400'>ملف الوسائط</strong> — مصدر فيديو أو صوت لاستخراج المقاطع واللقطات</li><li><strong class='text-amber-400'>مجلد الإخراج</strong> <span class='text-red-400'>*</span> — مكان حفظ الملفات الناتجة</li></ul>"
 }

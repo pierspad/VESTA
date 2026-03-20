@@ -676,5 +676,15 @@
   "sync.tooltipOffset": "Точная настройка времени субтитров. Положительные значения задерживают субтитры, отрицательные показывают их раньше.",
   "sync.tooltipConfirmAnchor": "Отметьте текущие субтитры как точку синхронизации (Enter). Якоря — это опорные точки, используемые для интерполяции времени ближайших субтитров.",
   "sync.tooltipPrevAnchor": "Перейти к предыдущему якорю",
-  "sync.tooltipNextAnchor": "Перейти к следующему якорю"
+  "sync.tooltipNextAnchor": "Перейти к следующему якорю",
+  "shortcuts.action.alignCyclePerPage": "Переключать видимые субтитры (5/10/15)",
+  "shortcuts.action.alignNextPage": "Следующая страница субтитров",
+  "shortcuts.action.alignPrevPage": "Предыдущая страница субтитров",
+  "shortcuts.action.alignSave": "Сохранить результат",
+  "shortcuts.action.alignSwapFiles": "Поменять местами целевой и исходный файлы",
+  "shortcuts.action.alignUndo": "Отменить последнее изменение",
+  "shortcuts.category.alignment": "📐 Выравнивание",
+  "shortcuts.category.alignment.desc": "Сочетания для вкладки выравнивания субтитров",
+  "transcribe.whisperModelDesc": "Скачайте модели для локальной транскрипции. Нажмите на модель, чтобы скачать её и установить по умолчанию.",
+  "flashcards.filesHelpMovie": "<p>Загрузите файлы субтитров и выберите папку вывода. Эта справка относится к режиму фильма.</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>Целевые субтитры</strong> <span class='text-red-400'>*</span> — язык, который вы <em>изучаете</em> (обязательно)</li><li><strong class='text-blue-400'>Родные субтитры</strong> — ваш родной язык / перевод (опционально)</li><li><strong class='text-purple-400'>Медиафайл</strong> — видео или аудио источник для извлечения клипов и скриншотов</li><li><strong class='text-amber-400'>Папка вывода</strong> <span class='text-red-400'>*</span> — куда сохраняются сгенерированные файлы</li></ul>"
 }

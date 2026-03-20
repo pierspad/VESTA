@@ -614,8 +614,8 @@
     </div>
   {/if}
 
-  <div class="grid grid-cols-12 gap-6 flex-1 min-h-0">
-    <div class="col-span-4 flex flex-col gap-4">
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 flex-1 min-h-0">
+    <div class="col-span-1 xl:col-span-4 flex flex-col gap-4">
       <button
         onclick={() => openAddKeyModal(selectedProviderType)}
         class="btn-primary w-full py-3 flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
@@ -780,7 +780,7 @@
       </div>
     </div>
 
-    <div class="col-span-8 flex flex-col min-h-0">
+    <div class="col-span-1 xl:col-span-8 flex flex-col min-h-0">
       <div class="glass-card flex-1 flex flex-col min-h-0">
         <div class="p-4 border-b border-white/5">
           <h3

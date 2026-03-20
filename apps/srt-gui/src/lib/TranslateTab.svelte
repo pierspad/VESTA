@@ -600,7 +600,10 @@
         if (!event.payload.success || event.payload.translated_count > 0) {
           progress = null;
         }
-        addLog(`✅ ${event.payload.message}`);
+        if (event.payload.output_path) {
+          addLog(`📁 Saved: ${event.payload.output_path.split("/").pop()}`);
+        }
+        addLog(`✅ ${event.payload.message} (${event.payload.translated_count} subtitles)`);
       },
     );
   });
@@ -671,6 +674,8 @@
         if (!outputPath) {
           outputPath = generateOutputPath(inputPath, targetLang);
         }
+        addLog(`📥 Input selected: ${inputPath.split("/").pop()}`);
+        addLog(`📤 Output set: ${outputPath.split("/").pop()}`);
       }
     } catch (e) {
       error = `${t("translate.errorSelectingFile")} ${e}`;
@@ -686,6 +691,7 @@
 
       if (selected) {
         outputPath = selected;
+        addLog(`📤 Output updated: ${outputPath.split("/").pop()}`);
       }
     } catch (e) {
       error = `${t("translate.errorSelectingFile")} ${e}`;
@@ -726,6 +732,9 @@
     isTranslating = true;
     translatedPairs = [];
     addLog(`🚀 ${t("translate.starting")}`);
+    addLog(`🌐 Target language: ${targetLang}`);
+    addLog(`🧠 Provider: ${selectedProviderFamily} | Model: ${effectiveModel}`);
+    addLog(`⚙️ Batch size: ${batchSize}, overlap: ${resumeOverlap}`);
     startPreviewRefresh();
 
     let keysToSend: string[] = [];
@@ -1469,29 +1478,7 @@
             </div>
             <div>
               <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-400 flex items-center gap-2">
-                  {t("translate.batchSize")}
-                  <button
-                    type="button"
-                    onclick={() => (helpSection = "batchSize")}
-                    class="text-gray-500 hover:text-green-300 transition-colors"
-                    title="Info"
-                  >
-                    <svg
-                      class="w-3.5 h-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </button>
-                </span>
+                <span class="text-sm text-gray-400">{t("translate.batchSize")}</span>
               </div>
               <div class="grid grid-cols-4 gap-2">
                 <button
@@ -1556,8 +1543,7 @@
                   <span class="font-semibold block">{t("translate.batchTurbo")}</span>
                 </button>
               </div>
-              <div class="mt-2 flex items-center justify-between text-xs">
-                <span class="text-gray-500">batch size</span>
+              <div class="mt-2 flex items-center justify-end text-xs">
                 <span
                   class="text-white font-mono bg-white/10 px-2 py-0.5 rounded text-sm"
                   >{batchSize} {t("translate.subPerBatch")}</span
@@ -2029,7 +2015,7 @@
         </div>
       </div>
     {:else if panelId === "logs"}
-      <div class="glass-card p-4 shrink-0">
+      <div class="glass-card p-4 shrink-0" style="min-height: 190px;">
         <div class="flex items-center justify-between mb-3">
           <h4 class="text-sm font-medium text-gray-400 flex items-center gap-2">
             <svg
@@ -2056,7 +2042,7 @@
             </button>
           {/if}
         </div>
-        <div class="max-h-40 overflow-y-auto bg-black/20 rounded-lg p-3">
+        <div class="max-h-64 overflow-y-auto bg-black/20 rounded-lg p-3">
           {#if logs.length > 0}
             <div class="space-y-1">
               {#each logs as log}
@@ -2071,110 +2057,33 @@
     {/if}
   {/snippet}
 
-  <div class="flex justify-end mb-1">
-    <button
-      onclick={resetTranslateLayout}
-      class="text-[10px] text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
-    >
-      <svg
-        class="w-3 h-3"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-        />
-      </svg>
-      {t("flashcards.resetLayout")}
-    </button>
-  </div>
-
-  <div class="flex-1 grid grid-cols-2 gap-6 min-h-0 overflow-y-auto transition-opacity">
+  <div class="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-6 min-h-0 overflow-y-auto transition-opacity">
     <div
       class="space-y-3 overflow-y-auto overflow-x-hidden pr-1 min-h-[100px]"
-      ondragover={(e) => trOnDragOverColumn(e, "col1")}
-      ondrop={() => trOnDropColumn("col1")}
       role="list"
     >
       {#each translatePanelLayout.col1 as trPanelId, idx (trPanelId)}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          ondragover={(e) => trOnDragOver(e, "col1", idx)}
-          ondrop={(e) => {
-            e.stopPropagation();
-            trOnDrop("col1", idx);
-          }}
-          class="relative group transition-all duration-150 flex-1 flex flex-col {trDraggedPanel ===
-          trPanelId
-            ? 'opacity-40 scale-[0.98]'
-            : ''} {trDragOverCol === 'col1' &&
-          trDragOverIdx === idx &&
-          trDraggedPanel !== trPanelId
-            ? 'border-t-2 border-indigo-400 pt-1'
-            : ''}"
+          class="relative transition-all duration-150 flex-1 flex flex-col"
           role="listitem"
         >
-          <!-- Drag Handle -->
-          <div
-            draggable="true"
-            ondragstart={(e) => {
-              const parent = (e.currentTarget as HTMLElement).parentElement;
-              if (e.dataTransfer && parent) {
-                e.dataTransfer.setDragImage(parent, 20, 20);
-              }
-              trOnDragStart(e, trPanelId);
-            }}
-            ondragend={trOnDragEnd}
-            class="absolute top-2 right-2 p-1.5 bg-gray-800/80 backdrop-blur border border-white/10 rounded-md cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-gray-700/80 hover:text-indigo-400 text-gray-400"
-            title="Drag to reposition panel"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
-          </div>
           {@render panelContent(trPanelId)}
         </div>
       {/each}
-      {#if trDraggedPanel && trDragOverCol === "col1" && trDragOverIdx === translatePanelLayout.col1.length}
-        <div class="h-1 bg-green-400 rounded-full mx-4 transition-all"></div>
-      {/if}
     </div>
 
     <div
       class="space-y-3 overflow-y-auto overflow-x-hidden pr-1 min-h-[100px]"
-      ondragover={(e) => trOnDragOverColumn(e, "col2")}
-      ondrop={() => trOnDropColumn("col2")}
       role="list"
     >
       {#each translatePanelLayout.col2 as trPanelId, idx (trPanelId)}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          draggable="true"
-          ondragstart={(e) => trOnDragStart(e, trPanelId)}
-          ondragover={(e) => trOnDragOver(e, "col2", idx)}
-          ondrop={(e) => {
-            e.stopPropagation();
-            trOnDrop("col2", idx);
-          }}
-          ondragend={trOnDragEnd}
-          class="cursor-grab active:cursor-grabbing transition-all duration-150 {trDraggedPanel ===
-          trPanelId
-            ? 'opacity-40 scale-[0.98]'
-            : ''} {trDragOverCol === 'col2' &&
-          trDragOverIdx === idx &&
-          trDraggedPanel !== trPanelId
-            ? 'border-t-2 border-green-400 pt-1'
-            : ''}"
+          class="transition-all duration-150"
           role="listitem"
         >
           {@render panelContent(trPanelId)}
         </div>
       {/each}
-      {#if trDraggedPanel && trDragOverCol === "col2" && trDragOverIdx === translatePanelLayout.col2.length}
-        <div class="h-1 bg-green-400 rounded-full mx-4 transition-all"></div>
-      {/if}
     </div>
   </div>
 
@@ -2212,7 +2121,44 @@
           class="text-gray-300 text-sm leading-relaxed max-h-[60vh] overflow-y-auto"
         >
           {#if helpSection === "options"}
-            {@html t("translate.optionsHelp")}
+            <div class="space-y-4">
+              <div class="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3">
+                <p class="text-cyan-300 text-xs uppercase tracking-wide mb-1">Workflow</p>
+                <p class="text-sm text-gray-200">
+                  1) Select provider and model, 2) confirm target language, 3) tune batch size for speed/quality trade-off.
+                </p>
+              </div>
+
+              <div class="rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-3 space-y-2">
+                <p class="text-indigo-300 text-xs uppercase tracking-wide">Provider And Model</p>
+                <p class="text-sm text-gray-200">
+                  Local/Custom providers are best for privacy and experimentation. Managed APIs are typically faster and more stable.
+                </p>
+                <p class="text-xs text-gray-400">
+                  Tip: after changing provider, verify that the selected model matches the provider family.
+                </p>
+              </div>
+
+              <div class="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 space-y-2">
+                <p class="text-emerald-300 text-xs uppercase tracking-wide">Batch Size</p>
+                <p class="text-sm text-gray-200">
+                  Small batches improve consistency and recovery behavior. Larger batches are faster but can amplify errors when retries happen.
+                </p>
+                <p class="text-xs text-gray-400">
+                  Suggested start: Balanced preset, then move to Fast/Turbo only after confirming output quality.
+                </p>
+              </div>
+
+              <div class="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 space-y-2">
+                <p class="text-amber-300 text-xs uppercase tracking-wide">Resume Overlap</p>
+                <p class="text-sm text-gray-200">
+                  Overlap reprocesses a few lines after interruption to prevent context breaks and duplicated edge artifacts.
+                </p>
+                <p class="text-xs text-gray-400">
+                  Keep it low for speed, increase slightly when subtitle continuity matters.
+                </p>
+              </div>
+            </div>
           {:else if helpSection === "files"}
             {@html t("translate.filesHelp")}
           {:else if helpSection === "batchSize"}

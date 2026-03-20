@@ -676,5 +676,15 @@
   "sync.tooltipOffset": "字幕のタイミングを調整します。正の値は字幕を遅延させ、負の値は早く表示します。",
   "sync.tooltipConfirmAnchor": "現在の字幕を同期ポイントとしてマーク（Enter）。アンカーは、近くの字幕タイミングを補間するために使用される参照ポイントです。",
   "sync.tooltipPrevAnchor": "前のアンカーにジャンプ",
-  "sync.tooltipNextAnchor": "次のアンカーにジャンプ"
+  "sync.tooltipNextAnchor": "次のアンカーにジャンプ",
+  "shortcuts.action.alignCyclePerPage": "表示中の字幕を切り替え (5/10/15)",
+  "shortcuts.action.alignNextPage": "次の字幕ページ",
+  "shortcuts.action.alignPrevPage": "前の字幕ページ",
+  "shortcuts.action.alignSave": "結果を保存",
+  "shortcuts.action.alignSwapFiles": "ターゲットとソースのファイルを入れ替え",
+  "shortcuts.action.alignUndo": "最後の編集を元に戻す",
+  "shortcuts.category.alignment": "📐 アラインメント",
+  "shortcuts.category.alignment.desc": "字幕アラインメントタブのショートカット",
+  "transcribe.whisperModelDesc": "ローカル文字起こし用のモデルをダウンロードします。モデルをクリックしてダウンロードし、デフォルトに設定してください。",
+  "flashcards.filesHelpMovie": "<p>字幕ファイルを読み込み、出力フォルダを選択します。このヘルプは映画モード用です。</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>学習対象の字幕</strong> <span class='text-red-400'>*</span> — あなたが<em>学習中</em>の言語 (必須)</li><li><strong class='text-blue-400'>母国語の字幕</strong> — 母国語 / 翻訳 (任意)</li><li><strong class='text-purple-400'>メディアファイル</strong> — クリップやスクリーンショット抽出用の動画または音声ソース</li><li><strong class='text-amber-400'>出力フォルダ</strong> <span class='text-red-400'>*</span> — 生成ファイルの保存先</li></ul>"
 }

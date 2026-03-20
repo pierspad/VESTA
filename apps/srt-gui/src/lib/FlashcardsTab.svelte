@@ -46,8 +46,6 @@
   function toggleSeriesMode() {
     seriesMode = !seriesMode;
     localStorage.setItem(SERIES_MODE_KEY, String(seriesMode));
-    // Ensure layout matches current column count when switching modes
-    setColumnCount(columnCount);
   }
 
   // Episode data for series mode
@@ -525,6 +523,14 @@
       ? episodes.length > 0
       : targetSubsPath !== ""
   );
+  const HINT_LOAD_TARGET_FIRST =
+    "Load the Original subtitle track first in Files & Output to unlock this section.";
+  const HINT_LOAD_MEDIA_FIRST =
+    "Load a media file (audio or video) first to unlock this section.";
+  const HINT_LOAD_VIDEO_FIRST =
+    "Load a video file first to unlock this section.";
+  const PANEL_INFO_BUTTON_CLASS =
+    "inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 bg-white/5 text-gray-400 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white";
   let includeWords = $state("");
   let excludeWords = $state("");
   let excludeDuplicatesSubs1 = $state(false);
@@ -634,35 +640,20 @@
     col3: ["exportFormat", "cpuCores", "actions", "progressResult", "logs"],
   };
 
+  function cloneLayout(layout: ColumnLayout): ColumnLayout {
+    return {
+      col1: [...layout.col1],
+      col2: [...layout.col2],
+      col3: [...layout.col3],
+    };
+  }
+
   function loadLayout(): ColumnLayout {
-    try {
-      const saved = localStorage.getItem(MOVIE_LAYOUT_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as ColumnLayout;
-        // Validate: all panel IDs must be present exactly once
-        const all = [...parsed.col1, ...parsed.col2, ...parsed.col3];
-        const valid =
-          PANEL_IDS.every((id) => all.includes(id)) &&
-          all.length === PANEL_IDS.length;
-        if (valid) return parsed;
-      }
-    } catch {}
-    return { ...DEFAULT_LAYOUT };
+    return cloneLayout(DEFAULT_LAYOUT);
   }
 
   function loadSeriesLayout(): ColumnLayout {
-    try {
-      const saved = localStorage.getItem(SERIES_LAYOUT_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as ColumnLayout;
-        const all = [...parsed.col1, ...parsed.col2, ...parsed.col3];
-        const valid =
-          PANEL_IDS.every((id) => all.includes(id)) &&
-          all.length === PANEL_IDS.length;
-        if (valid) return parsed;
-      }
-    } catch {}
-    return { ...DEFAULT_SERIES_LAYOUT };
+    return cloneLayout(DEFAULT_SERIES_LAYOUT);
   }
 
   function saveLayout(layout: ColumnLayout) {
@@ -688,75 +679,73 @@
     }
   }
 
-  // Column count (1, 2, or 3)
-  const COLUMN_COUNT_KEY = "vesta-flashcards-column-count";
-  function loadColumnCount(): 1 | 2 | 3 {
-    try {
-      const saved = localStorage.getItem(COLUMN_COUNT_KEY);
-      if (saved) {
-        const n = parseInt(saved, 10);
-        if (n === 1 || n === 2 || n === 3) return n;
-      }
-    } catch {}
-    return 3;
-  }
-  let columnCount = $state<1 | 2 | 3>(loadColumnCount());
+  // Responsive columns: auto-collapse from 3 -> 2 -> 1 based on available width.
+  const PREFERRED_COLUMN_COUNT = 3;
+  const STACK_TO_ONE_COLUMN_WIDTH = 1040;
+  const STACK_TO_TWO_COLUMNS_WIDTH = 1240;
+  let layoutHostEl = $state<HTMLElement | null>(null);
+  let layoutWidth = $state(
+    typeof window !== "undefined" ? window.innerWidth : 1700,
+  );
+  let effectiveColumnCount = $derived(
+    layoutWidth < STACK_TO_ONE_COLUMN_WIDTH
+      ? 1
+      : layoutWidth < STACK_TO_TWO_COLUMNS_WIDTH
+        ? 2
+        : PREFERRED_COLUMN_COUNT,
+  );
 
-  function setColumnCount(count: 1 | 2 | 3) {
-    columnCount = count;
-    localStorage.setItem(COLUMN_COUNT_KEY, String(count));
-    let newLayout: ColumnLayout;
-    // Redistribute panels: merge hidden columns into the last visible one
-    if (count === 1) {
-      newLayout = {
-        col1: [...panelLayout.col1, ...panelLayout.col2, ...panelLayout.col3],
-        col2: [],
-        col3: [],
-      };
-    } else if (count === 2) {
-      newLayout = {
+  let effectivePanelLayout = $derived.by(() => {
+    if (effectiveColumnCount === 3) {
+      return {
         col1: [...panelLayout.col1],
-        col2: [...panelLayout.col2, ...panelLayout.col3],
-        col3: [],
+        col2: [...panelLayout.col2],
+        col3: [...panelLayout.col3],
       };
-    } else {
-      // For count === 3, if col2/col3 are empty, redistribute from col1
-      const all = [
+    }
+
+    if (effectiveColumnCount === 2) {
+      const orderedPanels = [
         ...panelLayout.col1,
         ...panelLayout.col2,
         ...panelLayout.col3,
       ];
-      if (panelLayout.col2.length === 0 && panelLayout.col3.length === 0) {
-        const third = Math.ceil(all.length / 3);
-        const twoThirds = Math.ceil((all.length * 2) / 3);
-        newLayout = {
-          col1: all.slice(0, third),
-          col2: all.slice(third, twoThirds),
-          col3: all.slice(twoThirds),
-        };
-      } else if (panelLayout.col3.length === 0) {
-        // Coming from 2 columns: split col2
-        const col2All = [...panelLayout.col2];
-        const half = Math.ceil(col2All.length / 2);
-        newLayout = {
-          col1: [...panelLayout.col1],
-          col2: col2All.slice(0, half),
-          col3: col2All.slice(half),
-        };
-      } else {
-        newLayout = { ...panelLayout };
-      }
+      const balancedCol1: PanelId[] = [];
+      const balancedCol2: PanelId[] = [];
+
+      orderedPanels.forEach((panelId, idx) => {
+        if (idx % 2 === 0) {
+          balancedCol1.push(panelId);
+        } else {
+          balancedCol2.push(panelId);
+        }
+      });
+
+      return {
+        col1: balancedCol1,
+        col2: balancedCol2,
+        col3: [],
+      };
     }
-    updatePanelLayout(newLayout);
-  }
+
+    return {
+      col1: [...panelLayout.col1, ...panelLayout.col2, ...panelLayout.col3],
+      col2: [],
+      col3: [],
+    };
+  });
 
   // Computed column grid class
   let gridColClass = $derived(
-    columnCount === 1
+    effectiveColumnCount === 1
       ? "grid-cols-1"
-      : columnCount === 2
+      : effectiveColumnCount === 2
         ? "grid-cols-2"
         : "grid-cols-3",
+  );
+
+  let filesHelpContent = $derived(
+    seriesMode ? t("flashcards.filesHelp") : t("flashcards.filesHelpMovie"),
   );
 
   let helpSection = $state<string | null>(null);
@@ -845,6 +834,7 @@
   let unlisten: (() => void) | null = null;
   let unlistenDragDrop: (() => void) | null = null;
   let removeTemplateListener: (() => void) | null = null;
+  let removeLayoutObserver: (() => void) | null = null;
   let isDraggingOver = $state(false);
 
   function syncNoteTypeNameFromTemplates() {
@@ -969,31 +959,16 @@
       if (subtitleFiles.length >= 2) {
         const { target, native } = classifySubtitles(subtitleFiles);
         if (target) {
-          targetSubsPath = target;
-          const filename = getFileName(target);
-          if (!noteTypeLanguage) {
-            const inferred = inferLanguageFromPath(target);
-            if (inferred) {
-              noteTypeLanguage = inferred;
-              localStorage.setItem(NOTE_TYPE_LANGUAGE_KEY, inferred);
-            }
-          }
           try {
-            const info = await invoke<any>("flashcard_load_subs", { path: target });
-            targetSubsInfo = info;
-            addLog(`${info.count} ${t("flashcards.subtitlesLoaded")} (${info.format.toUpperCase()})`, "target-subs", filename);
-            if (!deckName) deckName = generateDefaultDeckName(filename);
+            await loadTargetSubtitle(target);
+            await tryAutoSelectMediaForSubtitle(target);
           } catch (e) {
             error = `Error parsing subtitles: ${e}`;
           }
         }
         if (native) {
-          nativeSubsPath = native;
-          const filename = getFileName(native);
           try {
-            const info = await invoke<any>("flashcard_load_subs", { path: native });
-            nativeSubsInfo = info;
-            addLog(`${info.count} ${t("flashcards.subtitlesLoaded")} (${info.format.toUpperCase()})`, "native-subs", filename);
+            await loadNativeSubtitle(native);
           } catch (e) {
             error = `Error parsing native subtitles: ${e}`;
           }
@@ -1001,30 +976,19 @@
       } else if (subtitleFiles.length === 1) {
         // Single subtitle: assign to target if empty, otherwise to native
         const subPath = subtitleFiles[0];
-        const filename = getFileName(subPath);
         if (!targetSubsPath) {
-          targetSubsPath = subPath;
-          if (!noteTypeLanguage) {
-            const inferred = inferLanguageFromPath(subPath);
-            if (inferred) {
-              noteTypeLanguage = inferred;
-              localStorage.setItem(NOTE_TYPE_LANGUAGE_KEY, inferred);
-            }
-          }
           try {
-            const info = await invoke<any>("flashcard_load_subs", { path: subPath });
-            targetSubsInfo = info;
-            addLog(`${info.count} ${t("flashcards.subtitlesLoaded")} (${info.format.toUpperCase()})`, "target-subs", filename);
-            if (!deckName) deckName = generateDefaultDeckName(filename);
+            await loadTargetSubtitle(subPath);
+            await tryAutoSelectCompanionSubtitle(subPath, "target");
+            await tryAutoSelectMediaForSubtitle(subPath);
           } catch (e) {
             error = `Error parsing subtitles: ${e}`;
           }
         } else {
-          nativeSubsPath = subPath;
           try {
-            const info = await invoke<any>("flashcard_load_subs", { path: subPath });
-            nativeSubsInfo = info;
-            addLog(`${info.count} ${t("flashcards.subtitlesLoaded")} (${info.format.toUpperCase()})`, "native-subs", filename);
+            await loadNativeSubtitle(subPath);
+            await tryAutoSelectCompanionSubtitle(subPath, "native");
+            await tryAutoSelectMediaForSubtitle(subPath);
           } catch (e) {
             error = `Error parsing native subtitles: ${e}`;
           }
@@ -1033,31 +997,41 @@
 
       // Handle media files
       if (mediaFiles.length > 0) {
-        const mp = mediaFiles[0];
-        mediaPath = mp;
-        const filename = getFileName(mp);
-        mediaType = detectMediaType(filename);
-        if (mediaType === "video") {
-          generateAudio = true;
-          generateSnapshots = true;
-          addLog(`${t("flashcards.mediaTypeVideo")}`, "media", filename);
-        } else if (mediaType === "audio") {
-          generateAudio = true;
-          generateSnapshots = false;
-          generateVideoClips = false;
-          addLog(`${t("flashcards.mediaTypeAudio")}`, "media", filename);
-        }
+        applyMediaSelection(mediaFiles[0]);
       }
     }
   }
 
   onMount(async () => {
-    // Ensure initial layout rendering matches the current columnCount
-    setColumnCount(columnCount);
     syncNoteTypeNameFromTemplates();
 
     const handleCardTemplatesUpdated = () => {
       syncNoteTypeNameFromTemplates();
+    };
+
+    const updateLayoutWidth = () => {
+      const hostWidth = layoutHostEl?.getBoundingClientRect().width;
+      layoutWidth = hostWidth && hostWidth > 0 ? Math.round(hostWidth) : window.innerWidth;
+    };
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => updateLayoutWidth())
+        : null;
+
+    if (resizeObserver && layoutHostEl) {
+      resizeObserver.observe(layoutHostEl);
+    }
+
+    const handleResize = () => updateLayoutWidth();
+    window.addEventListener("resize", handleResize);
+    updateLayoutWidth();
+
+    removeLayoutObserver = () => {
+      window.removeEventListener("resize", handleResize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
     };
 
     window.addEventListener(
@@ -1105,10 +1079,10 @@
     try {
       systemCpuCount = await invoke<number>("flashcard_get_cpu_count");
       const startupMaxCores = Math.max(2, systemCpuCount - 1);
-      cpuCores = 2 + Math.ceil(((startupMaxCores - 2) * 2) / 3);
+      cpuCores = startupMaxCores;
     } catch {
       systemCpuCount = 4;
-      cpuCores = 3;
+      cpuCores = Math.max(2, systemCpuCount - 1);
     }
 
     // Listen for OS-level file drag and drop
@@ -1155,6 +1129,7 @@
     if (unlisten) unlisten();
     if (unlistenDragDrop) unlistenDragDrop();
     if (removeTemplateListener) removeTemplateListener();
+    if (removeLayoutObserver) removeLayoutObserver();
   });
 
   // Track the i18n key of the last progress log so sequential updates
@@ -1276,6 +1251,111 @@
     };
   }
 
+  async function loadTargetSubtitle(path: string) {
+    targetSubsPath = path;
+    const filename = targetSubsPath.split("/").pop() || "";
+
+    if (!noteTypeLanguage) {
+      const inferredLanguage = inferLanguageFromPath(targetSubsPath);
+      if (inferredLanguage) {
+        noteTypeLanguage = inferredLanguage;
+        localStorage.setItem(NOTE_TYPE_LANGUAGE_KEY, inferredLanguage);
+      }
+    }
+
+    const info = await invoke<any>("flashcard_load_subs", {
+      path: targetSubsPath,
+    });
+    targetSubsInfo = info;
+    addLog(
+      `${info.count} ${t("flashcards.subtitlesLoaded")} (${info.format.toUpperCase()})`,
+      "target-subs",
+      filename,
+    );
+
+    if (!deckName) {
+      deckName = generateDefaultDeckName(filename);
+    }
+  }
+
+  async function loadNativeSubtitle(path: string) {
+    nativeSubsPath = path;
+    const filename = nativeSubsPath.split("/").pop() || "";
+
+    if (!noteTypeLanguage) {
+      const inferredLanguage = inferLanguageFromPath(nativeSubsPath);
+      if (inferredLanguage) {
+        noteTypeLanguage = inferredLanguage;
+        localStorage.setItem(NOTE_TYPE_LANGUAGE_KEY, inferredLanguage);
+      }
+    }
+
+    const info = await invoke<any>("flashcard_load_subs", {
+      path: nativeSubsPath,
+    });
+    nativeSubsInfo = info;
+    addLog(
+      `${info.count} ${t("flashcards.subtitlesLoaded")} (${info.format.toUpperCase()})`,
+      "native-subs",
+      filename,
+    );
+  }
+
+  function applyMediaSelection(path: string, autoSelected = false) {
+    mediaPath = path;
+    const filename = mediaPath.split("/").pop() || "";
+    mediaType = detectMediaType(filename);
+
+    if (mediaType === "video") {
+      generateAudio = true;
+      generateSnapshots = true;
+      addLog(`${t("flashcards.mediaTypeVideo")}`, "media", filename);
+    } else if (mediaType === "audio") {
+      generateAudio = true;
+      generateSnapshots = false;
+      generateVideoClips = false;
+      addLog(`${t("flashcards.mediaTypeAudio")}`, "media", filename);
+    }
+
+    if (autoSelected) {
+      addLog(`Auto-selected media: ${filename}`, "media");
+    }
+  }
+
+  async function tryAutoSelectCompanionSubtitle(path: string, selectedRole: "target" | "native") {
+    const needsTarget = selectedRole === "native" && !targetSubsPath;
+    const needsNative = selectedRole === "target" && !nativeSubsPath;
+    if (!needsTarget && !needsNative) return;
+
+    try {
+      const suggested = await invoke<string | null>("sync_suggest_companion_subtitle_for_srt", {
+        srtPath: path,
+      });
+      if (!suggested || suggested === path) return;
+
+      if (needsNative) {
+        await loadNativeSubtitle(suggested);
+      } else if (needsTarget) {
+        await loadTargetSubtitle(suggested);
+      }
+    } catch {
+      // Best-effort suggestion only.
+    }
+  }
+
+  async function tryAutoSelectMediaForSubtitle(path: string) {
+    if (mediaPath) return;
+    try {
+      const suggestedPath = await invoke<string | null>("sync_suggest_media_for_srt", {
+        srtPath: path,
+      });
+      if (!suggestedPath) return;
+      applyMediaSelection(suggestedPath, true);
+    } catch {
+      // Best-effort suggestion only.
+    }
+  }
+
   async function selectTargetSubs() {
     try {
       const selected = await open({
@@ -1288,31 +1368,11 @@
         ],
       });
       if (selected) {
-        targetSubsPath = selected as string;
-        const filename = targetSubsPath.split("/").pop() || "";
-
-        if (!noteTypeLanguage) {
-          const inferredLanguage = inferLanguageFromPath(targetSubsPath);
-          if (inferredLanguage) {
-            noteTypeLanguage = inferredLanguage;
-            localStorage.setItem(NOTE_TYPE_LANGUAGE_KEY, inferredLanguage);
-          }
-        }
-
         try {
-          const info = await invoke<any>("flashcard_load_subs", {
-            path: targetSubsPath,
-          });
-          targetSubsInfo = info;
-          addLog(
-            `${info.count} ${t("flashcards.subtitlesLoaded")} (${info.format.toUpperCase()})`,
-            "target-subs",
-            filename,
-          );
-
-          if (!deckName) {
-            deckName = generateDefaultDeckName(filename);
-          }
+          const selectedPath = selected as string;
+          await loadTargetSubtitle(selectedPath);
+          await tryAutoSelectCompanionSubtitle(selectedPath, "target");
+          await tryAutoSelectMediaForSubtitle(selectedPath);
         } catch (e) {
           error = `Error parsing subtitles: ${e}`;
         }
@@ -1334,27 +1394,11 @@
         ],
       });
       if (selected) {
-        nativeSubsPath = selected as string;
-        const filename = nativeSubsPath.split("/").pop() || "";
-
-        if (!noteTypeLanguage) {
-          const inferredLanguage = inferLanguageFromPath(nativeSubsPath);
-          if (inferredLanguage) {
-            noteTypeLanguage = inferredLanguage;
-            localStorage.setItem(NOTE_TYPE_LANGUAGE_KEY, inferredLanguage);
-          }
-        }
-
         try {
-          const info = await invoke<any>("flashcard_load_subs", {
-            path: nativeSubsPath,
-          });
-          nativeSubsInfo = info;
-          addLog(
-            `${info.count} ${t("flashcards.subtitlesLoaded")} (${info.format.toUpperCase()})`,
-            "native-subs",
-            filename,
-          );
+          const selectedPath = selected as string;
+          await loadNativeSubtitle(selectedPath);
+          await tryAutoSelectCompanionSubtitle(selectedPath, "native");
+          await tryAutoSelectMediaForSubtitle(selectedPath);
         } catch (e) {
           error = `Error parsing native subtitles: ${e}`;
         }
@@ -1395,20 +1439,7 @@
         ],
       });
       if (selected) {
-        mediaPath = selected as string;
-        const filename = mediaPath.split("/").pop() || "";
-        mediaType = detectMediaType(filename);
-
-        if (mediaType === "video") {
-          generateAudio = true;
-          generateSnapshots = true;
-          addLog(`${t("flashcards.mediaTypeVideo")}`, "media", filename);
-        } else if (mediaType === "audio") {
-          generateAudio = true;
-          generateSnapshots = false;
-          generateVideoClips = false;
-          addLog(`${t("flashcards.mediaTypeAudio")}`, "media", filename);
-        }
+        applyMediaSelection(selected as string);
       }
     } catch (e) {
       error = `${t("flashcards.errorSelectingFile")}: ${e}`;
@@ -2107,7 +2138,7 @@
             type="button"
             onclick={() => (helpSection = "files")}
             title="Info"
-            class="ml-auto text-gray-500 hover:text-emerald-300 transition-colors"
+            class={`ml-auto ${PANEL_INFO_BUTTON_CLASS}`}
           >
             <svg
               class="w-3.5 h-3.5"
@@ -2515,8 +2546,10 @@
       </div>
     {:else if panelId === "subtitleOptions"}
       <div
+        inert={!hasAnyFiles}
+        title={!hasAnyFiles ? HINT_LOAD_TARGET_FIRST : undefined}
         class="glass-card p-4 {!hasAnyFiles
-          ? 'opacity-40 pointer-events-none'
+          ? 'opacity-40'
           : ''}"
       >
         <div class="flex items-center gap-2">
@@ -2562,7 +2595,7 @@
             type="button"
             onclick={() => (helpSection = "subtitleOptions")}
             title="Info"
-            class="text-gray-500 hover:text-teal-300 flex-shrink-0 transition-colors"
+            class={`flex-shrink-0 ${PANEL_INFO_BUTTON_CLASS}`}
           >
             <svg
               class="w-3.5 h-3.5"
@@ -2693,8 +2726,10 @@
       </div>
     {:else if panelId === "filters"}
       <div
+        inert={!hasAnyFiles}
+        title={!hasAnyFiles ? HINT_LOAD_TARGET_FIRST : undefined}
         class="glass-card p-4 {!hasAnyFiles
-          ? 'opacity-40 pointer-events-none'
+          ? 'opacity-40'
           : ''}"
       >
         <div class="flex items-center gap-2">
@@ -2751,7 +2786,7 @@
           </button>
           <button
             onclick={() => (helpSection = "filters")}
-            class="text-gray-500 hover:text-orange-400 flex-shrink-0"
+            class={`flex-shrink-0 ${PANEL_INFO_BUTTON_CLASS}`}
             title="Info"
           >
             <svg
@@ -2935,8 +2970,10 @@
       </div>
     {:else if panelId === "contextLines"}
       <div
+        inert={!hasAnyFiles}
+        title={!hasAnyFiles ? HINT_LOAD_TARGET_FIRST : undefined}
         class="glass-card p-4 {!hasAnyFiles
-          ? 'opacity-40 pointer-events-none'
+          ? 'opacity-40'
           : ''}"
       >
         <div class="flex items-center gap-2">
@@ -2982,7 +3019,7 @@
             type="button"
             onclick={() => (helpSection = "contextLines")}
             title="Info"
-            class="text-gray-500 hover:text-indigo-300 flex-shrink-0 transition-colors"
+            class={`flex-shrink-0 ${PANEL_INFO_BUTTON_CLASS}`}
           >
             <svg
               class="w-3.5 h-3.5"
@@ -3045,8 +3082,10 @@
       </div>
     {:else if panelId === "audioClips"}
       <div
+        inert={!hasAudio}
+        title={!hasAudio ? HINT_LOAD_MEDIA_FIRST : undefined}
         class="glass-card p-4 {!hasAudio
-          ? 'opacity-40 pointer-events-none'
+          ? 'opacity-40'
           : ''}"
         style="overflow: visible; position: relative; z-index: 10;"
       >
@@ -3072,7 +3111,7 @@
               type="button"
               onclick={() => (helpSection = "audioClips")}
               title="Info"
-              class="text-gray-500 hover:text-cyan-300 transition-colors"
+              class={PANEL_INFO_BUTTON_CLASS}
             >
               <svg
                 class="w-3.5 h-3.5"
@@ -3172,8 +3211,10 @@
       </div>
     {:else if panelId === "snapshots"}
       <div
+        inert={!hasVideo}
+        title={!hasVideo ? HINT_LOAD_VIDEO_FIRST : undefined}
         class="glass-card p-4 {!hasVideo
-          ? 'opacity-40 pointer-events-none'
+          ? 'opacity-40'
           : ''}"
       >
         <div class="flex items-center justify-between mb-3">
@@ -3198,7 +3239,7 @@
               type="button"
               onclick={() => (helpSection = "snapshots")}
               title="Info"
-              class="text-gray-500 hover:text-purple-300 transition-colors"
+              class={PANEL_INFO_BUTTON_CLASS}
             >
               <svg
                 class="w-3.5 h-3.5"
@@ -3282,8 +3323,10 @@
       </div>
     {:else if panelId === "videoClips"}
       <div
+        inert={!hasVideo}
+        title={!hasVideo ? HINT_LOAD_VIDEO_FIRST : undefined}
         class="glass-card p-4 {!hasVideo
-          ? 'opacity-40 pointer-events-none'
+          ? 'opacity-40'
           : ''}"
         style="overflow: visible; position: relative; z-index: 5;"
       >
@@ -3309,7 +3352,7 @@
               type="button"
               onclick={() => (helpSection = "videoClips")}
               title="Info"
-              class="text-gray-500 hover:text-rose-300 transition-colors"
+              class={PANEL_INFO_BUTTON_CLASS}
             >
               <svg
                 class="w-3.5 h-3.5"
@@ -3447,8 +3490,10 @@
       </div>
     {:else if panelId === "ankiFields"}
       <div
+        inert={!hasAnyFiles}
+        title={!hasAnyFiles ? HINT_LOAD_TARGET_FIRST : undefined}
         class="glass-card p-4 {!hasAnyFiles
-          ? 'opacity-50 pointer-events-none'
+          ? 'opacity-50'
           : ''}"
       >
         <h3
@@ -3472,7 +3517,7 @@
             type="button"
             onclick={() => (helpSection = "ankiFields")}
             title="Info"
-            class="ml-auto text-gray-500 hover:text-lime-300 transition-colors"
+            class={`ml-auto ${PANEL_INFO_BUTTON_CLASS}`}
           >
             <svg
               class="w-3.5 h-3.5"
@@ -3603,8 +3648,10 @@
       </div>
     {:else if panelId === "exportFormat"}
       <div
+        inert={!hasAnyFiles}
+        title={!hasAnyFiles ? HINT_LOAD_TARGET_FIRST : undefined}
         class="glass-card p-4 {!hasAnyFiles
-          ? 'opacity-50 pointer-events-none'
+          ? 'opacity-50'
           : ''}"
       >
         <h3
@@ -3628,7 +3675,7 @@
             type="button"
             onclick={() => (helpSection = "exportFormat")}
             title="Info"
-            class="ml-auto text-gray-500 hover:text-sky-300 transition-colors"
+            class={`ml-auto ${PANEL_INFO_BUTTON_CLASS}`}
           >
             <svg
               class="w-3.5 h-3.5"
@@ -3749,8 +3796,10 @@
       </div>
     {:else if panelId === "naming"}
       <div
+        inert={!hasAnyFiles}
+        title={!hasAnyFiles ? HINT_LOAD_TARGET_FIRST : undefined}
         class="glass-card p-4 {!hasAnyFiles
-          ? 'opacity-50 pointer-events-none'
+          ? 'opacity-50'
           : ''}"
       >
         <h3
@@ -3774,7 +3823,7 @@
             type="button"
             onclick={() => (helpSection = "naming")}
             title="Info"
-            class="ml-auto text-gray-500 hover:text-amber-300 transition-colors"
+            class={`ml-auto ${PANEL_INFO_BUTTON_CLASS}`}
           >
             <svg
               class="w-3.5 h-3.5"
@@ -3810,8 +3859,10 @@
       </div>
     {:else if panelId === "cpuCores"}
       <div
+        inert={!hasAnyFiles}
+        title={!hasAnyFiles ? HINT_LOAD_TARGET_FIRST : undefined}
         class="glass-card p-4 {!hasAnyFiles
-          ? 'opacity-50 pointer-events-none'
+          ? 'opacity-50'
           : ''}"
       >
         <h3
@@ -3834,7 +3885,7 @@
           <button
             type="button"
             onclick={() => (helpSection = "cpuCores")}
-            class="ml-auto text-gray-500 hover:text-orange-300 transition-colors"
+            class={`ml-auto ${PANEL_INFO_BUTTON_CLASS}`}
             title="Info"
           >
             <svg
@@ -3955,6 +4006,9 @@
           <button
             onclick={startGeneration}
             disabled={!canRunFlashcards}
+            title={!canRunFlashcards
+              ? "Complete required fields: subtitle, output folder, deck name, and language."
+              : undefined}
             class="btn-success w-full py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg
@@ -3976,6 +4030,9 @@
           <button
             class="btn-secondary w-full py-2 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={!canRunFlashcards}
+            title={!canRunFlashcards
+              ? "Complete required fields: subtitle, output folder, deck name, and language."
+              : undefined}
             onclick={loadPreview}
           >
             <svg
@@ -4163,7 +4220,7 @@
         {/if}
       </div>
     {:else if panelId === "logs"}
-      <div class="glass-card p-4 flex flex-col min-h-32">
+      <div class="glass-card p-4 flex flex-col min-h-[180px]">
         <div class="flex items-center justify-between mb-2">
           <h4
             class="text-xs font-semibold text-gray-400 flex items-center gap-2"
@@ -4192,7 +4249,7 @@
             </button>
           {/if}
         </div>
-        <div class="overflow-y-auto space-y-1.5 max-h-48">
+        <div class="overflow-y-auto space-y-1.5 max-h-64">
           {#if logs.length > 0}
             {#each logs as log (log.id)}
               {@const style = logStyle(log.type)}
@@ -4228,66 +4285,9 @@
     {/if}
   {/snippet}
 
-  <div class="relative mb-1 flex items-center justify-start min-h-[32px]">
-    <!-- Column count buttons -->
-    <div class="flex items-center gap-1">
-      <button
-        onclick={() => setColumnCount(1)}
-        class="p-1 rounded transition-colors {columnCount === 1
-          ? 'text-emerald-400 bg-emerald-500/15'
-          : 'text-gray-500 hover:text-gray-300'}"
-        title={t("flashcards.columns1")}
-      >
-        <svg
-          class="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          stroke-width="2"
-        >
-          <rect x="4" y="4" width="16" height="16" rx="1" />
-        </svg>
-      </button>
-      <button
-        onclick={() => setColumnCount(2)}
-        class="p-1 rounded transition-colors {columnCount === 2
-          ? 'text-emerald-400 bg-emerald-500/15'
-          : 'text-gray-500 hover:text-gray-300'}"
-        title={t("flashcards.columns2")}
-      >
-        <svg
-          class="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          stroke-width="2"
-        >
-          <rect x="4" y="4" width="7" height="16" rx="1" />
-          <rect x="13" y="4" width="7" height="16" rx="1" />
-        </svg>
-      </button>
-      <button
-        onclick={() => setColumnCount(3)}
-        class="p-1 rounded transition-colors {columnCount === 3
-          ? 'text-emerald-400 bg-emerald-500/15'
-          : 'text-gray-500 hover:text-gray-300'}"
-        title={t("flashcards.columns3")}
-      >
-        <svg
-          class="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          stroke-width="2"
-        >
-          <rect x="3" y="4" width="5" height="16" rx="1" />
-          <rect x="9.5" y="4" width="5" height="16" rx="1" />
-          <rect x="16" y="4" width="5" height="16" rx="1" />
-        </svg>
-      </button>
-    </div>
+  <div class="relative mb-1 flex items-center justify-center min-h-[32px]">
     <!-- Movie/Series toggle -->
-    <div class="absolute left-1/2 -translate-x-1/2">
+    <div>
       <div
         class="flex items-center gap-2 px-3 py-0.5 rounded-full bg-gray-800/60 border border-gray-700/50"
       >
@@ -4356,15 +4356,15 @@
     </div>
   </div>
 
-  <div class="flex-1 grid {gridColClass} gap-4 min-h-0 overflow-y-auto">
+  <div bind:this={layoutHostEl} class="flex-1 grid {gridColClass} gap-4 min-h-0 overflow-y-auto">
     {#if seriesMode}
       <!-- In series mode, render the files panel full-width above the columns -->
-      <div class="{columnCount >= 2 ? 'col-span-2' : ''} {columnCount >= 3 ? 'col-span-3' : ''} mb-1">
+      <div class="{effectiveColumnCount >= 2 ? 'col-span-2' : ''} {effectiveColumnCount >= 3 ? 'col-span-3' : ''} mb-1">
         {@render panelContent("files")}
       </div>
     {/if}
     <div class="space-y-3 {seriesMode ? '' : 'overflow-y-auto'} pr-1 min-h-[100px]" role="list">
-      {#each panelLayout.col1 as panelId, idx (panelId)}
+      {#each effectivePanelLayout.col1 as panelId, idx (panelId)}
         {#if !(seriesMode && panelId === "files")}
         <div class="relative transition-all duration-150" role="listitem">
           {@render panelContent(panelId)}
@@ -4373,9 +4373,9 @@
       {/each}
     </div>
 
-    {#if columnCount >= 2}
+    {#if effectiveColumnCount >= 2}
       <div class="space-y-3 {seriesMode ? '' : 'overflow-y-auto'} pr-1 min-h-[100px]" role="list">
-        {#each panelLayout.col2 as panelId, idx (panelId)}
+        {#each effectivePanelLayout.col2 as panelId, idx (panelId)}
           {#if !(seriesMode && panelId === "files")}
           <div class="relative transition-all duration-150" role="listitem">
             {@render panelContent(panelId)}
@@ -4385,9 +4385,9 @@
       </div>
     {/if}
 
-    {#if columnCount >= 3}
+    {#if effectiveColumnCount >= 3}
       <div class="space-y-3 {seriesMode ? '' : 'overflow-y-auto'} pr-1 min-h-[100px]" role="list">
-        {#each panelLayout.col3 as panelId, idx (panelId)}
+        {#each effectivePanelLayout.col3 as panelId, idx (panelId)}
           {#if !(seriesMode && panelId === "files")}
           <div class="transition-all duration-150" role="listitem">
             {@render panelContent(panelId)}
@@ -4451,7 +4451,7 @@
         <div
           class="text-gray-300 text-sm leading-relaxed max-h-[60vh] overflow-y-auto help-content"
         >
-          {#if helpSection === "files"}{@html t("flashcards.filesHelp")}
+          {#if helpSection === "files"}{@html filesHelpContent}
           {:else if helpSection === "subtitleOptions"}{@html t(
               "flashcards.subtitleOptionsHelp",
             )}

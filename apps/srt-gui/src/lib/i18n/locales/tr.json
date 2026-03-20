@@ -668,5 +668,15 @@
   "translate.localServerUrl": "Sunucu URL'si",
   "translate.fetchModels": "Modelleri Getir",
   "translate.fetchModelsHint": "Sunucunuzdan kullanılabilir modelleri yüklemek için 'Modelleri Getir'e tıklayın.",
-  "translate.modelsFound": "kullanılabilir modeller"
+  "translate.modelsFound": "kullanılabilir modeller",
+  "shortcuts.action.alignCyclePerPage": "Görünür altyazıları döngüle (5/10/15)",
+  "shortcuts.action.alignNextPage": "Sonraki altyazı sayfası",
+  "shortcuts.action.alignPrevPage": "Önceki altyazı sayfası",
+  "shortcuts.action.alignSave": "Sonucu kaydet",
+  "shortcuts.action.alignSwapFiles": "Hedef ve kaynak dosyaları yer değiştir",
+  "shortcuts.action.alignUndo": "Son düzenlemeyi geri al",
+  "shortcuts.category.alignment": "📐 Hizalama",
+  "shortcuts.category.alignment.desc": "Altyazı hizalama sekmesi için kısayollar",
+  "transcribe.whisperModelDesc": "Yerel transkripsiyon için modelleri indirin. İndirmek ve varsayılan olarak ayarlamak için bir modele tıklayın.",
+  "flashcards.filesHelpMovie": "<p>Altyazı dosyalarını yükleyin ve bir çıktı klasörü seçin. Bu yardım film modu içindir.</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>Hedef altyazılar</strong> <span class='text-red-400'>*</span> — <em>öğrendiğiniz</em> dil (gerekli)</li><li><strong class='text-blue-400'>Ana dil altyazıları</strong> — ana diliniz / çeviri (isteğe bağlı)</li><li><strong class='text-purple-400'>Medya dosyası</strong> — klip ve ekran görüntüsü çıkarmak için video veya ses kaynağı</li><li><strong class='text-amber-400'>Çıktı klasörü</strong> <span class='text-red-400'>*</span> — üretilen dosyaların kaydedileceği yer</li></ul>"
 }

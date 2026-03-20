@@ -102,6 +102,21 @@ def build_report(locales_dir: Path) -> dict[str, Any]:
     }
 
 
+def count_issues_by_reason(report: dict[str, Any], reasons: set[str]) -> tuple[int, dict[str, int]]:
+    per_locale: dict[str, int] = {}
+    total = 0
+
+    for issue in report.get("missing_keys", {}).values():
+        for detail in issue.get("details", []):
+            reason = detail.get("reason")
+            locale = detail.get("locale")
+            if reason in reasons and isinstance(locale, str):
+                per_locale[locale] = per_locale.get(locale, 0) + 1
+                total += 1
+
+    return total, dict(sorted(per_locale.items(), key=lambda item: item[0]))
+
+
 def main() -> int:
     script_root = Path(__file__).resolve().parents[1]
     default_locales = script_root / "src" / "lib" / "i18n" / "locales"
@@ -118,6 +133,16 @@ def main() -> int:
         default=str(default_report),
         help="Output JSON report path",
     )
+    parser.add_argument(
+        "--fail-on-issues",
+        action="store_true",
+        help="Exit with code 1 if issues exist for the configured block reasons",
+    )
+    parser.add_argument(
+        "--block-reasons",
+        default="missing_key,empty_value",
+        help="Comma-separated reasons that should block when --fail-on-issues is set",
+    )
     args = parser.parse_args()
 
     locales_dir = Path(args.locales_dir)
@@ -125,6 +150,12 @@ def main() -> int:
         raise FileNotFoundError(f"Locales directory does not exist: {locales_dir}")
 
     report = build_report(locales_dir)
+
+    block_reasons = {
+        token.strip()
+        for token in str(args.block_reasons).split(",")
+        if token.strip()
+    }
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -137,6 +168,23 @@ def main() -> int:
     print("Missing count by locale:")
     for locale, count in sorted(report["missing_counts_by_locale"].items(), key=lambda x: x[0]):
         print(f"  - {locale}: {count}")
+
+    if args.fail_on_issues:
+        blocking_total, blocking_by_locale = count_issues_by_reason(report, block_reasons)
+        if blocking_total > 0:
+            print("")
+            print(
+                "Blocking i18n issues found "
+                f"for reasons: {', '.join(sorted(block_reasons))}"
+            )
+            for locale, count in blocking_by_locale.items():
+                print(f"  - {locale}: {count}")
+            return 1
+        print("")
+        print(
+            "No blocking i18n issues found "
+            f"for reasons: {', '.join(sorted(block_reasons))}"
+        )
 
     return 0
 

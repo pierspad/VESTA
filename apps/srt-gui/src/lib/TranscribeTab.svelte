@@ -15,6 +15,7 @@
   let outputPath = $state("");
   let selectedModel = $state("base");
   let selectedLanguage = $state("auto");
+  let previousLanguageForOutput = "auto";
   let translateToEnglish = $state(false);
   let wordTimestamps = $state(true);
   let maxSegmentLength = $state(30);
@@ -43,6 +44,7 @@
     message: string;
     output_path?: string;
     subtitle_count?: number;
+    detected_language?: string;
   } | null>(null);
 
   let snackbarMessage = $state<string | null>(null);
@@ -114,6 +116,70 @@
     },
     ...allLanguages,
   ]);
+
+  const knownLangCodes = new Set(allLanguages.map((l) => l.code.toLowerCase()));
+
+  function effectiveLanguageCodeForOutput(langCode: string): string {
+    if (langCode !== "auto") return langCode;
+    return result?.detected_language?.toLowerCase() || "auto";
+  }
+
+  function rewriteOutputPathLanguage(path: string, langCode: string): string {
+    const match = path.match(/^(.*\/)?([^/]+)$/);
+    if (!match) return path;
+
+    const dir = match[1] || "";
+    const fileName = match[2];
+
+    if (!/\.srt$/i.test(fileName)) {
+      return path;
+    }
+
+    const stem = fileName.replace(/\.srt$/i, "");
+    const tokenMatch = stem.match(/^(.*)([\-._])([^\-._]+)$/);
+    if (tokenMatch) {
+      const [, prefix, sep, token] = tokenMatch;
+      const tokenLower = token.toLowerCase();
+      const looksLikeLang = knownLangCodes.has(tokenLower) || tokenLower === "auto" || /^[a-z]{2,3}$/i.test(tokenLower);
+      if (looksLikeLang) {
+        return `${dir}${prefix}${sep}${langCode}.srt`;
+      }
+    }
+
+    return `${dir}${stem}.${langCode}.srt`;
+  }
+
+  function generateOutputPathFromInput(input: string, langCode: string): string {
+    const basePath = input.replace(/\.[^/.]+$/, "");
+    return `${basePath}.${langCode}.srt`;
+  }
+
+  function selectedLanguageLabel(code: string): string {
+    const lang = transcriptionLanguages.find((l) => l.code === code);
+    return lang ? lang.nameEn : code;
+  }
+
+  $effect(() => {
+    const currentLang = selectedLanguage;
+    const effectiveCurrentLang = effectiveLanguageCodeForOutput(currentLang);
+    const effectivePrevLang = effectiveLanguageCodeForOutput(previousLanguageForOutput);
+
+    if (currentLang !== previousLanguageForOutput && inputPath) {
+      if (outputPath) {
+        outputPath = rewriteOutputPathLanguage(outputPath, effectiveCurrentLang);
+      } else {
+        outputPath = generateOutputPathFromInput(inputPath, effectiveCurrentLang);
+      }
+      addLog(
+        `Language set to ${selectedLanguageLabel(currentLang)}; output updated to ${outputPath.split("/").pop()}`,
+        "info",
+      );
+      previousLanguageForOutput = currentLang;
+      if (effectivePrevLang !== effectiveCurrentLang) {
+        result = null;
+      }
+    }
+  });
 
   let unlistenProgress: (() => void) | null = null;
 
@@ -266,13 +332,14 @@
       if (selected) {
         inputPath = selected as string;
         if (!outputPath) {
-          const basePath = inputPath.replace(/\.[^/.]+$/, "");
-          outputPath = `${basePath}.srt`;
+          const outputLang = effectiveLanguageCodeForOutput(selectedLanguage);
+          outputPath = generateOutputPathFromInput(inputPath, outputLang);
         }
         addLog(
           `${t("transcribe.fileSelected")}: ${inputPath.split("/").pop()}`,
           "file",
         );
+        addLog(`Output file: ${outputPath.split("/").pop()}`, "info");
       }
     } catch (e) {
       error = `${t("transcribe.errorSelectingFile")}: ${e}`;
@@ -288,6 +355,7 @@
 
       if (selected) {
         outputPath = selected;
+        addLog(`Output file set manually: ${outputPath.split("/").pop()}`, "file");
       }
     } catch (e) {
       error = `${t("transcribe.errorSelectingFile")}: ${e}`;
@@ -322,14 +390,15 @@
       }
       inputPath = cleaned;
       if (!outputPath) {
-        const basePath = inputPath.replace(/\.[^/.]+$/, "");
-        outputPath = `${basePath}.srt`;
+        const outputLang = effectiveLanguageCodeForOutput(selectedLanguage);
+        outputPath = generateOutputPathFromInput(inputPath, outputLang);
       }
       showInputPathDialog = false;
       addLog(
         `${t("transcribe.fileSelected")}: ${inputPath.split("/").pop()}`,
         "file",
       );
+      addLog(`Output file: ${outputPath.split("/").pop()}`, "info");
     } catch (e) {
       inputPathError = `Error: ${e}`;
     }
@@ -376,6 +445,9 @@
     progress = 0;
     isTranscribing = true;
     addLog(`${t("transcribe.starting")} (model: ${selectedModel})`, "info");
+    addLog(`Source language: ${selectedLanguageLabel(selectedLanguage)}`, "info");
+    addLog(`Word timestamps: ${wordTimestamps ? "enabled" : "disabled"}; max segment: ${maxSegmentLength}s`, "info");
+    addLog(`Input: ${inputPath.split("/").pop()} → Output: ${outputPath.split("/").pop()}`, "file");
 
     const startTime = Date.now();
 
@@ -385,6 +457,7 @@
         message: string;
         output_path?: string;
         subtitle_count?: number;
+        detected_language?: string;
       }>("transcribe_start", {
         config: {
           input_path: inputPath,
@@ -397,6 +470,15 @@
         },
       });
       result = res;
+      if (res.output_path) {
+        outputPath = res.output_path;
+      }
+      if (res.detected_language) {
+        addLog(`Detected language: ${res.detected_language}`, "success");
+      }
+      if (res.output_path) {
+        addLog(`Saved: ${res.output_path.split("/").pop()}`, "success");
+      }
       addLog(res.message, "success");
       await refreshModels();
     } catch (e: any) {
@@ -1161,7 +1243,7 @@
     {:else if panelId === "logs"}
       <div
         class="glass-card p-4 flex flex-col"
-        style="min-height: 120px; max-height: 300px;"
+        style="min-height: 170px; max-height: 360px;"
       >
         <div class="flex items-center justify-between mb-2 shrink-0">
           <h4 class="text-xs font-semibold text-gray-400">
@@ -1201,97 +1283,33 @@
     {/if}
   {/snippet}
 
-  <div class="flex justify-end mb-1">
-    <button
-      onclick={resetTranscribeLayout}
-      class="text-[10px] text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
-    >
-      <svg
-        class="w-3 h-3"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-        />
-      </svg>
-      {t("flashcards.resetLayout")}
-    </button>
-  </div>
-
-  <div class="flex-1 grid grid-cols-2 gap-6 min-h-0 overflow-y-auto">
+  <div class="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-6 min-h-0 overflow-y-auto">
     <div
       class="space-y-3 overflow-y-auto pr-1 min-h-[100px]"
-      ondragover={(e) => tOnDragOverColumn(e, "col1")}
-      ondrop={() => tOnDropColumn("col1")}
       role="list"
     >
       {#each transcribePanelLayout.col1 as tPanelId, idx (tPanelId)}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          draggable="true"
-          ondragstart={(e) => tOnDragStart(e, tPanelId)}
-          ondragover={(e) => tOnDragOver(e, "col1", idx)}
-          ondrop={(e) => {
-            e.stopPropagation();
-            tOnDrop("col1", idx);
-          }}
-          ondragend={tOnDragEnd}
-          class="cursor-grab active:cursor-grabbing transition-all duration-150 {tDraggedPanel ===
-          tPanelId
-            ? 'opacity-40 scale-[0.98]'
-            : ''} {tDragOverCol === 'col1' &&
-          tDragOverIdx === idx &&
-          tDraggedPanel !== tPanelId
-            ? 'border-t-2 border-cyan-400 pt-1'
-            : ''}"
+          class="transition-all duration-150"
           role="listitem"
         >
           {@render panelContent(tPanelId)}
         </div>
       {/each}
-      {#if tDraggedPanel && tDragOverCol === "col1" && tDragOverIdx === transcribePanelLayout.col1.length}
-        <div class="h-1 bg-cyan-400 rounded-full mx-4 transition-all"></div>
-      {/if}
     </div>
 
     <div
       class="space-y-3 overflow-y-auto pr-1 min-h-[100px]"
-      ondragover={(e) => tOnDragOverColumn(e, "col2")}
-      ondrop={() => tOnDropColumn("col2")}
       role="list"
     >
       {#each transcribePanelLayout.col2 as tPanelId, idx (tPanelId)}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          draggable="true"
-          ondragstart={(e) => tOnDragStart(e, tPanelId)}
-          ondragover={(e) => tOnDragOver(e, "col2", idx)}
-          ondrop={(e) => {
-            e.stopPropagation();
-            tOnDrop("col2", idx);
-          }}
-          ondragend={tOnDragEnd}
-          class="cursor-grab active:cursor-grabbing transition-all duration-150 {tDraggedPanel ===
-          tPanelId
-            ? 'opacity-40 scale-[0.98]'
-            : ''} {tDragOverCol === 'col2' &&
-          tDragOverIdx === idx &&
-          tDraggedPanel !== tPanelId
-            ? 'border-t-2 border-cyan-400 pt-1'
-            : ''}"
+          class="transition-all duration-150"
           role="listitem"
         >
           {@render panelContent(tPanelId)}
         </div>
       {/each}
-      {#if tDraggedPanel && tDragOverCol === "col2" && tDragOverIdx === transcribePanelLayout.col2.length}
-        <div class="h-1 bg-cyan-400 rounded-full mx-4 transition-all"></div>
-      {/if}
     </div>
   </div>
 

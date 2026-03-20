@@ -676,5 +676,15 @@
   "sync.tooltipOffset": "Ajusta el tiempo de los subtítulos. Los valores positivos retrasan los subtítulos, los negativos los muestran antes.",
   "sync.tooltipConfirmAnchor": "Marca el subtítulo actual como punto de sincronización (Enter). Los puntos de anclaje son referencias usadas para interpolar tiempos de subtítulos cercanos.",
   "sync.tooltipPrevAnchor": "Saltar al punto de anclaje anterior",
-  "sync.tooltipNextAnchor": "Saltar al siguiente punto de anclaje"
+  "sync.tooltipNextAnchor": "Saltar al siguiente punto de anclaje",
+  "shortcuts.action.alignCyclePerPage": "Recorrer subtítulos visibles (5/10/15)",
+  "shortcuts.action.alignNextPage": "Página siguiente de subtítulos",
+  "shortcuts.action.alignPrevPage": "Página anterior de subtítulos",
+  "shortcuts.action.alignSave": "Guardar resultado",
+  "shortcuts.action.alignSwapFiles": "Intercambiar archivos de destino y origen",
+  "shortcuts.action.alignUndo": "Deshacer última edición",
+  "shortcuts.category.alignment": "📐 Alineación",
+  "shortcuts.category.alignment.desc": "Atajos para la pestaña de alineación de subtítulos",
+  "transcribe.whisperModelDesc": "Descarga modelos para la transcripción local. Haz clic en un modelo para descargarlo y establecerlo como predeterminado.",
+  "flashcards.filesHelpMovie": "<p>Carga archivos de subtítulos y elige una carpeta de salida. Esta ayuda es para el modo película.</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>Subs destino</strong> <span class='text-red-400'>*</span> — el idioma que estás <em>estudiando</em> (requerido)</li><li><strong class='text-blue-400'>Subs nativos</strong> — tu idioma nativo / traducción (opcional)</li><li><strong class='text-purple-400'>Archivo multimedia</strong> — fuente de video o audio para extraer clips y capturas</li><li><strong class='text-amber-400'>Carpeta de salida</strong> <span class='text-red-400'>*</span> — dónde se guardan los archivos generados</li></ul>"
 }

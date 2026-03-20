@@ -103,6 +103,35 @@
   let helpSection = $state<string | null>(null);
   let expandedPathField = $state<"srt" | "media" | null>(null);
 
+  interface SyncLogEntry {
+    id: number;
+    timestamp: string;
+    message: string;
+    level: "info" | "success" | "warning" | "error";
+  }
+  let syncLogId = 0;
+  let syncLogs = $state<SyncLogEntry[]>([]);
+
+  function addSyncLog(
+    message: string,
+    level: SyncLogEntry["level"] = "info",
+  ) {
+    const timestamp = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+    syncLogs = [
+      ...syncLogs,
+      { id: ++syncLogId, timestamp, message, level },
+    ].slice(-80);
+  }
+
+  function clearSyncLogs() {
+    syncLogs = [];
+    syncLogId = 0;
+  }
+
   type SyncPanelId = "toolbar" | "wizard" | "status" | "subtitleList";
 
   function syncDebug(message: string, payload?: Record<string, unknown>) {
@@ -129,8 +158,10 @@
       audioSrc = await loadMediaFile(suggestedPath);
       status = await invoke<SyncStatus>("sync_set_video", { path: suggestedPath });
       showSnackbar(`Auto-selected media: ${getFileName(suggestedPath)}`);
+      addSyncLog(`Auto-selected media: ${getFileName(suggestedPath)}`, "success");
     } catch (e) {
       syncDebug("auto-media-suggestion-failed", { error: String(e) });
+      addSyncLog("Auto media match not found", "warning");
     }
   }
 
@@ -368,6 +399,7 @@
         status = await invoke<SyncStatus>("sync_load_srt", {
           path: selectedPath,
         });
+        addSyncLog(`Loaded SRT: ${getFileName(selectedPath)}`, "success");
         await loadSubtitles();
         await loadAnchors();
         wizardHistory = [];
@@ -377,6 +409,7 @@
       }
     } catch (e) {
       error = `${t("sync.errorLoadingSrt")} ${e}`;
+      addSyncLog(`SRT load failed: ${e}`, "error");
     }
   }
 
@@ -416,9 +449,11 @@
         cleanupAudioSrc();
         audioSrc = await loadMediaFile(path);
         status = await invoke<SyncStatus>("sync_set_video", { path });
+        addSyncLog(`Loaded media: ${getFileName(path)}`, "success");
       }
     } catch (e) {
       error = `${t("sync.errorLoadingAudio")} ${e}`;
+      addSyncLog(`Media load failed: ${e}`, "error");
     }
   }
 
@@ -600,9 +635,14 @@
       syncDebug("confirmCurrentCheckpoint completed", {
         subtitleId: updated.id,
       });
+      addSyncLog(
+        `Anchor confirmed on #${updated.id} (${formatOffset(updated.offset_ms)})`,
+        "success",
+      );
     } catch (e) {
       error = `${t("sync.errorAddingAnchor")} ${e}`;
       syncDebug("confirmCurrentCheckpoint failed", { error: String(e) });
+      addSyncLog(`Anchor confirm failed: ${e}`, "error");
     } finally {
       isConfirmingCheckpoint = false;
     }
@@ -614,8 +654,10 @@
       status = await invoke<SyncStatus>("sync_remove_anchor", { subtitleId });
       await refreshCurrentSubtitles();
       await loadAnchors();
+      addSyncLog(`Removed anchor #${subtitleId}`, "warning");
     } catch (e) {
       error = `${t("sync.errorRemovingAnchor")} ${e}`;
+      addSyncLog(`Remove anchor failed: ${e}`, "error");
     }
   }
 
@@ -660,9 +702,11 @@
       if (selected) {
         await invoke<string>("sync_save_file", { outputPath: selected });
         showSnackbar(`${t("sync.fileSaved")} ${selected}`);
+        addSyncLog(`Saved synced file: ${getFileName(selected)}`, "success");
       }
     } catch (e) {
       error = `${t("sync.errorSaving")} ${e}`;
+      addSyncLog(`Save file failed: ${e}`, "error");
     }
   }
 
@@ -675,9 +719,11 @@
       if (selected) {
         await invoke<string>("sync_save_session", { sessionPath: selected });
         showSnackbar(`${t("sync.sessionSaved")} ${selected}`);
+        addSyncLog(`Session saved: ${getFileName(selected)}`, "success");
       }
     } catch (e) {
       error = `${t("sync.errorSaving")} ${e}`;
+      addSyncLog(`Save session failed: ${e}`, "error");
     }
   }
 
@@ -691,6 +737,7 @@
         status = await invoke<SyncStatus>("sync_load_session", {
           sessionPath: selected as string,
         });
+        addSyncLog(`Session loaded: ${getFileName(selected as string)}`, "success");
         await loadSubtitles();
         await loadAnchors();
         wizardHistory = anchors.map((a) => a.subtitle_id);
@@ -698,6 +745,7 @@
       }
     } catch (e) {
       error = `${t("sync.errorLoadingSrt")} ${e}`;
+      addSyncLog(`Load session failed: ${e}`, "error");
     }
   }
 
@@ -723,8 +771,10 @@
         audioElement.pause();
         audioElement.src = "";
       }
+      addSyncLog("Session reset", "warning");
     } catch (e) {
       error = `${t("sync.errorSaving")} ${e}`;
+      addSyncLog(`Reset failed: ${e}`, "error");
     }
   }
 
@@ -774,6 +824,7 @@
           status = await invoke<SyncStatus>("sync_load_srt", {
             path: filePath,
           });
+          addSyncLog(`Dropped SRT: ${fileName}`, "success");
           await loadSubtitles();
           await loadAnchors();
           wizardHistory = [];
@@ -782,6 +833,7 @@
           await tryAutoSelectMediaForSrt(filePath);
         } catch (e: any) {
           error = `${t("sync.errorLoadingSrt")} ${e}`;
+          addSyncLog(`Dropped SRT failed: ${e}`, "error");
         }
       } else if (isMediaFile(fileName)) {
         if (!status?.is_loaded) {
@@ -795,8 +847,10 @@
           status = await invoke<SyncStatus>("sync_set_video", {
             path: filePath,
           });
+          addSyncLog(`Dropped media: ${fileName}`, "success");
         } catch (e: any) {
           error = `${t("sync.errorLoadingAudio")} ${e}`;
+          addSyncLog(`Dropped media failed: ${e}`, "error");
         }
       }
     }
@@ -1038,8 +1092,8 @@
   {#snippet panelContent(panelId: SyncPanelId)}
     {#if panelId === "toolbar"}
       <div class="glass-card flex items-center gap-4 p-4 flex-shrink-0">
-        <div class="flex items-center gap-2 flex-1 max-w-2xl">
-          <div class="flex-1 min-w-[180px]">
+        <div class="flex items-center gap-2 flex-1 w-full">
+          <div class="flex-1 min-w-[260px]">
             <div class="flex gap-2">
               <button
                 type="button"
@@ -1096,7 +1150,7 @@
             >
           </div>
 
-          <div class="flex-1 min-w-[180px]">
+          <div class="flex-1 min-w-[260px]">
             <div class="flex gap-2">
               <button
                 type="button"
@@ -1146,7 +1200,7 @@
           </div>
         </div>
 
-        <div class="flex-1"></div>
+        <div class="flex-1 min-w-[24px]"></div>
         <div class="relative group">
           <button
             type="button"
@@ -1790,6 +1844,37 @@
               </div>
             </div>
           {/if}
+
+          <div class="border-t border-white/10 pt-3">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-sm font-semibold text-cyan-300">Activity Log</h4>
+              {#if syncLogs.length > 0}
+                <button
+                  onclick={clearSyncLogs}
+                  class="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                >Clear</button>
+              {/if}
+            </div>
+            <div class="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+              {#if syncLogs.length > 0}
+                {#each syncLogs as entry (entry.id)}
+                  <div class="rounded-lg border px-2.5 py-1.5 text-xs flex items-start gap-2 {entry.level ===
+                  'success'
+                    ? 'bg-green-500/10 border-green-500/25 text-green-300'
+                    : entry.level === 'warning'
+                      ? 'bg-amber-500/10 border-amber-500/25 text-amber-300'
+                      : entry.level === 'error'
+                        ? 'bg-red-500/10 border-red-500/25 text-red-300'
+                        : 'bg-white/5 border-white/10 text-gray-300'}">
+                    <span class="text-[10px] text-gray-500 mt-0.5">{entry.timestamp}</span>
+                    <span class="leading-snug">{entry.message}</span>
+                  </div>
+                {/each}
+              {:else}
+                <p class="text-xs text-gray-500">No sync events yet.</p>
+              {/if}
+            </div>
+          </div>
         {:else}
           <p class="text-gray-500 text-sm text-center py-4">
             {t("sync.srtPlaceholder")}
@@ -1929,7 +2014,7 @@
     {@render panelContent("toolbar")}
   </div>
 
-  <div class="flex-1 grid grid-cols-2 gap-6 min-h-0 overflow-hidden">
+  <div class="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-6 min-h-0 overflow-hidden">
     <div class="flex flex-col gap-3 overflow-y-auto min-h-[100px]" role="list">
       <div class="flex-1 flex flex-col" role="listitem">
         {@render panelContent("wizard")}

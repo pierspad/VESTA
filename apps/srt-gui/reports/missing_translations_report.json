@@ -18,21 +18,21 @@
     "zh"
   ],
   "missing_counts_by_locale": {
-    "ar": 36,
-    "de": 66,
-    "es": 64,
-    "fr": 52,
-    "hi": 36,
-    "it": 70,
-    "ja": 36,
-    "ko": 39,
-    "pl": 53,
-    "pt": 55,
-    "ru": 39,
-    "tr": 47,
-    "zh": 35
+    "ar": 32,
+    "de": 62,
+    "es": 60,
+    "fr": 48,
+    "hi": 32,
+    "it": 66,
+    "ja": 32,
+    "ko": 35,
+    "pl": 49,
+    "pt": 51,
+    "ru": 35,
+    "tr": 43,
+    "zh": 31
   },
-  "total_keys_with_issues": 118,
+  "total_keys_with_issues": 114,
   "missing_keys": {
     "app.title": {
       "locales": [
@@ -399,148 +399,6 @@
         }
       ]
     },
-    "flashcards.excludeDupSubs1": {
-      "locales": [
-        "ar",
-        "de",
-        "es",
-        "fr",
-        "hi",
-        "it",
-        "ja",
-        "ko",
-        "pl",
-        "pt",
-        "ru",
-        "tr",
-        "zh"
-      ],
-      "details": [
-        {
-          "locale": "ar",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "de",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "es",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "fr",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "hi",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "it",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "ja",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "ko",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "pl",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "pt",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "ru",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "tr",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "zh",
-          "reason": "same_as_english"
-        }
-      ]
-    },
-    "flashcards.excludeDupSubs2": {
-      "locales": [
-        "ar",
-        "de",
-        "es",
-        "fr",
-        "hi",
-        "it",
-        "ja",
-        "ko",
-        "pl",
-        "pt",
-        "ru",
-        "tr",
-        "zh"
-      ],
-      "details": [
-        {
-          "locale": "ar",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "de",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "es",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "fr",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "hi",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "it",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "ja",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "ko",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "pl",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "pt",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "ru",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "tr",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "zh",
-          "reason": "same_as_english"
-        }
-      ]
-    },
     "flashcards.log": {
       "locales": [
         "it",
@@ -775,148 +633,6 @@
       ]
     },
     "flashcards.snapshotField": {
-      "locales": [
-        "ar",
-        "de",
-        "es",
-        "fr",
-        "hi",
-        "it",
-        "ja",
-        "ko",
-        "pl",
-        "pt",
-        "ru",
-        "tr",
-        "zh"
-      ],
-      "details": [
-        {
-          "locale": "ar",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "de",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "es",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "fr",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "hi",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "it",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "ja",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "ko",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "pl",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "pt",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "ru",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "tr",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "zh",
-          "reason": "same_as_english"
-        }
-      ]
-    },
-    "flashcards.subs1": {
-      "locales": [
-        "ar",
-        "de",
-        "es",
-        "fr",
-        "hi",
-        "it",
-        "ja",
-        "ko",
-        "pl",
-        "pt",
-        "ru",
-        "tr",
-        "zh"
-      ],
-      "details": [
-        {
-          "locale": "ar",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "de",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "es",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "fr",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "hi",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "it",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "ja",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "ko",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "pl",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "pt",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "ru",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "tr",
-          "reason": "same_as_english"
-        },
-        {
-          "locale": "zh",
-          "reason": "same_as_english"
-        }
-      ]
-    },
-    "flashcards.subs2": {
       "locales": [
         "ar",
         "de",
@@ -2486,51 +2202,51 @@
       "details": [
         {
           "locale": "ar",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "de",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "es",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "fr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "hi",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ja",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ko",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pl",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pt",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ru",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "tr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "zh",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         }
       ]
     },
@@ -2552,51 +2268,51 @@
       "details": [
         {
           "locale": "ar",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "de",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "es",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "fr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "hi",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ja",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ko",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pl",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pt",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ru",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "tr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "zh",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         }
       ]
     },
@@ -2618,51 +2334,51 @@
       "details": [
         {
           "locale": "ar",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "de",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "es",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "fr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "hi",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ja",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ko",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pl",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pt",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ru",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "tr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "zh",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         }
       ]
     },
@@ -2684,51 +2400,51 @@
       "details": [
         {
           "locale": "ar",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "de",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "es",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "fr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "hi",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ja",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ko",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pl",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pt",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ru",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "tr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "zh",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         }
       ]
     },
@@ -2750,51 +2466,51 @@
       "details": [
         {
           "locale": "ar",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "de",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "es",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "fr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "hi",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ja",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ko",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pl",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pt",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ru",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "tr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "zh",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         }
       ]
     },
@@ -2816,51 +2532,51 @@
       "details": [
         {
           "locale": "ar",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "de",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "es",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "fr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "hi",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ja",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ko",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pl",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pt",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ru",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "tr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "zh",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         }
       ]
     },
@@ -3006,51 +2722,51 @@
       "details": [
         {
           "locale": "ar",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "de",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "es",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "fr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "hi",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ja",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ko",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pl",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pt",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ru",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "tr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "zh",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         }
       ]
     },
@@ -3072,51 +2788,51 @@
       "details": [
         {
           "locale": "ar",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "de",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "es",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "fr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "hi",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ja",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ko",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pl",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pt",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ru",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "tr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "zh",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         }
       ]
     },
@@ -3600,51 +3316,51 @@
       "details": [
         {
           "locale": "ar",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "de",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "es",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "fr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "hi",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ja",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ko",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pl",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "pt",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "ru",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "tr",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         },
         {
           "locale": "zh",
-          "reason": "missing_key"
+          "reason": "same_as_english"
         }
       ]
     },

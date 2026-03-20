@@ -41,6 +41,38 @@ echo -e "${YELLOW}🔎 Verifica finale coerenza versioni interne...${NC}"
 bash "$SCRIPT_DIR/check_internal_crate_versions.sh"
 echo ""
 
+# ── Verifica traduzioni i18n (blocca release su chiavi mancanti/vuote) ──
+I18N_AUDIT_SCRIPT="$PROJECT_ROOT/apps/srt-gui/scripts/check_missing_translations.py"
+I18N_REPORT="$PROJECT_ROOT/apps/srt-gui/reports/missing_translations_report.json"
+
+if [ ! -f "$I18N_AUDIT_SCRIPT" ]; then
+    echo -e "${RED}❌ Script audit traduzioni non trovato: $I18N_AUDIT_SCRIPT${NC}"
+    exit 1
+fi
+
+PYTHON_BIN="python3"
+if ! command -v "$PYTHON_BIN" &> /dev/null; then
+    if command -v python &> /dev/null; then
+        PYTHON_BIN="python"
+    else
+        echo -e "${RED}❌ Python non trovato (serve per l'audit traduzioni)${NC}"
+        exit 1
+    fi
+fi
+
+echo -e "${YELLOW}🌍 Verifica traduzioni (chiavi mancanti/vuote)...${NC}"
+if ! "$PYTHON_BIN" "$I18N_AUDIT_SCRIPT" \
+    --output "$I18N_REPORT" \
+    --fail-on-issues \
+    --block-reasons missing_key,empty_value; then
+    echo -e "${RED}❌ Rilevate incongruenze nelle traduzioni.${NC}"
+    echo -e "${YELLOW}   Correggi i file locale e riesegui la release.${NC}"
+    echo -e "${YELLOW}   Report: $I18N_REPORT${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✅ Traduzioni OK (nessuna chiave mancante/vuota)${NC}"
+echo ""
+
 # ── Verifica e modifica release-notes ─────────────────────────
 RELEASE_NOTES="$PROJECT_ROOT/docs/release-notes.md"
 if [ ! -f "$RELEASE_NOTES" ]; then

@@ -360,7 +360,7 @@
     </button>
   </div>
 
-  <div class="grid grid-cols-2 gap-6">
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
     {#each Object.entries(groupedShortcuts).filter(([cat]) => cat !== "sync") as [category, categoryShortcuts]}
       {#if categoryShortcuts.length > 0}
         <div class="glass-card p-5" style="content-visibility: auto; contain-intrinsic-size: auto 300px;">
@@ -395,7 +395,7 @@
           </p>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <div class="space-y-2">
             {#each syncShortcutsLeft as shortcut}
               {@render shortcutRow(shortcut)}

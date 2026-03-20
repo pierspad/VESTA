@@ -677,5 +677,15 @@
   "sync.tooltipOffset": "Ajuste fino do tempo das legendas. Valores positivos atrasam legendas, valores negativos as mostram mais cedo.",
   "sync.tooltipConfirmAnchor": "Marque a legenda atual como ponto de sincronização (Enter). Âncoras são pontos de referência usados para interpolar tempos de legendas próximas.",
   "sync.tooltipPrevAnchor": "Ir para âncora anterior",
-  "sync.tooltipNextAnchor": "Ir para próxima âncora"
+  "sync.tooltipNextAnchor": "Ir para próxima âncora",
+  "shortcuts.action.alignCyclePerPage": "Alternar legendas visíveis (5/10/15)",
+  "shortcuts.action.alignNextPage": "Próxima página de legendas",
+  "shortcuts.action.alignPrevPage": "Página anterior de legendas",
+  "shortcuts.action.alignSave": "Salvar resultado",
+  "shortcuts.action.alignSwapFiles": "Trocar arquivos de destino e origem",
+  "shortcuts.action.alignUndo": "Desfazer última edição",
+  "shortcuts.category.alignment": "📐 Alinhamento",
+  "shortcuts.category.alignment.desc": "Atalhos para a aba de alinhamento de legendas",
+  "transcribe.whisperModelDesc": "Baixe modelos para transcrição local. Clique em um modelo para baixá-lo e defini-lo como padrão.",
+  "flashcards.filesHelpMovie": "<p>Carregue arquivos de legenda e escolha uma pasta de saída. Esta ajuda é para o modo Filme.</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>Legenda alvo</strong> <span class='text-red-400'>*</span> — o idioma que você está <em>estudando</em> (obrigatório)</li><li><strong class='text-blue-400'>Legenda nativa</strong> — seu idioma nativo / tradução (opcional)</li><li><strong class='text-purple-400'>Arquivo de mídia</strong> — fonte de vídeo ou áudio para extrair clipes e capturas</li><li><strong class='text-amber-400'>Pasta de saída</strong> <span class='text-red-400'>*</span> — onde os arquivos gerados são salvos</li></ul>"
 }
