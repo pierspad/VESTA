@@ -7,6 +7,8 @@
   "nav.translate.desc": "ترجمة الترجمات بالذكاء الاصطناعي",
   "nav.sync": "المزامنة",
   "nav.sync.desc": "محاذاة الترجمات مع الفيديو",
+  "nav.revision": "مراجعة",
+  "nav.revision.desc": "أكمل وصحح ترجمة الترجمة",
   "nav.transcribe": "النسخ",
   "nav.transcribe.desc": "تحويل الكلام إلى نص مع Whisper",
   "nav.flashcards": "البطاقات التعليمية",
@@ -675,8 +677,10 @@
   "shortcuts.action.alignSave": "حفظ النتيجة",
   "shortcuts.action.alignSwapFiles": "تبديل ملفي الهدف والمصدر",
   "shortcuts.action.alignUndo": "التراجع عن آخر تعديل",
-  "shortcuts.category.alignment": "📐 المحاذاة",
-  "shortcuts.category.alignment.desc": "اختصارات تبويب محاذاة الترجمة",
+  "align.helpTitle": "مساعد المراجعة",
+  "align.helpContent": "<p>This tab is designed to <b>complete and correct subtitle translations</b> quickly, with a guided side-by-side workflow.</p><ul class='list-disc pl-4 mt-2 space-y-1'><li><b>Target SRT (Reference)</b> — Load the trusted subtitle track (usually original language or best version).</li><li><b>Source SRT (To Fix)</b> — Load the translated file you want to revise and improve.</li><li><b>Smart loading</b> — After selecting one file, VESTA tries to auto-detect the companion subtitle in the same folder.</li><li><b>ID-based pairing</b> — Lines are aligned by subtitle ID; missing entries are padded automatically so both columns stay in sync.</li><li><b>Swap files</b> — Instantly invert target/source to compare from the opposite perspective.</li><li><b>Fast navigation</b> — Move page-by-page, jump to first/last page, or jump directly to empty subtitles to complete missing translations.</li><li><b>Editable right column</b> — Revise text only on the source side while preserving timing context from both tracks.</li><li><b>Undo and safe save</b> — Use Ctrl+Z for recent edits and export a new file with a dedicated suffix.</li></ul><p class='mt-2 text-gray-400 text-xs'>Tip: use this tab after AI translation to polish tone, fix omissions, and make final quality checks before export.</p>",
+  "shortcuts.category.alignment": "🛠 مراجعة",
+  "shortcuts.category.alignment.desc": "اختصارات مراجعة الترجمة",
   "transcribe.whisperModelDesc": "نزّل النماذج للتفريغ المحلي. انقر على نموذج لتنزيله وتعيينه كافتراضي.",
   "flashcards.filesHelpMovie": "<p>حمّل ملفات الترجمة واختر مجلد الإخراج. هذه المساعدة خاصة بوضع الفيلم.</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>ترجمات الهدف</strong> <span class='text-red-400'>*</span> — اللغة التي <em>تدرسها</em> (مطلوب)</li><li><strong class='text-blue-400'>ترجمات اللغة الأم</strong> — لغتك الأم / الترجمة (اختياري)</li><li><strong class='text-purple-400'>ملف الوسائط</strong> — مصدر فيديو أو صوت لاستخراج المقاطع واللقطات</li><li><strong class='text-amber-400'>مجلد الإخراج</strong> <span class='text-red-400'>*</span> — مكان حفظ الملفات الناتجة</li></ul>"
 }

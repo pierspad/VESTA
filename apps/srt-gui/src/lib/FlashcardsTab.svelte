@@ -530,7 +530,7 @@
   const HINT_LOAD_VIDEO_FIRST =
     "Load a video file first to unlock this section.";
   const PANEL_INFO_BUTTON_CLASS =
-    "inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 bg-white/5 text-gray-400 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white";
+    "text-gray-500 hover:text-emerald-300 transition-colors";
   let includeWords = $state("");
   let excludeWords = $state("");
   let excludeDuplicatesSubs1 = $state(false);

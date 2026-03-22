@@ -683,8 +683,12 @@
   "shortcuts.action.alignSave": "結果を保存",
   "shortcuts.action.alignSwapFiles": "ターゲットとソースのファイルを入れ替え",
   "shortcuts.action.alignUndo": "最後の編集を元に戻す",
-  "shortcuts.category.alignment": "📐 アラインメント",
-  "shortcuts.category.alignment.desc": "字幕アラインメントタブのショートカット",
+  "shortcuts.category.alignment": "🛠 修正",
+  "shortcuts.category.alignment.desc": "字幕の修正用ショートカット",
   "transcribe.whisperModelDesc": "ローカル文字起こし用のモデルをダウンロードします。モデルをクリックしてダウンロードし、デフォルトに設定してください。",
-  "flashcards.filesHelpMovie": "<p>字幕ファイルを読み込み、出力フォルダを選択します。このヘルプは映画モード用です。</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>学習対象の字幕</strong> <span class='text-red-400'>*</span> — あなたが<em>学習中</em>の言語 (必須)</li><li><strong class='text-blue-400'>母国語の字幕</strong> — 母国語 / 翻訳 (任意)</li><li><strong class='text-purple-400'>メディアファイル</strong> — クリップやスクリーンショット抽出用の動画または音声ソース</li><li><strong class='text-amber-400'>出力フォルダ</strong> <span class='text-red-400'>*</span> — 生成ファイルの保存先</li></ul>"
+  "flashcards.filesHelpMovie": "<p>字幕ファイルを読み込み、出力フォルダを選択します。このヘルプは映画モード用です。</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>学習対象の字幕</strong> <span class='text-red-400'>*</span> — あなたが<em>学習中</em>の言語 (必須)</li><li><strong class='text-blue-400'>母国語の字幕</strong> — 母国語 / 翻訳 (任意)</li><li><strong class='text-purple-400'>メディアファイル</strong> — クリップやスクリーンショット抽出用の動画または音声ソース</li><li><strong class='text-amber-400'>出力フォルダ</strong> <span class='text-red-400'>*</span> — 生成ファイルの保存先</li></ul>",
+  "nav.revision": "修正",
+  "nav.revision.desc": "翻訳字幕を補完・修正",
+  "align.helpTitle": "修正アシスタント",
+  "align.helpContent": "<p>This tab is designed to <b>complete and correct subtitle translations</b> quickly, with a guided side-by-side workflow.</p><ul class='list-disc pl-4 mt-2 space-y-1'><li><b>Target SRT (Reference)</b> — Load the trusted subtitle track (usually original language or best version).</li><li><b>Source SRT (To Fix)</b> — Load the translated file you want to revise and improve.</li><li><b>Smart loading</b> — After selecting one file, VESTA tries to auto-detect the companion subtitle in the same folder.</li><li><b>ID-based pairing</b> — Lines are aligned by subtitle ID; missing entries are padded automatically so both columns stay in sync.</li><li><b>Swap files</b> — Instantly invert target/source to compare from the opposite perspective.</li><li><b>Fast navigation</b> — Move page-by-page, jump to first/last page, or jump directly to empty subtitles to complete missing translations.</li><li><b>Editable right column</b> — Revise text only on the source side while preserving timing context from both tracks.</li><li><b>Undo and safe save</b> — Use Ctrl+Z for recent edits and export a new file with a dedicated suffix.</li></ul><p class='mt-2 text-gray-400 text-xs'>Tip: use this tab after AI translation to polish tone, fix omissions, and make final quality checks before export.</p>"
 }

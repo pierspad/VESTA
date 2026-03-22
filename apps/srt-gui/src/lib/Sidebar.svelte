@@ -20,12 +20,16 @@
   let appVersionNum = $state("");
   let appLicense = $state("");
 
+  function formatLicense(license: string): string {
+    return license.replace(/-only$/i, "").trim();
+  }
+
   onMount(() => {
     invoke<{ version: string; name: string; license: string }>("get_app_info")
       .then((info) => {
         appVersionNum = `v${info.version}`;
-        appLicense = info.license;
-        appVersion = `v${info.version} • Tauri + Svelte • ${info.license}`;
+        appLicense = formatLicense(info.license);
+        appVersion = `v${info.version} • Tauri + Svelte • ${formatLicense(info.license)}`;
       })
       .catch(() => {
         appVersion = "VESTA";
@@ -161,7 +165,7 @@
         ? 'bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-lg shadow-teal-500/30'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("align")}
-      title={collapsed ? "Alignment" : undefined}
+      title={collapsed ? t("nav.revision") : undefined}
     >
       <div class="w-8 h-8 rounded-lg {activeTab === 'align' ? 'bg-white/20' : 'bg-white/5'} flex items-center justify-center flex-shrink-0">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,8 +174,8 @@
       </div>
       {#if !collapsed}
         <div class="text-left flex-1">
-          <span class="block font-medium">Alignment</span>
-          <span class="text-xs {activeTab === 'align' ? 'text-white/70' : 'text-gray-500'}">Side-by-side editing</span>
+          <span class="block font-medium">{t("nav.revision")}</span>
+          <span class="text-xs {activeTab === 'align' ? 'text-white/70' : 'text-gray-500'}">{t("nav.revision.desc")}</span>
         </div>
       {/if}
     </button>

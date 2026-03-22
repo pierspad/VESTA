@@ -683,8 +683,12 @@
   "shortcuts.action.alignSave": "保存结果",
   "shortcuts.action.alignSwapFiles": "交换目标和源文件",
   "shortcuts.action.alignUndo": "撤销上次编辑",
-  "shortcuts.category.alignment": "📐 对齐",
-  "shortcuts.category.alignment.desc": "字幕对齐标签页的快捷键",
+  "shortcuts.category.alignment": "🛠 修订",
+  "shortcuts.category.alignment.desc": "字幕修订快捷键",
   "transcribe.whisperModelDesc": "下载用于本地转录的模型。点击某个模型即可下载并将其设为默认。",
-  "flashcards.filesHelpMovie": "<p>加载字幕文件并选择输出文件夹。此帮助内容适用于电影模式。</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>目标字幕</strong> <span class='text-red-400'>*</span> — 你正在<em>学习</em>的语言 (必填)</li><li><strong class='text-blue-400'>母语字幕</strong> — 你的母语 / 翻译 (可选)</li><li><strong class='text-purple-400'>媒体文件</strong> — 用于提取片段和截图的视频或音频源</li><li><strong class='text-amber-400'>输出文件夹</strong> <span class='text-red-400'>*</span> — 生成文件的保存位置</li></ul>"
+  "flashcards.filesHelpMovie": "<p>加载字幕文件并选择输出文件夹。此帮助内容适用于电影模式。</p><ul class='mt-2 space-y-1 list-disc list-inside text-gray-400'><li><strong class='text-emerald-400'>目标字幕</strong> <span class='text-red-400'>*</span> — 你正在<em>学习</em>的语言 (必填)</li><li><strong class='text-blue-400'>母语字幕</strong> — 你的母语 / 翻译 (可选)</li><li><strong class='text-purple-400'>媒体文件</strong> — 用于提取片段和截图的视频或音频源</li><li><strong class='text-amber-400'>输出文件夹</strong> <span class='text-red-400'>*</span> — 生成文件的保存位置</li></ul>",
+  "nav.revision": "修订",
+  "nav.revision.desc": "补全并修正字幕翻译",
+  "align.helpTitle": "修订助手",
+  "align.helpContent": "<p>This tab is designed to <b>complete and correct subtitle translations</b> quickly, with a guided side-by-side workflow.</p><ul class='list-disc pl-4 mt-2 space-y-1'><li><b>Target SRT (Reference)</b> — Load the trusted subtitle track (usually original language or best version).</li><li><b>Source SRT (To Fix)</b> — Load the translated file you want to revise and improve.</li><li><b>Smart loading</b> — After selecting one file, VESTA tries to auto-detect the companion subtitle in the same folder.</li><li><b>ID-based pairing</b> — Lines are aligned by subtitle ID; missing entries are padded automatically so both columns stay in sync.</li><li><b>Swap files</b> — Instantly invert target/source to compare from the opposite perspective.</li><li><b>Fast navigation</b> — Move page-by-page, jump to first/last page, or jump directly to empty subtitles to complete missing translations.</li><li><b>Editable right column</b> — Revise text only on the source side while preserving timing context from both tracks.</li><li><b>Undo and safe save</b> — Use Ctrl+Z for recent edits and export a new file with a dedicated suffix.</li></ul><p class='mt-2 text-gray-400 text-xs'>Tip: use this tab after AI translation to polish tone, fix omissions, and make final quality checks before export.</p>"
 }

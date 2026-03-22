@@ -36,6 +36,7 @@
 
   let error = $state("");
   let success = $state("");
+  let helpSection = $state<string | null>(null);
 
   interface ActivityLogEntry {
     id: number;
@@ -419,52 +420,61 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div 
-  class="h-full flex flex-col pt-6 px-8 pb-8 overflow-hidden animate-fade-in relative text-gray-200 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-950"
+  class="h-full flex flex-col p-6 overflow-hidden animate-fade-in relative text-gray-200"
   onkeydown={handleKeydown}
 >
-  <!-- Header -->
-  <div class="mb-4 space-y-2 shrink-0">
-    <div class="flex items-center justify-between">
+  <div class="flex-1 min-h-0 bg-[#1d2332] rounded-2xl border border-white/5 shadow-2xl p-6 flex flex-col overflow-hidden">
+    <div class="mb-6 flex items-start justify-between shrink-0 gap-3">
       <div>
-        <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-emerald-500">
-          Subtitle Alignment
-        </h1>
-        <p class="text-gray-400 mt-1 flex items-center gap-2">
-          Compare and edit subtitles side-by-side
-        </p>
+        <h2 class="text-lg font-semibold text-teal-300 flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/>
+          </svg>
+          {t("nav.revision")}
+        </h2>
+        <p class="text-sm text-gray-500 mt-0.5">{t("nav.revision.desc")}</p>
       </div>
+      <button
+        class="text-gray-500 hover:text-teal-300 transition-colors p-1"
+        title={t("align.helpTitle")}
+        aria-label={t("align.helpTitle")}
+        onclick={() => (helpSection = "overview")}
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </button>
     </div>
-  </div>
 
-  <!-- Error/Success -->
-  {#if error}
-    <div class="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-xl text-red-400 flex items-center shrink-0">
-      {error}
-      <button class="ml-auto" onclick={() => error = ""}>✕</button>
-    </div>
-  {/if}
-  {#if success}
-    <div class="mb-4 p-3 bg-green-500/10 border border-green-500/50 rounded-xl text-green-400 flex items-center shrink-0">
-      {success}
-      <button class="ml-auto" onclick={() => success = ""}>✕</button>
-    </div>
-  {/if}
+    <!-- Error/Success -->
+    {#if error}
+      <div class="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-xl text-red-400 flex items-center shrink-0">
+        {error}
+        <button class="ml-auto" onclick={() => error = ""}>✕</button>
+      </div>
+    {/if}
+    {#if success}
+      <div class="mb-4 p-3 bg-green-500/10 border border-green-500/50 rounded-xl text-green-400 flex items-center shrink-0">
+        {success}
+        <button class="ml-auto" onclick={() => success = ""}>✕</button>
+      </div>
+    {/if}
 
-  <!-- File Selection Area -->
-  <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] md:items-center gap-4 mb-6 shrink-0 relative">
+    <!-- File Selection Area -->
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-4 mb-8 shrink-0 relative min-w-0">
     
     <!-- Target File -->
-    <div class="glass-card p-4 rounded-xl flex flex-col gap-2 relative z-10">
+    <div class="flex flex-col gap-2 relative z-10 min-w-0">
       <div class="text-sm font-semibold text-gray-300 flex items-center gap-2">
         {#if targetFlag}<span class="text-lg">{targetFlag}</span>{/if}
         Target SRT (Reference)
       </div>
-      <div class="flex gap-2">
-        <button onclick={selectTarget} class="btn-secondary whitespace-nowrap px-4 py-2">Select Target</button>
+      <div class="flex gap-2 min-w-0">
+        <button onclick={selectTarget} class="btn-secondary whitespace-nowrap px-4 py-2 shrink-0">Select Target</button>
         <button 
           type="button"
           onclick={() => expandedPathField = "target"}
-          class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate"
+          class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate min-w-0"
           style="direction: rtl; text-align: left;"
           title={targetPath || "Drag & drop SRT here..."}
         >
@@ -482,10 +492,10 @@
     </div>
 
     <!-- Swap Button -->
-    <div class="flex items-center justify-center relative z-20 mx-[-2rem]">
+    <div class="flex items-center justify-center relative z-20 md:px-2 shrink-0 mt-4 md:mt-0">
       <button 
         onclick={swapFiles}
-        class="p-3 rounded-full bg-gray-800 hover:bg-teal-500/20 text-gray-400 hover:text-teal-400 border border-gray-700 hover:border-teal-500/50 transition-all shadow-xl group relative transform hover:-translate-y-1 hover:scale-110"
+        class="p-2.5 rounded-full bg-gray-900/70 hover:bg-teal-500/20 text-gray-400 hover:text-teal-300 border border-gray-700 hover:border-teal-500/50 transition-colors group"
         title="Swap Target and Source files"
       >
         <svg class="w-6 h-6 group-hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -495,17 +505,17 @@
     </div>
 
     <!-- Source File -->
-    <div class="glass-card p-4 rounded-xl flex flex-col gap-2 relative z-10">
+    <div class="flex flex-col gap-2 relative z-10 min-w-0">
       <div class="text-sm font-semibold text-gray-300 flex items-center gap-2">
         {#if sourceFlag}<span class="text-lg">{sourceFlag}</span>{/if}
         Source SRT (To Fix)
       </div>
-      <div class="flex gap-2">
-        <button onclick={selectSource} class="btn-secondary whitespace-nowrap px-4 py-2">Select Source</button>
+      <div class="flex gap-2 min-w-0">
+        <button onclick={selectSource} class="btn-secondary whitespace-nowrap px-4 py-2 shrink-0">Select Source</button>
         <button 
           type="button"
           onclick={() => expandedPathField = "source"}
-          class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate"
+          class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate min-w-0"
           style="direction: rtl; text-align: left;"
           title={sourcePath || "Drag & drop SRT here..."}
         >
@@ -521,23 +531,23 @@
         <div class="text-xs text-gray-400">{sourceSubs.length} subtitles loaded</div>
       {/if}
     </div>
-  </div>
+    </div>
 
-  <!-- Editor Area -->
-  <div class="flex-1 min-h-[300px] h-full overflow-hidden glass-panel p-4 flex flex-col rounded-xl border border-white/5 bg-gray-900/60 shadow-inner">
-    {#if targetSubs.length === 0 && sourceSubs.length === 0}
-      <div class="flex-1 flex flex-col items-center justify-center text-gray-500 pb-10">
+    <!-- Editor Area -->
+    <div class="flex-1 min-h-[300px] h-full overflow-hidden flex flex-col min-w-0">
+      {#if targetSubs.length === 0 && sourceSubs.length === 0}
+        <div class="flex-1 flex flex-col items-center justify-center text-gray-500 pb-10">
         <svg class="w-20 h-20 mb-6 opacity-20 text-teal-500 bg-teal-500/5 p-4 rounded-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
         <p class="text-lg font-medium text-gray-400">Load some SRT files to start aligning.</p>
         <p class="text-sm mt-2 text-gray-600">You can drag and drop files anywhere on this window.</p>
-      </div>
-    {:else}
-      <!-- Pagination Top -->
-      <div class="flex items-center justify-between mb-4 bg-gray-900/50 p-3 rounded-lg border border-gray-800 shadow-sm shrink-0">
+        </div>
+      {:else}
+        <!-- Pagination Top -->
+        <div class="flex flex-wrap items-center justify-between mb-4 gap-2 shrink-0">
         <div class="flex items-center gap-2">
-          <div class="text-sm text-gray-400 font-medium bg-gray-800 px-3 py-1.5 rounded-md">
+          <div class="text-sm text-gray-400 font-medium bg-gray-800/80 px-3 py-1.5 rounded-md">
              Page <span class="text-white mx-1">{currentPage + 1}</span> of <span class="text-white mx-1">{totalPages || 1}</span>
           </div>
           <div class="w-px h-6 bg-gray-700 mx-1"></div>
@@ -551,7 +561,7 @@
             <span class="text-xs font-medium">{itemsPerPage}</span>
           </button>
         </div>
-        <div class="flex gap-1.5">
+        <div class="flex gap-1.5 flex-wrap">
           <button onclick={jumpStart} disabled={currentPage === 0} class="btn-secondary px-3 py-1.5 disabled:opacity-50 flex items-center" title="Go to Start">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
           </button>
@@ -581,28 +591,28 @@
             Save Result
           </button>
         </div>
-      </div>
+        </div>
 
-      <!-- Content Grid -->
-      <div class="flex-1 overflow-y-auto pr-3 pl-1 space-y-4 custom-scrollbar pb-4 min-h-0">
+        <!-- Content Grid -->
+        <div class="flex-1 overflow-y-auto pr-3 pl-1 space-y-6 custom-scrollbar pb-4 min-w-0">
         {#each currentPageItems as item (item.index)}
-          <div class="grid grid-cols-2 gap-5 glass-card bg-gray-800/30 p-4 rounded-xl border border-gray-700/50 hover:border-teal-500/30 transition-colors shadow-sm group">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 group min-w-0">
             
             <!-- Target Side (Readonly) -->
-            <div class="flex flex-col h-full bg-gray-900/60 rounded-lg border border-gray-800/80 overflow-hidden relative">
+            <div class="flex flex-col h-full rounded-lg border border-gray-800/70 overflow-hidden relative bg-gray-900/40 min-w-0">
               {#if item.target}
                 <!-- Header part -->
-                <div class="flex justify-between items-center text-xs text-gray-500 bg-gray-900/80 px-3 py-2 border-b border-gray-800 font-mono tracking-wider">
-                  <span class="bg-gray-800 px-2 py-0.5 rounded text-gray-400">#{item.target.id}</span>
-                  <span class="flex items-center gap-2">
-                    <span class="text-teal-400/50">{item.target.start}</span>
-                    <svg class="w-3 h-3 mx-1 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                    <span class="text-emerald-400/50">{item.target.end}</span>
+                <div class="flex justify-between items-center text-xs text-gray-500 bg-gray-900/80 px-3 py-2 border-b border-gray-800/50 font-mono tracking-wider truncate">
+                  <span class="bg-gray-800 flex-shrink-0 px-2 py-0.5 rounded text-gray-400 max-w-full">#{item.target.id}</span>
+                  <span class="flex items-center gap-1.5 md:gap-2 truncate ml-2">
+                    <span class="text-teal-400/50 truncate min-w-0">{item.target.start}</span>
+                    <svg class="w-3 h-3 mx-0.5 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    <span class="text-emerald-400/50 truncate min-w-0">{item.target.end}</span>
                   </span>
                 </div>
                 <!-- Content part -->
                 <textarea 
-                  class="flex-1 w-full bg-transparent p-3 text-sm text-gray-300 resize-none min-h-[90px] focus:outline-none"
+                  class="flex-1 w-full bg-transparent p-3 text-sm text-gray-300 resize-none min-h-[90px] focus:outline-none min-w-0"
                   readonly
                   value={item.target.text}
                 ></textarea>
@@ -615,20 +625,20 @@
             </div>
 
             <!-- Source Side (Editable) -->
-            <div class="flex flex-col h-full bg-indigo-950/20 rounded-lg border border-indigo-500/20 focus-within:border-indigo-500/60 focus-within:shadow-[0_0_15px_rgba(99,102,241,0.1)] transition-all overflow-hidden relative">
+            <div class="flex flex-col h-full rounded-lg border border-indigo-500/20 bg-indigo-950/10 focus-within:border-indigo-500/50 transition-colors overflow-hidden relative min-w-0">
               {#if item.source}
                  <!-- Header part -->
-                 <div class="flex justify-between items-center text-xs text-indigo-400/70 bg-indigo-950/40 px-3 py-2 border-b border-indigo-500/20 font-mono tracking-wider">
-                  <span class="bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded">#{item.source.id}</span>
-                  <span class="flex items-center gap-2">
-                    <span class="text-blue-400/70">{item.source.start}</span>
-                    <svg class="w-3 h-3 mx-1 text-indigo-500/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                    <span class="text-indigo-400/70">{item.source.end}</span>
+                 <div class="flex justify-between items-center text-xs text-indigo-400/70 bg-indigo-950/40 px-3 py-2 border-b border-indigo-500/20 font-mono tracking-wider truncate">
+                  <span class="bg-indigo-900/50 flex-shrink-0 text-indigo-300 px-2 py-0.5 rounded max-w-full">#{item.source.id}</span>
+                  <span class="flex items-center gap-1.5 md:gap-2 truncate ml-2">
+                    <span class="text-blue-400/70 truncate min-w-0">{item.source.start}</span>
+                    <svg class="w-3 h-3 mx-0.5 text-indigo-500/50 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    <span class="text-indigo-400/70 truncate min-w-0">{item.source.end}</span>
                   </span>
                 </div>
                 <!-- Content part: Svelte 5 runes allow easy bind:value on sourceSubs array -->
                 <textarea 
-                  class="flex-1 w-full bg-transparent p-3 text-[15px] leading-relaxed text-indigo-100 resize-none min-h-[90px] focus:outline-none placeholder-indigo-900/50"
+                  class="flex-1 w-full bg-transparent p-3 text-[15px] leading-relaxed text-indigo-100 resize-none min-h-[90px] focus:outline-none placeholder-indigo-900/50 min-w-0"
                   bind:value={sourceSubs[item.index].text}
                   oninput={scheduleUndo}
                   placeholder="Type subtitle here..."
@@ -643,9 +653,9 @@
             
           </div>
         {/each}
-      </div>
-      
-    {/if}
+        </div>
+      {/if}
+    </div>
   </div>
 
   <!-- Expanded Path Modal -->
@@ -686,6 +696,44 @@
         <div class="mt-3 flex justify-end">
           <button
             onclick={() => expandedPathField = null}
+            class="btn-primary py-1.5 px-4 text-xs"
+          >OK</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if helpSection}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      onclick={() => (helpSection = null)}
+      onkeydown={(e) => {
+        if (e.key === "Escape") helpSection = null;
+      }}
+    >
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl p-5 animate-fade-in"
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}
+      >
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold text-gray-300">{t("align.helpTitle")}</h3>
+          <button
+            onclick={() => (helpSection = null)}
+            class="text-gray-400 hover:text-white text-lg leading-none"
+          >✕</button>
+        </div>
+        <div class="text-sm text-gray-200 leading-relaxed prose prose-invert prose-sm max-w-none">
+          {@html t("align.helpContent")}
+        </div>
+        <div class="mt-4 flex justify-end">
+          <button
+            onclick={() => (helpSection = null)}
             class="btn-primary py-1.5 px-4 text-xs"
           >OK</button>
         </div>

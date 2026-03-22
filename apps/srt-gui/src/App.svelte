@@ -20,9 +20,10 @@
   // Hysteresis: collapse early while shrinking, expand only when there's plenty
   // of space while growing. This keeps columns as the first thing to recover.
   const SIDEBAR_COLLAPSE_FIRST_WIDTH = 1560;
-  // Keep sidebar collapsed on common desktop widths so content can use
-  // all horizontal space first; auto-expand only on very wide displays.
-  const SIDEBAR_EXPAND_LAST_WIDTH = 2200;
+  // Re-expand only after content has had time to fully recover width first.
+  // Delta is slightly larger than the sidebar width gain (w-20 -> w-72 = 208px)
+  // to preserve hysteresis and avoid flicker around the switching point.
+  const SIDEBAR_EXPAND_LAST_WIDTH = SIDEBAR_COLLAPSE_FIRST_WIDTH + 240;
 
   function applyResponsiveSidebar(logicalWidth: number) {
     if (logicalWidth <= SIDEBAR_COLLAPSE_FIRST_WIDTH) {

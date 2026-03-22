@@ -7,6 +7,8 @@
   "nav.translate.desc": "AI-powered subtitle translation",
   "nav.sync": "Synchronization",
   "nav.sync.desc": "Align subtitles with video",
+  "nav.revision": "Revision",
+  "nav.revision.desc": "Complete and fix translated subtitles",
   "nav.transcribe": "Transcribe",
   "nav.transcribe.desc": "Speech-to-text with Whisper",
   "nav.flashcards": "Flashcards",
@@ -671,12 +673,14 @@
   "sync.tooltipPrevAnchor": "Jump to previous anchor",
   "sync.tooltipNextAnchor": "Jump to next anchor",
   "sync.needVideoForAnchor": "Load a video before confirming anchors.",
-  "shortcuts.category.alignment": "📐 Alignment",
-  "shortcuts.category.alignment.desc": "Shortcuts for the subtitle alignment tab",
+  "shortcuts.category.alignment": "🛠 Revision",
+  "shortcuts.category.alignment.desc": "Shortcuts for subtitle revision",
   "shortcuts.action.alignNextPage": "Next subtitle page",
   "shortcuts.action.alignPrevPage": "Previous subtitle page",
   "shortcuts.action.alignSwapFiles": "Swap target and source files",
   "shortcuts.action.alignUndo": "Undo last edit",
   "shortcuts.action.alignSave": "Save result",
-  "shortcuts.action.alignCyclePerPage": "Cycle visible subtitles (5/10/15)"
+  "shortcuts.action.alignCyclePerPage": "Cycle visible subtitles (5/10/15)",
+  "align.helpTitle": "Revision Assistant",
+  "align.helpContent": "<p>This tab is designed to <b>complete and correct subtitle translations</b> quickly, with a guided side-by-side workflow.</p><ul class='list-disc pl-4 mt-2 space-y-1'><li><b>Target SRT (Reference)</b> — Load the trusted subtitle track (usually original language or best version).</li><li><b>Source SRT (To Fix)</b> — Load the translated file you want to revise and improve.</li><li><b>Smart loading</b> — After selecting one file, VESTA tries to auto-detect the companion subtitle in the same folder.</li><li><b>ID-based pairing</b> — Lines are aligned by subtitle ID; missing entries are padded automatically so both columns stay in sync.</li><li><b>Swap files</b> — Instantly invert target/source to compare from the opposite perspective.</li><li><b>Fast navigation</b> — Move page-by-page, jump to first/last page, or jump directly to empty subtitles to complete missing translations.</li><li><b>Editable right column</b> — Revise text only on the source side while preserving timing context from both tracks.</li><li><b>Undo and safe save</b> — Use Ctrl+Z for recent edits and export a new file with a dedicated suffix.</li></ul><p class='mt-2 text-gray-400 text-xs'>Tip: use this tab after AI translation to polish tone, fix omissions, and make final quality checks before export.</p>"
 }
