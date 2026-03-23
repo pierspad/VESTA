@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
   import { guardedOpen, guardedSave } from './dialogGuard';
+  import PathPreviewModal from './PathPreviewModal.svelte';
   import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
   import { t } from './i18n';
   import { listen } from '@tauri-apps/api/event';
@@ -664,50 +665,12 @@
     </div>
   </div>
 
-  <!-- Expanded Path Modal -->
-  {#if expandedPathField}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      onclick={() => expandedPathField = null}
-      onkeydown={(e) => { if (e.key === "Escape") expandedPathField = null; }}
-    >
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl p-5 animate-fade-in"
-        onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => e.stopPropagation()}
-      >
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-sm font-semibold text-gray-300">
-            {#if expandedPathField === "target"}1st SRT Path
-            {:else if expandedPathField === "source"}2nd SRT Path
-            {/if}
-          </h3>
-          <button
-            onclick={() => expandedPathField = null}
-            class="text-gray-400 hover:text-white text-lg leading-none"
-          >✕</button>
-        </div>
-        <div class="bg-gray-800/80 rounded-lg p-3 border border-gray-700/50">
-          <p class="text-sm text-white font-mono break-all select-all leading-relaxed">
-            {#if expandedPathField === "target"}{targetPath || "—"}
-            {:else if expandedPathField === "source"}{sourcePath || "—"}
-            {/if}
-          </p>
-        </div>
-        <div class="mt-3 flex justify-end">
-          <button
-            onclick={() => expandedPathField = null}
-            class="btn-primary py-1.5 px-4 text-xs"
-          >OK</button>
-        </div>
-      </div>
-    </div>
-  {/if}
+  <PathPreviewModal
+    isOpen={!!expandedPathField}
+    title={expandedPathField === "target" ? "1st SRT Path" : "2nd SRT Path"}
+    value={expandedPathField === "target" ? targetPath || "—" : sourcePath || "—"}
+    onclose={() => (expandedPathField = null)}
+  />
 
   {#if helpSection}
     <!-- svelte-ignore a11y_no_static_element_interactions -->

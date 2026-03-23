@@ -2,6 +2,8 @@
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
   import { guardedOpen, guardedSave } from "./dialogGuard";
+  import PathPreviewModal from "./PathPreviewModal.svelte";
+  import Snackbar from "./Snackbar.svelte";
   import { onMount } from "svelte";
   import { locale } from "./i18n";
 
@@ -2127,40 +2129,11 @@
   {/if}
 
   {#if snackbarMessage}
-    <div
-      class="fixed bottom-4 left-1/2 -translate-x-1/2 glass-card bg-amber-500/20 border border-amber-500/30 text-amber-200 px-6 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-fade-in z-50"
-    >
-      <svg
-        class="w-5 h-5 text-amber-400 flex-shrink-0"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        ><path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-        /></svg
-      >
-      <span>{snackbarMessage}</span>
-      <button
-        onclick={() => (snackbarMessage = null)}
-        class="text-amber-400 hover:text-amber-300 ml-2"
-        aria-label="Close"
-        ><svg
-          class="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          ><path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"
-          /></svg
-        ></button
-      >
-    </div>
+    <Snackbar
+      message={snackbarMessage}
+      variant="warning"
+      onclose={() => (snackbarMessage = null)}
+    />
   {/if}
 
   {#if showResetModal}
@@ -2189,47 +2162,12 @@
     </div>
   {/if}
 
-  {#if expandedPathField}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      onclick={() => (expandedPathField = null)}
-      onkeydown={(e) => {
-        if (e.key === "Escape") expandedPathField = null;
-      }}
-    >
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl p-5 animate-fade-in"
-        onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => e.stopPropagation()}
-      >
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-sm font-semibold text-gray-300">
-            {#if expandedPathField === "srt"}SRT Path
-            {:else}Media Path
-            {/if}
-          </h3>
-          <button
-            onclick={() => (expandedPathField = null)}
-            class="text-gray-400 hover:text-white text-lg leading-none">✕</button
-          >
-        </div>
-        <div class="bg-gray-800/80 rounded-lg p-3 border border-gray-700/50">
-          <p class="text-sm text-white font-mono break-all select-all leading-relaxed">
-            {#if expandedPathField === "srt"}
-              {status?.srt_path || ""}
-            {:else}
-              {status?.video_path || ""}
-            {/if}
-          </p>
-        </div>
-      </div>
-    </div>
-  {/if}
+  <PathPreviewModal
+    isOpen={!!expandedPathField}
+    title={expandedPathField === "srt" ? "SRT Path" : "Media Path"}
+    value={expandedPathField === "srt" ? status?.srt_path || "" : status?.video_path || ""}
+    onclose={() => (expandedPathField = null)}
+  />
 
   {#if helpSection}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
