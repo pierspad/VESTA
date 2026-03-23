@@ -1,6 +1,6 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
-  import { open, save } from '@tauri-apps/plugin-dialog';
+  import { guardedOpen, guardedSave } from './dialogGuard';
   import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
   import { t } from './i18n';
   import { listen } from '@tauri-apps/api/event';
@@ -331,7 +331,7 @@
   }
 
   async function selectTarget() {
-    const selected = await open({
+    const selected = await guardedOpen({
       filters: [{ name: 'Subtitles', extensions: ['srt'] }]
     });
     if (selected && !Array.isArray(selected)) {
@@ -341,7 +341,7 @@
   }
 
   async function selectSource() {
-    const selected = await open({
+    const selected = await guardedOpen({
       filters: [{ name: 'Subtitles', extensions: ['srt'] }]
     });
     if (selected && !Array.isArray(selected)) {
@@ -366,7 +366,7 @@
   async function saveSource() {
     try {
       const defaultPath = sourcePath.replace('.srt', '_aligned.srt');
-      const savePath = await save({
+      const savePath = await guardedSave({
         defaultPath,
         filters: [{ name: 'Subtitles', extensions: ['srt'] }]
       });

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
-  import { open, save } from "@tauri-apps/plugin-dialog";
+  import { guardedOpen, guardedSave } from "./dialogGuard";
   import { onMount } from "svelte";
   import { locale } from "./i18n";
 
@@ -390,7 +390,7 @@
 
   async function selectSrtFile() {
     try {
-      const selected = await open({
+      const selected = await guardedOpen({
         multiple: false,
         filters: [{ name: "SRT Files", extensions: ["srt"] }],
       });
@@ -415,7 +415,7 @@
 
   async function selectAudioFile() {
     try {
-      const selected = await open({
+      const selected = await guardedOpen({
         multiple: false,
         filters: [
           {
@@ -695,7 +695,7 @@
   async function saveFile() {
     console.debug("[SyncTab] saveFile");
     try {
-      const selected = await save({
+      const selected = await guardedSave({
         filters: [{ name: "SRT Files", extensions: ["srt"] }],
         defaultPath: status?.srt_path?.replace(".srt", ".synced.srt"),
       });
@@ -713,7 +713,7 @@
   async function saveSession() {
     console.debug("[SyncTab] saveSession");
     try {
-      const selected = await save({
+      const selected = await guardedSave({
         filters: [{ name: "Session Files", extensions: ["json"] }],
       });
       if (selected) {
@@ -730,7 +730,7 @@
   async function loadSession() {
     console.debug("[SyncTab] loadSession");
     try {
-      const selected = await open({
+      const selected = await guardedOpen({
         filters: [{ name: "Session Files", extensions: ["json"] }],
       });
       if (selected) {

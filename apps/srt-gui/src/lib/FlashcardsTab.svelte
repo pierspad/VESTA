@@ -2,7 +2,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
-  import { open } from "@tauri-apps/plugin-dialog";
+  import { guardedOpen } from "./dialogGuard";
   import { onDestroy, onMount, tick } from "svelte";
   import { locale } from "./i18n";
   import {
@@ -469,7 +469,7 @@
 
   async function addSeriesMultipleFiles() {
     try {
-      const raw = await open({
+      const raw = await guardedOpen({
         multiple: true,
         filters: [
           {
@@ -774,6 +774,7 @@
   let includeSubs2Field = $state(true);
 
   let deckName = $state("");
+  let deckNameAuto = $state(true);
   let firstEpisode = $state(1);
 
   let isProcessing = $state(false);
@@ -1259,8 +1260,9 @@
       filename,
     );
 
-    if (!deckName) {
+    if (deckNameAuto || !deckName.trim()) {
       deckName = generateDefaultDeckName(filename);
+      deckNameAuto = true;
     }
   }
 
@@ -1344,7 +1346,7 @@
 
   async function selectTargetSubs() {
     try {
-      const selected = await open({
+      const selected = await guardedOpen({
         multiple: false,
         filters: [
           {
@@ -1370,7 +1372,7 @@
 
   async function selectNativeSubs() {
     try {
-      const selected = await open({
+      const selected = await guardedOpen({
         multiple: false,
         filters: [
           {
@@ -1415,7 +1417,7 @@
 
   async function selectMedia() {
     try {
-      const selected = await open({
+      const selected = await guardedOpen({
         multiple: false,
         filters: [
           {
@@ -1434,7 +1436,7 @@
 
   async function selectOutputDir() {
     try {
-      const selected = await open({ directory: true });
+      const selected = await guardedOpen({ directory: true });
       if (selected) {
         outputDir = selected as string;
         localStorage.setItem(OUTPUT_DIR_KEY, outputDir);
@@ -1769,7 +1771,11 @@
     nativeSubsPath = "";
     mediaPath = "";
     mediaType = "none";
+    targetSubsInfo = null;
+    nativeSubsInfo = null;
     episodes = [];
+    deckName = "";
+    deckNameAuto = true;
   }
 </script>
 
@@ -3763,6 +3769,10 @@
             <input
               type="text"
               bind:value={deckName}
+              oninput={(event) => {
+                deckNameAuto =
+                  (event.currentTarget as HTMLInputElement).value.trim().length === 0;
+              }}
               class="input-modern w-full text-sm"
               placeholder={t("flashcards.deckNamePlaceholder")}
             />

@@ -2,7 +2,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import LogPanel, { type LogEntry } from "./LogPanel.svelte";
   import { listen } from "@tauri-apps/api/event";
-  import { open, save } from "@tauri-apps/plugin-dialog";
+  import { guardedOpen, guardedSave } from "./dialogGuard";
   import { onDestroy, onMount } from "svelte";
   import { locale } from "./i18n";
   import { languages as allLanguages } from "./models";
@@ -243,7 +243,7 @@
 
   async function selectInputFile() {
     try {
-      const selected = await open({
+      const selected = await guardedOpen({
         multiple: false,
         filters: [
           {
@@ -282,7 +282,7 @@
 
   async function selectOutputFile() {
     try {
-      const selected = await save({
+      const selected = await guardedSave({
         filters: [{ name: "SRT Files", extensions: ["srt"] }],
         defaultPath: outputPath || undefined,
       });

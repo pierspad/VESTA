@@ -2,7 +2,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWebview } from "@tauri-apps/api/webview";
-  import { open, save } from "@tauri-apps/plugin-dialog";
+  import { guardedOpen, guardedSave } from "./dialogGuard";
   import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
   import { onDestroy, onMount } from "svelte";
   import { locale } from "./i18n";
@@ -666,7 +666,7 @@
 
   async function selectInputFile() {
     try {
-      const selected = await open({
+      const selected = await guardedOpen({
         multiple: false,
         filters: [{ name: "SRT Files", extensions: ["srt"] }],
       });
@@ -688,7 +688,7 @@
 
   async function selectOutputFile() {
     try {
-      const selected = await save({
+      const selected = await guardedSave({
         filters: [{ name: "SRT Files", extensions: ["srt"] }],
         defaultPath: outputPath || undefined,
       });
