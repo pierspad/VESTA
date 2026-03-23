@@ -12,8 +12,10 @@
     loadAndValidateApiKeys,
     type ApiKeyConfig,
   } from "./models";
+  import PathPickerField from "./PathPickerField.svelte";
+  import PathPreviewModal from "./PathPreviewModal.svelte";
   import SearchableSelect from "./SearchableSelect.svelte";
-import LogPanel, { type LogEntry } from "./LogPanel.svelte";
+  import LogPanel, { type LogEntry } from "./LogPanel.svelte";
 
   // Set of known language codes for smart output filename detection
   const knownLangCodes = new Set(languages.map((l) => l.code));
@@ -1635,86 +1637,27 @@ import LogPanel, { type LogEntry } from "./LogPanel.svelte";
           </button>
         </h3>
         <div class="space-y-3">
-          <div>
-            <label for="input-path" class="block text-sm text-gray-400 mb-1"
-              >{t("translate.inputFile")}</label
-            >
-            <div class="flex gap-2">
-              <button
-                type="button"
-                onclick={() => (expandedPathField = "input")}
-                class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate"
-                style="direction: rtl; text-align: left;"
-                title={inputPath || t("translate.selectFile")}
-              >
-                <span
-                  class={inputPath ? "text-white" : "text-gray-500"}
-                  style="unicode-bidi: plaintext;"
-                >
-                  {inputPath || t("translate.selectFile")}
-                </span>
-              </button>
-              <button
-                onclick={selectInputFile}
-                class="btn-primary py-2 px-3"
-                title={t("translate.tooltip.upload")}
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-          <div>
-            <label for="output-path" class="block text-sm text-gray-400 mb-1"
-              >{t("translate.outputFile")}</label
-            >
-            <div class="flex gap-2">
-              <button
-                type="button"
-                onclick={() => (expandedPathField = "output")}
-                class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate"
-                style="direction: rtl; text-align: left;"
-                title={outputPath || t("translate.selectDestination")}
-              >
-                <span
-                  class={outputPath ? "text-white" : "text-gray-500"}
-                  style="unicode-bidi: plaintext;"
-                >
-                  {outputPath || t("translate.selectDestination")}
-                </span>
-              </button>
-              <button
-                onclick={selectOutputFile}
-                class="btn-secondary py-2 px-3"
-                title={t("translate.tooltip.save")}
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
+          <PathPickerField
+            label={t("translate.inputFile")}
+            value={inputPath}
+            placeholder={t("translate.selectFile")}
+            browseTitle={t("translate.tooltip.upload")}
+            onexpand={() => (expandedPathField = "input")}
+            onbrowse={selectInputFile}
+            browseButtonClass="btn-primary py-2 px-3"
+            browseIconPath="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+          />
+
+          <PathPickerField
+            label={t("translate.outputFile")}
+            value={outputPath}
+            placeholder={t("translate.selectDestination")}
+            browseTitle={t("translate.tooltip.save")}
+            onexpand={() => (expandedPathField = "output")}
+            onbrowse={selectOutputFile}
+            browseButtonClass="btn-secondary py-2 px-3"
+            browseIconPath="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+          />
           {#if fileInfo}
             <div
               class="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg"
@@ -2147,54 +2090,14 @@ import LogPanel, { type LogEntry } from "./LogPanel.svelte";
     </div>
   {/if}
 
-  {#if expandedPathField}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      onclick={() => (expandedPathField = null)}
-      onkeydown={(e) => {
-        if (e.key === "Escape") expandedPathField = null;
-      }}
-    >
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl p-5 animate-fade-in"
-        onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => e.stopPropagation()}
-      >
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-sm font-semibold text-gray-300">
-            {#if expandedPathField === "input"}{t("translate.inputFile")}
-            {:else if expandedPathField === "output"}{t("translate.outputFile")}
-            {/if}
-          </h3>
-          <button
-            onclick={() => (expandedPathField = null)}
-            class="text-gray-400 hover:text-white text-lg leading-none"
-            >✕</button
-          >
-        </div>
-        <div class="bg-gray-800/80 rounded-lg p-3 border border-gray-700/50">
-          <p
-            class="text-sm text-white font-mono break-all select-all leading-relaxed"
-          >
-            {#if expandedPathField === "input"}{inputPath || "—"}
-            {:else if expandedPathField === "output"}{outputPath || "—"}
-            {/if}
-          </p>
-        </div>
-        <div class="mt-3 flex justify-end">
-          <button
-            onclick={() => (expandedPathField = null)}
-            class="btn-primary py-1.5 px-4 text-xs">OK</button
-          >
-        </div>
-      </div>
-    </div>
-  {/if}
+  <PathPreviewModal
+    isOpen={!!expandedPathField}
+    title={expandedPathField === "input"
+      ? t("translate.inputFile")
+      : t("translate.outputFile")}
+    value={expandedPathField === "input" ? inputPath : outputPath}
+    onclose={() => (expandedPathField = null)}
+  />
 </div>
 
 <style>

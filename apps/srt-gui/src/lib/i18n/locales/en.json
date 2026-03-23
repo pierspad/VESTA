@@ -278,7 +278,7 @@
   "transcribe.files": "Files",
   "transcribe.sourceLanguage": "Source language",
   "transcribe.selectAudioVideo": "Select audio/video...",
-  "transcribe.noInputMediaSelected": "no input media selected",
+  "transcribe.noInputMediaSelected": "No input media selected",
   "transcribe.readyToProcess": "Ready to transcribe",
   "transcribe.startTranscription": "Start Transcription",
   "transcribe.modelDownloadNote": "This model is not downloaded yet. Please download it before starting transcription.",

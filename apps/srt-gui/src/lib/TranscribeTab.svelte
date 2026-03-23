@@ -6,6 +6,8 @@
   import { onDestroy, onMount } from "svelte";
   import { locale } from "./i18n";
   import { languages as allLanguages } from "./models";
+  import PathPickerField from "./PathPickerField.svelte";
+  import PathPreviewModal from "./PathPreviewModal.svelte";
   import SearchableSelect from "./SearchableSelect.svelte";
 
 
@@ -899,84 +901,27 @@
           </button>
         </h3>
         <div class="space-y-3">
-          <div>
-            <span class="block text-sm text-gray-400 mb-1"
-              >{t("transcribe.inputFile")}</span
-            >
-            <div class="flex gap-2">
-              <button
-                onclick={() => (expandedPathField = "input")}
-                class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate"
-                style="direction: rtl; text-align: left;"
-                title={inputPath || t("transcribe.noInputMediaSelected")}
-              >
-                <span
-                  class={inputPath ? "text-white" : "text-gray-500"}
-                  style="unicode-bidi: plaintext;"
-                >
-                  {inputPath || t("transcribe.noInputMediaSelected")}
-                </span>
-              </button>
-              <button
-                onclick={selectInputFile}
-                class="btn-primary py-2 px-3"
-                title={t("transcribe.selectFile")}
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-          <div>
-            <span class="block text-sm text-gray-400 mb-1"
-              >{t("transcribe.outputFile")}</span
-            >
-            <div class="flex gap-2">
-              <button
-                onclick={() => (expandedPathField = "output")}
-                class="input-modern flex-1 text-sm text-left cursor-pointer hover:bg-white/10 transition-colors truncate"
-                style="direction: rtl; text-align: left;"
-                title={outputPath || t("transcribe.noOutputFileSelected")}
-              >
-                <span
-                  class={outputPath ? "text-white" : "text-gray-500"}
-                  style="unicode-bidi: plaintext;"
-                >
-                  {outputPath || t("transcribe.noOutputFileSelected")}
-                </span>
-              </button>
-              <button
-                onclick={selectOutputFile}
-                class="btn-secondary py-2 px-3"
-                title={t("transcribe.selectDestination")}
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
+          <PathPickerField
+            label={t("transcribe.inputFile")}
+            value={inputPath}
+            placeholder={t("transcribe.noInputMediaSelected")}
+            browseTitle={t("transcribe.selectFile")}
+            onexpand={() => (expandedPathField = "input")}
+            onbrowse={selectInputFile}
+            browseButtonClass="btn-primary py-2 px-3"
+            browseIconPath="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+          />
+
+          <PathPickerField
+            label={t("transcribe.outputFile")}
+            value={outputPath}
+            placeholder={t("transcribe.noOutputFileSelected")}
+            browseTitle={t("transcribe.selectDestination")}
+            onexpand={() => (expandedPathField = "output")}
+            onbrowse={selectOutputFile}
+            browseButtonClass="btn-secondary py-2 px-3"
+            browseIconPath="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+          />
           {#if inputPath}
             <div
               class="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg"
@@ -1387,67 +1332,21 @@
     </div>
   {/if}
 
-  {#if expandedPathField}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      onclick={() => (expandedPathField = null)}
-      onkeydown={(e) => {
-        if (e.key === "Escape") expandedPathField = null;
-      }}
-    >
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl p-5 animate-fade-in"
-        onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => e.stopPropagation()}
-      >
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-sm font-semibold text-gray-300">
-            {#if expandedPathField === "input"}{t("transcribe.inputFile")}
-            {:else if expandedPathField === "output"}{t(
-                "transcribe.outputFile",
-              )}
-            {/if}
-          </h3>
-          <button
-            onclick={() => (expandedPathField = null)}
-            class="text-gray-400 hover:text-white text-lg leading-none"
-            >✕</button
-          >
-        </div>
-        <div class="bg-gray-800/80 rounded-lg p-3 border border-gray-700/50">
-          <p
-            class="text-sm text-white font-mono break-all select-all leading-relaxed"
-          >
-            {#if expandedPathField === "input"}{inputPath || "—"}
-            {:else if expandedPathField === "output"}{outputPath || "—"}
-            {/if}
-          </p>
-        </div>
-        <div class="mt-3 flex justify-end gap-2">
-          <button
-            onclick={() => {
-              const field = expandedPathField;
-              expandedPathField = null;
-              if (field === "input") openInputPathDialog();
-              else if (field === "output") openOutputPathDialog();
-            }}
-            class="btn-secondary py-1.5 px-4 text-xs"
-          >
-            ✏️ {t("transcribe.editPath")}
-          </button>
-          <button
-            onclick={() => (expandedPathField = null)}
-            class="btn-primary py-1.5 px-4 text-xs">OK</button
-          >
-        </div>
-      </div>
-    </div>
-  {/if}
+  <PathPreviewModal
+    isOpen={!!expandedPathField}
+    title={expandedPathField === "input"
+      ? t("transcribe.inputFile")
+      : t("transcribe.outputFile")}
+    value={expandedPathField === "input" ? inputPath : outputPath}
+    onclose={() => (expandedPathField = null)}
+    secondaryText={`✏️ ${t("transcribe.editPath")}`}
+    onsecondary={() => {
+      const field = expandedPathField;
+      expandedPathField = null;
+      if (field === "input") openInputPathDialog();
+      else if (field === "output") openOutputPathDialog();
+    }}
+  />
 
 
 

@@ -10,8 +10,9 @@
     languages,
     loadCardTemplates,
   } from "./models";
+  import PathPreviewModal from "./PathPreviewModal.svelte";
   import SearchableSelect from "./SearchableSelect.svelte";
-import LogPanel, { type LogEntry } from "./LogPanel.svelte";
+  import LogPanel, { type LogEntry } from "./LogPanel.svelte";
 
   const SUBTITLE_EXTENSIONS = ["srt", "ass", "ssa", "vtt"];
 
@@ -4351,60 +4352,22 @@ import LogPanel, { type LogEntry } from "./LogPanel.svelte";
     </div>
   {/if}
 
-  {#if expandedPathField}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      onclick={() => (expandedPathField = null)}
-      onkeydown={(e) => {
-        if (e.key === "Escape") expandedPathField = null;
-      }}
-    >
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl p-5 animate-fade-in"
-        onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => e.stopPropagation()}
-      >
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-sm font-semibold text-gray-300">
-            {#if expandedPathField === "targetSubs"}{t(
-                "flashcards.targetLangSubs",
-              )}
-            {:else if expandedPathField === "output"}{t("flashcards.outputDir")}
-            {:else if expandedPathField === "nativeSubs"}{t(
-                "flashcards.nativeLangSubs",
-              )}
-            {:else if expandedPathField === "media"}{t("flashcards.mediaFile")}
-            {/if}
-          </h3>
-          <button
-            onclick={() => (expandedPathField = null)}
-            class="text-gray-400 hover:text-white text-lg leading-none"
-            >✕</button
-          >
-        </div>
-        <div class="bg-gray-800/80 rounded-lg p-3 border border-gray-700/50">
-          <p
-            class="text-sm text-white font-mono break-all select-all leading-relaxed"
-          >
-            {#if expandedPathField === "targetSubs"}{targetSubsPath || "—"}
-            {:else if expandedPathField === "output"}{outputDir || "—"}
-            {:else if expandedPathField === "nativeSubs"}{nativeSubsPath || "—"}
-            {:else if expandedPathField === "media"}{mediaPath || "—"}
-            {/if}
-          </p>
-        </div>
-        <div class="mt-3 flex justify-end">
-          <button
-            onclick={() => (expandedPathField = null)}
-            class="btn-primary py-1.5 px-4 text-xs">OK</button
-          >
-        </div>
-      </div>
-    </div>
-  {/if}
+  <PathPreviewModal
+    isOpen={!!expandedPathField}
+    title={expandedPathField === "targetSubs"
+      ? t("flashcards.targetLangSubs")
+      : expandedPathField === "output"
+        ? t("flashcards.outputDir")
+        : expandedPathField === "nativeSubs"
+          ? t("flashcards.nativeLangSubs")
+          : t("flashcards.mediaFile")}
+    value={expandedPathField === "targetSubs"
+      ? targetSubsPath
+      : expandedPathField === "output"
+        ? outputDir
+        : expandedPathField === "nativeSubs"
+          ? nativeSubsPath
+          : mediaPath}
+    onclose={() => (expandedPathField = null)}
+  />
 </div>
