@@ -2036,44 +2036,7 @@
           class="text-gray-300 text-sm leading-relaxed max-h-[60vh] overflow-y-auto"
         >
           {#if helpSection === "options"}
-            <div class="space-y-4">
-              <div class="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3">
-                <p class="text-cyan-300 text-xs uppercase tracking-wide mb-1">Workflow</p>
-                <p class="text-sm text-gray-200">
-                  1) Select provider and model, 2) confirm target language, 3) tune batch size for speed/quality trade-off.
-                </p>
-              </div>
-
-              <div class="rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-3 space-y-2">
-                <p class="text-indigo-300 text-xs uppercase tracking-wide">Provider And Model</p>
-                <p class="text-sm text-gray-200">
-                  Local/Custom providers are best for privacy and experimentation. Managed APIs are typically faster and more stable.
-                </p>
-                <p class="text-xs text-gray-400">
-                  Tip: after changing provider, verify that the selected model matches the provider family.
-                </p>
-              </div>
-
-              <div class="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 space-y-2">
-                <p class="text-emerald-300 text-xs uppercase tracking-wide">Batch Size</p>
-                <p class="text-sm text-gray-200">
-                  Small batches improve consistency and recovery behavior. Larger batches are faster but can amplify errors when retries happen.
-                </p>
-                <p class="text-xs text-gray-400">
-                  Suggested start: Balanced preset, then move to Fast/Turbo only after confirming output quality.
-                </p>
-              </div>
-
-              <div class="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 space-y-2">
-                <p class="text-amber-300 text-xs uppercase tracking-wide">Resume Overlap</p>
-                <p class="text-sm text-gray-200">
-                  Overlap reprocesses a few lines after interruption to prevent context breaks and duplicated edge artifacts.
-                </p>
-                <p class="text-xs text-gray-400">
-                  Keep it low for speed, increase slightly when subtitle continuity matters.
-                </p>
-              </div>
-            </div>
+            {@html t("translate.optionsHelp")}
           {:else if helpSection === "files"}
             {@html t("translate.filesHelp")}
           {:else if helpSection === "batchSize"}

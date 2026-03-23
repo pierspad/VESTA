@@ -603,10 +603,13 @@
         <!-- Content Grid -->
         <div class="flex-1 overflow-y-auto pr-3 pl-1 space-y-6 custom-scrollbar pb-4 min-w-0">
         {#each currentPageItems as item (item.index)}
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 group min-w-0">
+          {@const isMissingPair =
+            (!!item.source && (!item.source.text || item.source.text.trim() === '')) ||
+            (!!item.target && (!item.target.text || item.target.text.trim() === ''))}
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 group min-w-0 rounded-xl p-1 transition-all {isMissingPair ? 'missing-pair-row' : ''}">
             
             <!-- Target Side (Readonly) -->
-            <div class="flex flex-col h-full rounded-lg border border-gray-800/70 overflow-hidden relative bg-gray-900/40 min-w-0">
+            <div class="flex flex-col h-full rounded-lg border overflow-hidden relative bg-gray-900/40 min-w-0 {isMissingPair ? 'border-orange-500/50' : 'border-gray-800/70'}">
               {#if item.target}
                 <!-- Header part -->
                 <div class="flex justify-between items-center text-xs text-gray-500 bg-gray-900/80 px-3 py-2 border-b border-gray-800/50 font-mono tracking-wider truncate">
@@ -632,7 +635,7 @@
             </div>
 
             <!-- Source Side (Editable) -->
-            <div class="flex flex-col h-full rounded-lg border border-indigo-500/20 bg-indigo-950/10 focus-within:border-indigo-500/50 transition-colors overflow-hidden relative min-w-0">
+            <div class="flex flex-col h-full rounded-lg border bg-indigo-950/10 focus-within:border-indigo-500/50 transition-colors overflow-hidden relative min-w-0 {isMissingPair ? 'border-orange-500/60' : 'border-indigo-500/20'}">
               {#if item.source}
                  <!-- Header part -->
                  <div class="flex justify-between items-center text-xs text-indigo-400/70 bg-indigo-950/40 px-3 py-2 border-b border-indigo-500/20 font-mono tracking-wider truncate">
@@ -712,6 +715,12 @@
 </div>
 
 <style>
+  .missing-pair-row {
+    border: 1px solid rgba(249, 115, 22, 0.45);
+    box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.15), 0 0 18px rgba(249, 115, 22, 0.12);
+    background: linear-gradient(90deg, rgba(249, 115, 22, 0.07), rgba(249, 115, 22, 0.02));
+  }
+
   .empty-jump-btn:not(:disabled) {
     color: #f97316;
     border-color: rgba(249, 115, 22, 0.4);
