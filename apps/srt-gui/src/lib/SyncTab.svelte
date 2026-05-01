@@ -512,6 +512,9 @@
     if (nextId === null) {
       showSaveSuggestion = true;
       wizardSubtitle = null;
+      if (audioElement) {
+        audioElement.pause();
+      }
       return;
     }
     showSaveSuggestion = false;
