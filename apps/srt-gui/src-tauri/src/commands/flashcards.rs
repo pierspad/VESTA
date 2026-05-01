@@ -561,6 +561,9 @@ fn get_overlap(a_start: i64, a_end: i64, b_start: i64, b_end: i64) -> i64 {
 
 /// Match subs1 entries with subs2 entries based on temporal overlap.
 /// Returns a Vec of MatchedLine with the best subs2 match for each subs1 entry.
+///
+/// Uses binary search on subs2 (which is sorted by start_ms) to avoid
+/// scanning from the beginning for each subs1 entry.
 fn match_subtitles(subs1: &[SubEntry], subs2: &[SubEntry]) -> Vec<MatchedLine> {
     let mut matched: Vec<MatchedLine> = Vec::with_capacity(subs1.len());
 
@@ -569,7 +572,13 @@ fn match_subtitles(subs1: &[SubEntry], subs2: &[SubEntry]) -> Vec<MatchedLine> {
         let mut best_match: Option<&SubEntry> = None;
         let mut best_overlap: i64 = 0;
 
-        for s2 in subs2.iter() {
+        // Binary search: find the first subs2 entry that could overlap with s1.
+        // A subs2 entry can only overlap if s2.end_ms > s1.start_ms - 5000.
+        // Since subs2 is sorted by start_ms, we search for the first entry
+        // whose start_ms >= s1.start_ms - 5000 (conservative lower bound).
+        let search_start = subs2.partition_point(|s2| s2.end_ms < s1.start_ms.saturating_sub(5000));
+
+        for s2 in &subs2[search_start..] {
             let overlap = get_overlap(s1.start_ms, s1.end_ms, s2.start_ms, s2.end_ms);
             if overlap > best_overlap {
                 best_overlap = overlap;
@@ -1055,6 +1064,60 @@ async fn normalize_audio(file_path: &Path) -> Result<()> {
     Ok(())
 }
 
+// ─── Context Text Rendering (shared by TSV + APKG) ──────────────────────────
+
+/// Render a subtitle text with leading/trailing context lines wrapped in a span.
+///
+/// * `main_text`  – the primary subtitle text for this line
+/// * `line`       – the MatchedLine (for accessing context indices)
+/// * `all_lines`  – full slice of MatchedLine (for looking up context entries)
+/// * `get_text`   – closure that extracts the desired text from a MatchedLine
+///                  (e.g. `|m| Some(m.subs1.text.as_str())` or
+///                        `|m| m.subs2.as_ref().map(|s| s.text.as_str())`)
+/// * `ctx_tag`    – the HTML wrapping for context lines, e.g.
+///                  `("style=\"color:gray\"", true)` for inline style or
+///                  `("class=\"context\"", false)` for class-based.
+///                  The bool indicates whether to also replace tabs.
+fn render_text_with_context<'a, F>(
+    main_text: &str,
+    line: &MatchedLine,
+    all_lines: &'a [MatchedLine],
+    get_text: F,
+    span_attr: &str,
+    replace_tabs: bool,
+) -> String
+where
+    F: Fn(&'a MatchedLine) -> Option<&'a str>,
+{
+    let mut text = String::new();
+
+    // Leading context
+    for &ctx_idx in &line.leading_context {
+        if let Some(ctx_line) = all_lines.get(ctx_idx) {
+            if let Some(ctx_text) = get_text(ctx_line) {
+                text.push_str(&format!("<span {}>{}</span><br>", span_attr, ctx_text));
+            }
+        }
+    }
+
+    text.push_str(main_text);
+
+    // Trailing context
+    for &ctx_idx in &line.trailing_context {
+        if let Some(ctx_line) = all_lines.get(ctx_idx) {
+            if let Some(ctx_text) = get_text(ctx_line) {
+                text.push_str(&format!("<br><span {}>{}</span>", span_attr, ctx_text));
+            }
+        }
+    }
+
+    let mut result = text.replace('\n', "<br>");
+    if replace_tabs {
+        result = result.replace('\t', " ");
+    }
+    result
+}
+
 // ─── TSV Generation ──────────────────────────────────────────────────────────
 
 fn generate_tsv(
@@ -1124,43 +1187,21 @@ fn generate_tsv(
 
         // Subs1 text (with context)
         if config.output_fields.include_subs1 {
-            let mut text = String::new();
-            // Leading context
-            for &ctx_idx in &line.leading_context {
-                if let Some(ctx_line) = lines.get(ctx_idx) {
-                    text.push_str(&format!("<span style=\"color:gray\">{}</span><br>", ctx_line.subs1.text));
-                }
-            }
-            text.push_str(&line.subs1.text);
-            // Trailing context
-            for &ctx_idx in &line.trailing_context {
-                if let Some(ctx_line) = lines.get(ctx_idx) {
-                    text.push_str(&format!("<br><span style=\"color:gray\">{}</span>", ctx_line.subs1.text));
-                }
-            }
-            fields.push(text.replace('\t', " ").replace('\n', "<br>"));
+            fields.push(render_text_with_context(
+                &line.subs1.text, line, lines,
+                |m| Some(m.subs1.text.as_str()),
+                "style=\"color:gray\"", true,
+            ));
         }
 
         // Subs2 text (with context)
         if config.output_fields.include_subs2 {
             if let Some(ref s2) = line.subs2 {
-                let mut text = String::new();
-                for &ctx_idx in &line.leading_context {
-                    if let Some(ctx_line) = lines.get(ctx_idx) {
-                        if let Some(ref ctx_s2) = ctx_line.subs2 {
-                            text.push_str(&format!("<span style=\"color:gray\">{}</span><br>", ctx_s2.text));
-                        }
-                    }
-                }
-                text.push_str(&s2.text);
-                for &ctx_idx in &line.trailing_context {
-                    if let Some(ctx_line) = lines.get(ctx_idx) {
-                        if let Some(ref ctx_s2) = ctx_line.subs2 {
-                            text.push_str(&format!("<br><span style=\"color:gray\">{}</span>", ctx_s2.text));
-                        }
-                    }
-                }
-                fields.push(text.replace('\t', " ").replace('\n', "<br>"));
+                fields.push(render_text_with_context(
+                    &s2.text, line, lines,
+                    |m| m.subs2.as_ref().map(|s| s.text.as_str()),
+                    "style=\"color:gray\"", true,
+                ));
             } else {
                 fields.push(String::new());
             }
@@ -1435,41 +1476,21 @@ fn generate_apkg(
 
             // Expression (subs1)
             if config.output_fields.include_subs1 {
-                let mut text = String::new();
-                for &ctx_idx in &line.leading_context {
-                    if let Some(ctx_line) = lines.get(ctx_idx) {
-                        text.push_str(&format!("<span class=\"context\">{}</span><br>", ctx_line.subs1.text));
-                    }
-                }
-                text.push_str(&line.subs1.text);
-                for &ctx_idx in &line.trailing_context {
-                    if let Some(ctx_line) = lines.get(ctx_idx) {
-                        text.push_str(&format!("<br><span class=\"context\">{}</span>", ctx_line.subs1.text));
-                    }
-                }
-                fields.push(text.replace('\n', "<br>"));
+                fields.push(render_text_with_context(
+                    &line.subs1.text, line, lines,
+                    |m| Some(m.subs1.text.as_str()),
+                    "class=\"context\"", false,
+                ));
             }
 
             // Meaning (subs2)
             if config.output_fields.include_subs2 {
                 if let Some(ref s2) = line.subs2 {
-                    let mut text = String::new();
-                    for &ctx_idx in &line.leading_context {
-                        if let Some(ctx_line) = lines.get(ctx_idx) {
-                            if let Some(ref ctx_s2) = ctx_line.subs2 {
-                                text.push_str(&format!("<span class=\"context\">{}</span><br>", ctx_s2.text));
-                            }
-                        }
-                    }
-                    text.push_str(&s2.text);
-                    for &ctx_idx in &line.trailing_context {
-                        if let Some(ctx_line) = lines.get(ctx_idx) {
-                            if let Some(ref ctx_s2) = ctx_line.subs2 {
-                                text.push_str(&format!("<br><span class=\"context\">{}</span>", ctx_s2.text));
-                            }
-                        }
-                    }
-                    fields.push(text.replace('\n', "<br>"));
+                    fields.push(render_text_with_context(
+                        &s2.text, line, lines,
+                        |m| m.subs2.as_ref().map(|s| s.text.as_str()),
+                        "class=\"context\"", false,
+                    ));
                 } else {
                     fields.push(String::new());
                 }
@@ -1595,7 +1616,7 @@ fn generate_apkg(
     let mut media_files: Vec<(String, PathBuf)> = Vec::new();
     let mut media_idx = 0u64;
 
-    for (seq, line) in active_lines.iter().enumerate() {
+    for (seq, _line) in active_lines.iter().enumerate() {
         let seq_num = seq + 1;
 
         // Audio
@@ -1631,9 +1652,6 @@ fn generate_apkg(
                 media_idx += 1;
             }
         }
-
-        // Suppress unused variable warning
-        let _ = line;
     }
 
     // Write media JSON to temp
@@ -1684,12 +1702,12 @@ fn generate_apkg(
 // These constants define the note type used for APKG export.
 // Edit them to customise how cards look in Anki.
 
-const ANKI_FRONT_TEMPLATE: &str = r#"
-<div id="tags-container"></div>
-<div id="tags-source" style="display: none;">{{Tags}}</div>
-<div id="timestamp-source" style="display: none;">{{SequenceMarker}}</div>
-<div class='expression'>{{Expression}}</div>
-<hr>
+/// Shared tag-pill JavaScript used by both front and back templates.
+/// Extracts timestamp and tags from hidden divs and renders them as pills.
+/// NOTE: This constant is kept as a canonical reference. The actual templates
+/// embed the script inline via concat! with string literals.
+#[allow(dead_code)]
+const ANKI_TAG_SCRIPT: &str = r#"
 <script>
 try {
     var container = document.getElementById('tags-container');
@@ -1720,20 +1738,15 @@ try {
 </script>
 "#;
 
-const ANKI_BACK_TEMPLATE: &str = r#"
+const ANKI_FRONT_TEMPLATE: &str = concat!(
+r#"
 <div id="tags-container"></div>
 <div id="tags-source" style="display: none;">{{Tags}}</div>
 <div id="timestamp-source" style="display: none;">{{SequenceMarker}}</div>
-<span class='media'>{{Audio}}</span>
-<div class="expression">{{Expression}}</div>
+<div class='expression'>{{Expression}}</div>
 <hr>
-<br>
-<div class='reading'>{{Reading}}</div>
-<div class='meaning'>{{Meaning}}</div>
-<br>
-<div class='media'>{{Snapshot}}</div>
-<span class='media'>{{Video}}</span>
-<br />
+"#,
+r#"
 <script>
 try {
     var container = document.getElementById('tags-container');
@@ -1762,7 +1775,54 @@ try {
     } catch (e_tags) {}
 } catch (e) {}
 </script>
-"#;
+"#);
+
+const ANKI_BACK_TEMPLATE: &str = concat!(
+r#"
+<div id="tags-container"></div>
+<div id="tags-source" style="display: none;">{{Tags}}</div>
+<div id="timestamp-source" style="display: none;">{{SequenceMarker}}</div>
+<span class='media'>{{Audio}}</span>
+<div class="expression">{{Expression}}</div>
+<hr>
+<br>
+<div class='reading'>{{Reading}}</div>
+<div class='meaning'>{{Meaning}}</div>
+<br>
+<div class='media'>{{Snapshot}}</div>
+<span class='media'>{{Video}}</span>
+<br />
+"#,
+r#"
+<script>
+try {
+    var container = document.getElementById('tags-container');
+    container.innerHTML = '';
+    try {
+        var rawString = document.getElementById('timestamp-source').innerText;
+        if (rawString && rawString.includes('_') && rawString.includes('.')) {
+            var fullTimestamp = rawString.split('_').pop();
+            var parts = fullTimestamp.split('.');
+            var formattedTimestamp = parts.slice(0, 3).join(':');
+            var ts_pill = document.createElement('span');
+            ts_pill.className = 'tag-pill';
+            ts_pill.textContent = formattedTimestamp;
+            container.appendChild(ts_pill);
+        }
+    } catch (e_ts) {}
+    try {
+        var rawTags = document.getElementById('tags-source').innerText;
+        var tags = rawTags.trim().split(' ').filter(tag => tag.length > 0);
+        tags.forEach(function(tag) {
+            var pill = document.createElement('span');
+            pill.className = 'tag-pill';
+            pill.textContent = tag;
+            container.appendChild(pill);
+        });
+    } catch (e_tags) {}
+} catch (e) {}
+</script>
+"#);
 
 const ANKI_CARD_STYLING: &str = r#"
 #tags-container {
@@ -2108,8 +2168,8 @@ async fn perform_generation(
     let ep = config.episode_number;
 
     // Pre-calculate media source strings (avoid allocating per-line)
-    let media_source_str = media_source.map(|s| s.to_string());
-    let video_source_str = video_source.map(|s| s.to_string());
+    let media_source_arc = media_source.map(|s| std::sync::Arc::<str>::from(s));
+    let video_source_arc = video_source.map(|s| std::sync::Arc::<str>::from(s));
     let video_codec = config.video_codec.clone();
     let h264_preset = config.h264_preset.clone();
 
@@ -2151,7 +2211,7 @@ async fn perform_generation(
 
             // Audio extraction
             if needs_audio {
-                let source = media_source_str.clone().unwrap();
+                let source = media_source_arc.clone().unwrap();
                 let output_path = media_dir.join(format!(
                     "{}_{:03}_{:04}.mp3",
                     deck_sanitized, ep, seq_num
@@ -2175,7 +2235,7 @@ async fn perform_generation(
 
             // Snapshot extraction
             if needs_snapshots {
-                let source = video_source_str.clone().unwrap();
+                let source = video_source_arc.clone().unwrap();
                 let output_path = media_dir.join(format!(
                     "{}_{:03}_{:04}.jpg",
                     deck_sanitized, ep, seq_num
@@ -2192,7 +2252,7 @@ async fn perform_generation(
 
             // Video clip extraction
             if needs_video {
-                let source = video_source_str.clone().unwrap();
+                let source = video_source_arc.clone().unwrap();
                 let ext = if video_codec == "h264" { "mp4" } else { "avi" };
                 let output_path = media_dir.join(format!(
                     "{}_{:03}_{:04}.{}",

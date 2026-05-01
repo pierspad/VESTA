@@ -5619,6 +5619,7 @@ dependencies = [
  "hound",
  "serde",
  "serde_json",
+ "sha2",
  "srt-parser",
  "srt-sync",
  "srt-translate",
