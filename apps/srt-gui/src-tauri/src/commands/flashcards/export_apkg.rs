@@ -57,20 +57,9 @@ pub(crate) fn generate_apkg(
     let db_path = tmp_dir.path().join("collection.anki2");
 
     {
-        // Open SQLite connection
-        // We use rusqlite-like approach but since we don't have rusqlite,
-        // we'll write the SQL file using the system sqlite3 command.
-        // Actually, let's build it with raw bytes / a simple SQLite writer.
-        // Better: use std::process::Command to call sqlite3.
-        
-        // Check if sqlite3 is available
-        let sqlite_check = std::process::Command::new("sqlite3")
-            .arg("--version")
-            .output();
-        
-        if sqlite_check.is_err() || !sqlite_check.unwrap().status.success() {
-            return Err("sqlite3 not found. Install sqlite3 to export APKG files.".to_string());
-        }
+        // Open SQLite connection using rusqlite
+        let conn = rusqlite::Connection::open(&db_path)
+            .map_err(|e| format!("Failed to open SQLite database: {e}"))?;
 
         // Build SQL commands
         let mut sql = String::with_capacity(active_lines.len() * 512);
@@ -341,15 +330,10 @@ pub(crate) fn generate_apkg(
             let flds = fields.join("\x1f");
             let sfld = if !fields.is_empty() { &fields[0] } else { "" };
 
-            // Compute checksum: Anki uses first 4 bytes of SHA-1(sfld) as u32
-            // We approximate with a simple FNV-1a hash truncated to u32
+            // Compute checksum: Anki uses first 8 hex characters of SHA-1(sfld) converted to int
             let csum = {
-                let mut hash: u32 = 2166136261;
-                for byte in sfld.as_bytes() {
-                    hash ^= *byte as u32;
-                    hash = hash.wrapping_mul(16777619);
-                }
-                hash as i64
+                let hex_str = sha1_smol::Sha1::from(sfld).digest().to_string();
+                i64::from_str_radix(&hex_str[0..8], 16).unwrap_or(0)
             };
 
             // GUID
@@ -382,28 +366,9 @@ pub(crate) fn generate_apkg(
 
         sql.push_str("COMMIT;\n");
 
-        // Write SQL to temp file
-        let sql_path = tmp_dir.path().join("create.sql");
-        let mut sql_file = std::fs::File::create(&sql_path)
-            .map_err(|e| format!("Cannot create SQL file: {e}"))?;
-        sql_file.write_all(sql.as_bytes())
-            .map_err(|e| format!("Cannot write SQL: {e}"))?;
-        drop(sql_file);
-
-        // Execute with sqlite3
-        let output = std::process::Command::new("sqlite3")
-            .arg(db_path.to_str().unwrap_or(""))
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .arg(format!(".read {}", sql_path.to_str().unwrap_or("")))
-            .output()
-            .map_err(|e| format!("Failed to execute sqlite3: {e}"))?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(format!("sqlite3 error: {stderr}"));
-        }
+        // Execute SQL batch using rusqlite
+        conn.execute_batch(&sql)
+            .map_err(|e| format!("Failed to execute SQLite batch: {e}"))?;
     }
 
     // Build media map: { "0": "filename.mp3", "1": "filename.jpg", ... }

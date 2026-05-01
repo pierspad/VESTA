@@ -1,0 +1,301 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="description" content="The official documentation of subs2srs." />
+    <meta name="keywords" content="subtitle, timing, subs2srs" />
+    <title>Subs Re-Timer Usage</title>
+    <LINK HREF="style.css" REL="stylesheet" TYPE="text/css" />
+   
+  </head>
+  <body>
+    <h1>Subs Re-Timer Usage</h1>
+
+    <h2><a name="toc"></a>Table of Contents</h2>
+    <ul>
+      <li>
+        <a href="#description">Description</a>
+      </li>
+      <li>
+        <a href="#how_to_use">General Usage</a>
+      </li>
+      <li>
+        <a href="#tutorial">Tutorial</a>
+      </li>
+      <li>
+        <a href="#interface">Interface</a>
+      </li>
+    </ul>  
+    
+    <h2><a name="description"></a>Description</h2>
+    <p>
+      Use this tool to re-time a subtitle file based on the timings of another subtitle file. This is helpful when one is already synced to a video but the other is not.
+    </p>
+    
+    <p>
+      Note: This is not a general subtitle timing tool like Aegisub and cannot be used to create subtitles from scratch. It is  useful in the very specific case where you already have a subtitle file that is timed to a video and you want to match another subtitle file's timings to it.
+    </p>
+    
+    <p>
+      Screenshot:
+    <p>
+    
+    <img src="Images/Main.png" alt="" />
+
+    
+    
+    <h2><a name="how_to_use"></a>General Usage</h2>
+      
+    <p>
+      To begin, drag a .srt or .ass subtitle file into the left or right subtitle box or use the use the 'File | Open Left/Right...' menu options.
+    </p>
+  
+    <p>
+      The left subtitle box should contain the subtitle file that is already timed.
+    </p>
+
+    <p>
+      The right subtitle box should contain the subtitle file that needs to be re-timed.
+    </p>
+
+    <p>
+      Subs Re-Timer has only one operation: Time Shift. To shift timings, select a line in the right subtitle box and it's corresponding line in the left subtitle box. Now press the "Time Shift" button. This will shift all subtitle timings in the right subtitle box from the selected line onwards by the time difference between the selected line in the left subtitle box and the selected line in the right subtitle box.
+    </p> 
+    
+    <p>
+      Lines of dialog right after a large time gap (28 seconds) are colored orange. These gaps usually represent opening/ending credits or commercials that were subbed in one file but not the other. The timings for these lines (and everything below) usually need to be shifted.
+    </p>
+    
+    <p>
+      Always go from top to bottom. Usually, time shifting only needs to be performed on orange lines. Typically, 1-4 time shifts will be necassary for the two subtiles to match one another. 
+    </p> 
+            
+    <p>
+      <b>Row Colors:</b>
+    </p>
+    
+    <table>
+      <tr>
+        <th>Color</th>
+        <th>Description</th>
+      </tr>
+        <tr><td>White</td><td>Normal.</td></tr>
+        <tr><td>Orange</td><td>Line of dialog right after a large time gap (28 seconds). These gaps usually represent opening/ending credits or commercials that were subbed in one file but not the other. The timings for these lines (and everything below) usually need to be shifted.</td></tr>
+        <tr><td>Gray</td><td>Line of dialog whose timings don't appear to match any of the timings in the other subtitle box.</td></tr>
+      </tr>
+    </table>
+    
+    <p>
+      <b>Shortcuts:</b>
+    </p>
+    
+    <table>
+      <tr>
+        <th>Shortcut</th>
+        <th>Description</th>
+      </tr>
+      
+      <tr><td>(Subtitle Box) Right-Click</td><td>Select line and closest line from other subtitle box.</td></tr>
+      <tr><td>(Subtitle Box) Middle-Click</td><td>Shift all timings in the right subtitle box from the selected line onwards by the time difference between the selected line in the left subtitle box and the selected line in the right subtitle box.</td></tr>
+      <tr><td>(Subtitle Box) Double-Click</td><td>Find the next orange line.</td></tr>
+      <tr><td>(Subtitle Box) Left</td><td>Select previous line and closest line from other subtitle box.</td></tr>
+      <tr><td>(Subtitle Box) Right</td><td>Select next line and closest line from other subtitle box.</td></tr>
+      <tr><td>(Subtitle Box) Ctrl+Left</td><td>Select the left subtitle box.</td></tr>
+      <tr><td>(Subtitle Box) Ctrl+Right</td><td>Select the right subtitle box.</td></tr>
+      <tr><td>(Subtitle Box) Ctrl+Up</td><td>Find the previous orange line.</td></tr>
+      <tr><td>(Subtitle Box) Ctrl+Down</td><td>Find the next orange line.</td></tr>
+      <tr><td>(Subtitle Box) Enter</td><td>Shift all timings in the right subtitle box from the selected line onwards by the time difference between the selected line in the left subtitle box and the selected line in the right subtitle box.</td></tr>
+      <tr><td>(Chart) Left-Click</td><td>Select next line in right subtitle box and closet line from left subtitle box.</td></tr>
+      <tr><td>(Chart) Right-Click</td><td>Select previous line in right subtitle box and closet line from left subtitle box.</td></tr>
+      <tr><td>(Global) Ctrl+Z</td><td>Undo previous time shift.</td></tr>
+      <tr><td>(Global) Ctrl+Y</td><td>Redo previous time shift.</td></tr>
+      <tr><td>(Global) Ctrl+O</td><td>Select subtitle file for left subtitle box.</td></tr>
+      <tr><td>(Global) Ctrl+Shift+O</td><td>Select subtitle file for right subtitle box.</td></tr>
+      <tr><td>(Global) Ctrl+S</td><td>Save re-timed subtitle file (appends "_retimed" to original subtitle file)</td></tr>
+      <tr><td>(Global) Ctrl+Shift+S</td><td>Select save path for re-timed subtitle file.</td></tr>
+      <tr><td>(+) Right-Click</td><td>Zoom-in by 10 seconds.</td></tr>
+      <tr><td>(+) Middle-Click</td><td>Zoom-in maximum amount.</td></tr>
+      <tr><td>(-) Right-Click</td><td>Zoom-out by 10 seconds.</td></tr>
+      <tr><td>(-) Middle-Click</td><td>Zoom-out maximum amount.</td></tr>
+    </table>
+     
+     
+     
+    <h2><a name="tutorial"></a>Tutorial</h2>
+    
+    <p>
+      Navigate to the "Tutorial_Files" folder in the Subs Re-Timer directory. Here we see 2 files. "Tutorial_LS03_Jap.ass" contains Japanese subtitles and is the file that is timed to the video. "Tutorial_LS03_Eng.srt" contains English subtitles and is the file that we want to re-time.
+    </p>
+    
+    <p>
+      Drag "Tutorial_LS03_Jap.ass" to the left subtitle box. The left subtitle box should always contain the subtitles that are already timed. 
+    </p>
+    
+    <p>     
+      Drag "Tutorial_LS03_Eng.ass" to the right subtitle box. The right subtitle box should always contain the subtitles need to be re-timed. 
+    </p>
+    
+    <p>
+      At this point, the interface should look like this:
+    <p>
+
+    <img src="Images/Main.png" alt="" />
+    
+    <p>
+      As you can see in the chart at the bottom, the first 4 lines match each other pretty well. However, the 5th line doesn't match at all. This is evident by the gray coloring of the lines in the right subtitle box. The gray lines indicate that the timings do not seem to match any of the timings in the left subtitle box. It would appear that the Japanese version doesn't include subtitles for the opening music but the English subtitles do.
+    </p>
+    
+    <p>
+      The orange line in the left subtitle box indicates that there exists a large timing gap (at least 28 seconds) between orange line and the previous line. Orange lines are usually the only ones that need our attention. In this example, there is only a single orange line and it is right in our view. Other subtitles may have many orange lines and they may be further down in the file. In these cases you can manually scroll down and look for them or you may double-click a line or press Ctrl-Down to automatically move to the next orange line.
+    </p> 
+    
+    <p>
+      Go ahead and right-click (not left-click) the orange line. Right-clicking will both select the line that was clicked and also select the closest timed line in the other subtitle box.
+    </p>
+   
+    <img src="Images/Tut1.png" alt="" />
+    
+    <p>
+      The two selected lines in the above screenshot do not match. Find and left-click the matching line in the right subtitle box at 0:01:31.08 as shown here:
+    </p>
+        
+    <img src="Images/Tut2.png" alt="" />
+    
+    <p>
+      We will now shift all subtitle timings in the right subtitle box from the selected line onwards by the time difference between the selected line in the left subtitle box and the selected line in the right subtitle box. Do this now by pressing the "Time Shift" button or Middle-clicking or pressing Enter. The result:
+    </p>
+    
+    <img src="Images/Tut3.png" alt="" />
+    
+    <p>
+      In the above screenshot, notice that both lines in the bottom chart now start at the same time. Also notice that the "Average Mismatch" statistic in the top-left went from "2.356 : 0.722" to "1.874 : 0.272". The "1.874" represents the average mismatch of all lines (in seconds) and the "0.272" is the average mismatch of only the non-gray lines (in seconds). The first number is pretty high because these 2 subtitle files have a different number of lines. In the top-middle, you can see that the left file has 505 total lines whereas the right file has 535 total lines.
+    </p>
+    
+    <p>
+      The next screenshot shows another example of a gray line (notice how the 「は！？」 in the Japanese version was not translated in the English version):
+    </p>
+        
+    <img src="Images/Tut4.png" alt="" />
+    
+    <p>
+      Is it helpful to spot check the timings near the middle and end. The next screenshot shows that the timings still match up pretty well at the end:
+    </p>
+    
+    <img src="Images/Tut5.png" alt="" />
+    
+    <p>
+      We can see that the final line still has a 94% overlap which is probably acceptable for watching and more than acceptable for use with subs2srs. 
+    </p>
+    
+    <p>
+      You can go ahead and save the file now. You're done.
+    </p>
+    
+    
+    
+    <h2><a name="interface"></a>Interface</h2>
+    
+    <img src="Images/Ano_Main.png" alt="" />
+    
+    <ol>
+      <li>
+        <p>
+          <b><a name="main_interface_menu"></a>Menu</b>
+          <br/>
+          <b>File | Open Left...:</b>
+          Open file that will go into the left subtitle box.
+          <br/>
+          <b>File | Open Right...:</b>
+          Open file that will go into the right subtitle box.
+          <br/>
+          <b>File | Save Right (original preserved):</b>
+          Save the subtitle file in the right subtitle box by adding "_retimed" to the end of the original file's name. The original file will be unmodified.
+          <br/>
+          <b>File | Save Right As...:</b>
+          Choose a location and save the subtitle file in the right subtitle box.
+          <br/>
+          <b>File | Exit:</b>
+          Exit Subs Re-Timer.
+          <br/>
+          <b>Edit | Undo:</b>
+          Undo the last time shift.
+          <br/>
+          <b>Edit | Redo:</b>
+          Redo the last time shift.
+          <br/>
+          <b>Edit | Time Shift:</b>
+          Shift all subtitle timings in the right subtitle box from the selected line onwards by the time difference between the selected line in the left subtitle box and the selected line in the right subtitle box.
+          <br/>
+          <b>Help | Usage:</b>
+          Show this file
+          <b>Help | About:</b>
+          Display information about Subs Re-Timer.
+        </p>
+      </li>
+      
+      <li>
+        <p>
+          <b><a name="main_interface_average_mismatch"></a>Average Mismatch: </b> The number to the left of the colon represents the average mismatch of all lines (in seconds) between the two subtitle files. The number to the right of the colon represents the average mismatch of only the non-gray lines (in seconds) between the two subtitle files. The number on the left is usually higher because the two subtitles files will often have a different number of lines. Generally, the number on the right is a more useful statistic.
+        </p>
+      </li>
+      
+      <li>
+        <p>
+          <b><a name="main_interface_filename"></a>Filename: </b> The filename of the subtitle file shown in subtitle box below. There are two of these: one for each subtitle file.
+        </p>
+      </li>
+      
+      <li>
+        <p>
+          <b><a name="main_interface_line_number"></a>Selected Line Number / Total Number of Lines: </b> The number to the left of the slash is the currently selected line. The number to the right of the slash is the total number of lines in the subtitle file. There are two of these: one for each subtitle file.
+        </p>
+      </li>
+      
+      <li>
+        <p>
+          <b><a name="main_interface_subtitle_box"></a>Subtitle Box: </b>Contains the start time and text of each line of dialog in the subtitle file. The format of the start time: "Hours:Minutes:Seconds.Centiseconds". Line colors and shortcuts are described in the <a href=#how_to_use>General Usage</a> section. There are two of these: one for each subtitle file.
+        </p>
+      </li>
+      
+      <li>
+        <p>
+          <b><a name="main_interface_line_stats"></a>Line Statistics: </b>The top statistic is the amount that the selected line in the left subtitle box overlaps the line in the right subtitle box. A high overlap is a good indicator that the two lines share similar timings. The overlap will be painted green when the overlap is greater than 90% and will be painted pink when the overlap is 0%. The bottom statistic is the start time difference (+ or -) between the selected line in the left subtitle box and the selected line in the right subtitle box. The start time difference will be painted green when the left starts before the right and will be painted pink when the left starts after the right.
+        </p>
+      </li>
+      
+      <li>
+        <p>
+          <b><a name="main_interface_line_start_times"></a>Start Times: </b>The time on the top is the start time of the selected line in the left subtitle box. The time on the bottom is the start time of the selected line in the right subtitle box.
+        </p>
+      </li>
+      
+      <li>
+        <p>
+          <b><a name="main_interface_dialog_text"></a>Dialog Text: </b>The top line shows the text of the selected line in the left subtitle box. The bottom line shows the text of the selected line in the right subtitle box.
+        </p>
+      </li>
+      
+      <li>
+        <p>
+          <b><a name="main_interface_time_shift"></a>Time Shift: </b>Shift all subtitle timings in the right subtitle box from the selected line onwards by the time difference between the selected line in the left subtitle box and the selected line in the right subtitle box.
+        </p>
+      </li>
+      
+      <li>
+        <p>
+          <b><a name="main_interface_chart_scale"></a>Chart Scale: </b>The "+" button zooms the chart in. The "-" button zooms the chart out. Right-click the buttons to zoom in/out by 10 seconds. Middle-click to zoom in/out to the maximum amount.
+        </p>
+      </li>
+      
+      <li>
+        <p>
+          <b><a name="main_interface_chart"></a>Subtitle Chart: </b>Shows the subtitle lines on a time scale. This can be used to visually see timing differences between lines in the left subtitle box and lines in the right subtitle box. The timeline is shown at the very top of the chart. The upper portion of the chart shows the lines from the left subtitle box and the lower portion shows the lines from the right subtitle box. The currently selected line in the left subtitle box is painted green and the currently selected line in the right subtitle box is painted blue. Left-click the chart to select the next line in the right subtitle box and the closest match in the left subtitle box. Right-click the chart to select the previous line in the right subtitle box and the closest match in the left subtitle box.
+        </p>
+      </li>
+      
+    </ol>
+    
+    
+    
+  </body>
+</html>

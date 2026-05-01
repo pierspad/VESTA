@@ -1,0 +1,81 @@
+﻿;------------------------------------------------------------------------------
+;
+; This is the preferences file for subs2srs. This file contains a variety of
+; preferences related to GUI defaults and output formats.
+;
+; You can change these settings by selecting 'Tools->Preferences...' from
+; the main menu.
+;
+;------------------------------------------------------------------------------
+
+main_window_width = 614
+main_window_height = 630
+default_enable_audio_clip_generation = True
+default_enable_snapshots_generation = True
+default_enable_video_clips_generation = False
+default_audio_clip_bitrate = 128
+default_video_clip_video_bitrate = 800
+default_video_clip_audio_bitrate = 128
+default_ipod_support = False
+default_encoding_subs1 = utf-8
+default_encoding_subs2 = utf-8
+default_context_num_leading = 0
+default_context_num_trailing = 0
+default_file_browser_start_dir = none
+default_remove_styled_lines_subs1 = True
+default_remove_styled_lines_subs2 = True
+default_remove_no_counterpart_subs1 = True
+default_remove_no_counterpart_subs2 = True
+default_included_text_subs1 = none
+default_included_text_subs2 = none
+default_excluded_text_subs1 = none
+default_excluded_text_subs2 = none
+default_exclude_duplicate_lines_subs1 = False
+default_exclude_duplicate_lines_subs2 = False
+default_exclude_lines_with_fewer_than_n_chars_subs1 = False
+default_exclude_lines_with_fewer_than_n_chars_subs2 = False
+default_exclude_lines_with_fewer_than_n_chars_num_subs1 = 8
+default_exclude_lines_with_fewer_than_n_chars_num_subs2 = 8
+default_exclude_lines_shorter_than_n_ms_subs1 = False
+default_exclude_lines_shorter_than_n_ms_subs2 = False
+default_exclude_lines_shorter_than_n_ms_num_subs1 = 800
+default_exclude_lines_shorter_than_n_ms_num_subs2 = 800
+default_exclude_lines_longer_than_n_ms_subs1 = False
+default_exclude_lines_longer_than_n_ms_subs2 = False
+default_exclude_lines_longer_than_n_ms_num_subs1 = 5000
+default_exclude_lines_longer_than_n_ms_num_subs2 = 5000
+default_audio_normalize = False
+srs_filename_format = ${deck_name}.tsv
+srs_delimiter = ${tab}
+srs_tag_format = ${deck_name}_${0:episode_num}
+srs_sequence_marker_format = ${0:episode_num}_${0:sequence_num}_${0:s_total_hour}.${0:s_min}.${0:s_sec}.${0:s_msec}
+srs_audio_filename_prefix = [sound:
+audio_filename_format = ${deck_name}_${0:episode_num}_${0:s_total_hour}.${0:s_min}.${0:s_sec}.${0:s_msec}-${0:e_total_hour}.${0:e_min}.${0:e_sec}.${0:e_msec}.mp3
+audio_id3_artist = ${deck_name}
+audio_id3_album = ${deck_name}_${0:episode_num}
+audio_id3_title = ${deck_name}_${0:episode_num}_${0:s_total_hour}.${0:s_min}.${0:s_sec}.${0:s_msec}-${0:e_total_hour}.${0:e_min}.${0:e_sec}.${0:e_msec}
+audio_id3_genre = Speech
+audio_id3_lyrics = ${subs1_line} ${subs2_line}
+srs_audio_filename_suffix = ]
+srs_snapshot_filename_prefix = <img src="
+snapshot_filename_format = ${deck_name}_${0:episode_num}_${0:m_total_hour}.${0:m_min}.${0:m_sec}.${0:m_msec}.jpg
+srs_snapshot_filename_suffix = ">
+srs_video_filename_prefix = [sound:
+video_filename_format = ${deck_name}_${0:episode_num}_${0:s_total_hour}.${0:s_min}.${0:s_sec}.${0:s_msec}-${0:e_total_hour}.${0:e_min}.${0:e_sec}.${0:e_msec}
+srs_video_filename_suffix = ]
+srs_vobsub_filename_prefix = <img src="
+srs_vobsub_filename_suffix = ">
+srs_subs1_format = ${subs1_line}
+srs_subs2_format = ${subs2_line}
+extract_media_audio_filename_format = ${deck_name}_${0:episode_num}_${0:s_total_hour}.${0:s_min}.${0:s_sec}.${0:s_msec}-${0:e_total_hour}.${0:e_min}.${0:e_sec}.${0:e_msec}.mp3
+extract_media_lyrics_subs1_format = [${2:s_total_min}:${2:s_sec}.${2:s_hsec}] ${subs1_line}
+extract_media_lyrics_subs2_format = [${2:s_total_min}:${2:s_sec}.${2:s_hsec}] ${subs2_line}
+dueling_subtitle_filename_format = ${deck_name}_${0:episode_num}.ass
+dueling_quick_ref_filename_format = ${deck_name}_${0:episode_num}.txt
+dueling_quick_ref_subs1_format = [${0:s_total_hour}:${0:s_min}:${0:s_sec}.${0:s_hsec}]  ${subs1_line}
+dueling_quick_ref_subs2_format = [${0:s_total_hour}:${0:s_min}:${0:s_sec}.${0:s_hsec}]  ${subs2_line}${lf}
+video_player = none
+video_player_args = none
+reencode_before_splitting_audio = False
+enable_logging = True
+audio_normalize_args = /f /q /r /k

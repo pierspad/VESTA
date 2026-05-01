@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, State, Manager};
 use tokio_util::sync::CancellationToken;
 use crate::state::AppFlashcardState;
 
@@ -17,13 +17,63 @@ use super::export_apkg::*;
 
 // ─── FFmpeg Media Extraction ─────────────────────────────────────────────────
 
-/// Check if ffmpeg is available
+/// Check if ffmpeg is available in PATH
 pub(crate) async fn check_ffmpeg() -> Result<bool> {
     let output = tokio::process::Command::new("ffmpeg")
         .arg("-version")
         .output()
         .await;
     Ok(output.is_ok())
+}
+
+/// Resolves the FFmpeg binary path, falling back to AppData if missing from PATH
+pub(crate) async fn resolve_ffmpeg_path(app: Option<&AppHandle>) -> String {
+    if check_ffmpeg().await.unwrap_or(false) {
+        return "ffmpeg".to_string();
+    }
+    if let Some(app) = app {
+        if let Ok(app_data) = app.path().app_local_data_dir() {
+            let ffmpeg_ext = if cfg!(windows) { "exe" } else { "" };
+            let mut ffmpeg_path = app_data.join("ffmpeg_bin").join("ffmpeg");
+            if cfg!(windows) {
+                ffmpeg_path.set_extension(ffmpeg_ext);
+            }
+            if ffmpeg_path.exists() {
+                return ffmpeg_path.to_string_lossy().to_string();
+            }
+        }
+    }
+    "ffmpeg".to_string()
+}
+
+/// Resolves the FFprobe binary path, falling back to AppData if missing from PATH
+pub(crate) async fn resolve_ffprobe_path(app: Option<&AppHandle>) -> String {
+    // Check if it's in system PATH
+    let is_in_path = tokio::process::Command::new("ffprobe")
+        .arg("-version")
+        .output()
+        .await
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+        
+    if is_in_path {
+        return "ffprobe".to_string();
+    }
+    
+    // Check local AppData
+    if let Some(app) = app {
+        if let Ok(app_data) = app.path().app_local_data_dir() {
+            let ffprobe_ext = if cfg!(windows) { "exe" } else { "" };
+            let mut ffprobe_path = app_data.join("ffmpeg_bin").join("ffprobe");
+            if cfg!(windows) {
+                ffprobe_path.set_extension(ffprobe_ext);
+            }
+            if ffprobe_path.exists() {
+                return ffprobe_path.to_string_lossy().to_string();
+            }
+        }
+    }
+    "ffprobe".to_string()
 }
 
 /// Format milliseconds as ffmpeg timestamp HH:MM:SS.mmm
@@ -46,11 +96,12 @@ pub(crate) async fn extract_audio_clip(
     pad_start_ms: i64,
     pad_end_ms: i64,
     bitrate: u32,
+    ffmpeg_cmd: &str,
 ) -> Result<()> {
     let actual_start = (start_ms - pad_start_ms).max(0);
     let duration_ms = (end_ms + pad_end_ms) - actual_start;
 
-    let mut cmd = tokio::process::Command::new("ffmpeg");
+    let mut cmd = tokio::process::Command::new(ffmpeg_cmd);
     cmd.args([
         "-nostdin",
         "-loglevel", "error",
@@ -83,6 +134,7 @@ pub(crate) async fn extract_snapshot(
     width: u32,
     height: u32,
     crop_bottom: u32,
+    ffmpeg_cmd: &str,
 ) -> Result<()> {
     let midpoint_ms = start_ms + (end_ms - start_ms) / 2;
 
@@ -93,7 +145,7 @@ pub(crate) async fn extract_snapshot(
     vf_filters.push(format!("scale={}:{}:flags=bicubic", width, height));
     let vf = vf_filters.join(",");
 
-    let mut cmd = tokio::process::Command::new("ffmpeg");
+    let mut cmd = tokio::process::Command::new(ffmpeg_cmd);
     cmd.args([
         "-nostdin",
         "-loglevel", "error",
@@ -128,11 +180,12 @@ pub(crate) async fn extract_video_clip(
     preset: &str,
     video_bitrate: u32,
     audio_bitrate: u32,
+    ffmpeg_cmd: &str,
 ) -> Result<()> {
     let actual_start = (start_ms - pad_start_ms).max(0);
     let duration_ms = (end_ms + pad_end_ms) - actual_start;
 
-    let mut cmd = tokio::process::Command::new("ffmpeg");
+    let mut cmd = tokio::process::Command::new(ffmpeg_cmd);
     cmd.args([
         "-nostdin",
         "-loglevel", "error",
@@ -173,11 +226,10 @@ pub(crate) async fn extract_video_clip(
     Ok(())
 }
 
-/// Normalize audio volume using ffmpeg loudnorm
-pub(crate) async fn normalize_audio(file_path: &Path) -> Result<()> {
+pub(crate) async fn normalize_audio(file_path: &Path, ffmpeg_cmd: &str) -> Result<()> {
     let temp_path = file_path.with_extension("normalized.mp3");
 
-    let mut cmd = tokio::process::Command::new("ffmpeg");
+    let mut cmd = tokio::process::Command::new(ffmpeg_cmd);
     cmd.args([
         "-y",
         "-i",

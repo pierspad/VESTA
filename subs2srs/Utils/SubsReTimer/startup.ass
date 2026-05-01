@@ -1,0 +1,41 @@
+﻿; Startup file for Subs Re-Timer
+Script Type: V4.00+
+ScriptType: V4.00+
+Collisions: Normal
+PlayResX: 704
+PlayResY: 396
+Timer: 100.000
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,24,&H00FFFFFF,&H00FFFFCC,&H00C66551,&H00FF0000,-1,0,0,0,100,100,0,0,1,2,0,2,10,0,10,128
+
+[Events]
+Format: Layer, Start, End, Style, Actor, MarginL, MarginR, MarginV, Effect, Text
+
+Dialogue: 0,0:01:53.80,0:01:54.73,Default,,0000,0000,0000,,Hello. Welcome to Subs Re-Timer.
+Dialogue: 0,0:01:55.27,0:01:58.46,Default,,0000,0000,0000,,
+Dialogue: 0,0:01:58.70,0:02:01.07,Default,,0000,0000,0000,,Use this tool to re-time a subtitle file based on
+Dialogue: 0,0:02:01.07,0:02:02.28,Default,,0000,0000,0000,,the timings of another subtitle file. This is helpful
+Dialogue: 0,0:02:02.43,0:02:04.18,Default,,0000,0000,0000,,when one is already synced to a video but the other
+Dialogue: 0,0:02:04.44,0:02:04.90,Default,,0000,0000,0000,,is not.
+Dialogue: 0,0:02:05.16,0:02:07.82,Default,,0000,0000,0000,,
+Dialogue: 0,0:02:07.99,0:02:09.32,Default,,0000,0000,0000,,To begin, please drag a .srt or .ass subtitle file into 
+Dialogue: 0,0:02:09.32,0:02:12.71,Default,,0000,0000,0000,,this box or use the 'File | Open Left/Right...' menu option.
+Dialogue: 0,0:02:12.77,0:02:15.18,Default,,0000,0000,0000,,
+Dialogue: 0,0:02:15.58,0:02:17.18,Default,,0000,0000,0000,,The left box should contain the subtitle file that is
+Dialogue: 0,0:02:17.28,0:02:20.22,Default,,0000,0000,0000,,already timed.
+Dialogue: 0,0:02:20.41,0:02:22.17,Default,,0000,0000,0000,,
+Dialogue: 0,0:02:22.17,0:02:22.63,Default,,0000,0000,0000,,The right box should contain the subtitle file that needs
+Dialogue: 0,0:02:23.03,0:02:25.52,Default,,0000,0000,0000,,to be re-timed.
+Dialogue: 0,0:02:25.77,0:02:27.83,Default,,0000,0000,0000,,
+Dialogue: 0,0:02:28.58,0:02:31.67,Default,,0000,0000,0000,,Please read the help file for a tutorial.
+Dialogue: 0,0:02:31.87,0:02:35.50,Default,,0000,0000,0000,,
+Dialogue: 0,0:02:35.99,0:02:37.79,Default,,0000,0000,0000,,
+Dialogue: 0,0:02:37.94,0:02:39.58,Default,,0000,0000,0000,,
+Dialogue: 0,0:02:39.84,0:02:40.84,Default,,0000,0000,0000,,
+Dialogue: 0,0:02:41.03,0:02:43.39,Default,,0000,0000,0000,,
+Dialogue: 0,0:02:43.65,0:02:47.81,Default,,0000,0000,0000,,
+Dialogue: 0,0:02:48.00,0:02:48.81,Default,,0000,0000,0000,,
+Dialogue: 0,0:02:48.90,0:02:50.21,Default,,0000,0000,0000,,

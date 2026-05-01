@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, State, Manager};
 use tokio_util::sync::CancellationToken;
 use crate::state::AppFlashcardState;
 
@@ -290,13 +290,16 @@ async fn perform_generation(
 
     // Check ffmpeg availability
     if needs_audio || needs_snapshots || needs_video {
-        if !check_ffmpeg().await.unwrap_or(false) {
+        if !flashcard_check_deps(app.clone()).await.unwrap_or(false) {
             return Err("ffmpeg not found. Install ffmpeg to extract media.".to_string());
         }
     }
 
     let deck_sanitized = sanitize_filename(&config.deck_name);
     let ep = config.episode_number;
+    
+    let ffmpeg_cmd = super::media::resolve_ffmpeg_path(Some(&app)).await;
+    let ffmpeg_cmd_arc = std::sync::Arc::<str>::from(ffmpeg_cmd.as_str());
 
     // Pre-calculate media source strings (avoid allocating per-line)
     let media_source_arc = media_source.map(|s| std::sync::Arc::<str>::from(s));
@@ -351,14 +354,15 @@ async fn perform_generation(
                 let pad_s = config.audio_pad_start_ms;
                 let pad_e = config.audio_pad_end_ms;
                 let normalize = config.normalize_audio;
+                let ffmpeg = ffmpeg_cmd_arc.clone();
 
                 handles.push(tokio::spawn(async move {
                     let result = extract_audio_clip(
-                        &source, &output_path, start_ms, end_ms, pad_s, pad_e, bitrate,
+                        &source, &output_path, start_ms, end_ms, pad_s, pad_e, bitrate, &ffmpeg
                     )
                     .await;
                     if result.is_ok() && normalize {
-                        let _ = normalize_audio(&output_path).await;
+                        let _ = normalize_audio(&output_path, &ffmpeg).await;
                     }
                     ("audio", result, line_seq)
                 }));
@@ -374,9 +378,10 @@ async fn perform_generation(
                 let w = config.snapshot_width;
                 let h = config.snapshot_height;
                 let crop = config.crop_bottom;
+                let ffmpeg = ffmpeg_cmd_arc.clone();
 
                 handles.push(tokio::spawn(async move {
-                    let result = extract_snapshot(&source, &output_path, start_ms, end_ms, w, h, crop).await;
+                    let result = extract_snapshot(&source, &output_path, start_ms, end_ms, w, h, crop, &ffmpeg).await;
                     ("snapshot", result, line_seq)
                 }));
             }
@@ -395,11 +400,12 @@ async fn perform_generation(
                 let abr = config.video_audio_bitrate;
                 let pad_s = config.video_pad_start_ms;
                 let pad_e = config.video_pad_end_ms;
+                let ffmpeg = ffmpeg_cmd_arc.clone();
 
                 handles.push(tokio::spawn(async move {
                     let result = extract_video_clip(
                         &source, &output_path, start_ms, end_ms, pad_s, pad_e, &codec, &preset,
-                        vbr, abr,
+                        vbr, abr, &ffmpeg
                     )
                     .await;
                     ("video", result, line_seq)
@@ -558,8 +564,42 @@ pub async fn flashcard_cancel(state: State<'_, AppFlashcardState>) -> Result<boo
 
 /// Check if ffmpeg is available
 #[tauri::command]
-pub async fn flashcard_check_deps() -> Result<bool, String> {
-    check_ffmpeg().await.map_err(|e| e.to_string())
+pub async fn flashcard_check_deps(app: AppHandle) -> Result<bool, String> {
+    // 1. First check if it's in system PATH
+    if check_ffmpeg().await.unwrap_or(false) {
+        return Ok(true);
+    }
+    // 2. Then check if we downloaded it into AppData
+    if let Ok(app_data) = app.path().app_local_data_dir() {
+        let ffmpeg_ext = if cfg!(windows) { "exe" } else { "" };
+        let mut ffmpeg_path = app_data.join("ffmpeg_bin").join("ffmpeg");
+        if cfg!(windows) {
+            ffmpeg_path.set_extension(ffmpeg_ext);
+        }
+        if ffmpeg_path.exists() {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+/// Automate FFmpeg download
+#[tauri::command]
+pub async fn flashcard_download_ffmpeg(app: AppHandle) -> Result<bool, String> {
+    use ffmpeg_sidecar::download::{ffmpeg_download_url, download_ffmpeg_package, unpack_ffmpeg};
+    
+    let app_data = app.path().app_local_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+        
+    let dest = app_data.join("ffmpeg_bin");
+    std::fs::create_dir_all(&dest).map_err(|e| e.to_string())?;
+    
+    tokio::task::spawn_blocking(move || {
+        let url = ffmpeg_download_url().map_err(|e| e.to_string())?;
+        let archive = download_ffmpeg_package(url, &dest).map_err(|e| e.to_string())?;
+        unpack_ffmpeg(&archive, &dest).map_err(|e| e.to_string())?;
+        Ok(true)
+    }).await.map_err(|e| e.to_string())?
 }
 
 /// Check if a directory exists

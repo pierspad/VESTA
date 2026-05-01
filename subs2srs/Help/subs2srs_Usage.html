@@ -1,0 +1,1802 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="description" content="The official documentation of subs2srs." />
+    <meta name="keywords" content="subs2srs, anki, srs, language, learn" />
+    <title>subs2srs Usage</title>
+    <LINK HREF="style.css" REL="stylesheet" TYPE="text/css" />
+
+  </head>
+  <body>
+    <h1>subs2srs Usage</h1>
+    <p>
+      Download the latest version from <a href="https://sourceforge.net/projects/subs2srs/files/">SourceForge</a>.
+    </p>
+
+    <form action="https://www.paypal.com/cgi-bin/webscr" method="post">
+    <input type="hidden" name="cmd" value="_s-xclick">
+    <input type="hidden" name="encrypted" value="-----BEGIN PKCS7-----MIIHJwYJKoZIhvcNAQcEoIIHGDCCBxQCAQExggEwMIIBLAIBADCBlDCBjjELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAkNBMRYwFAYDVQQHEw1Nb3VudGFpbiBWaWV3MRQwEgYDVQQKEwtQYXlQYWwgSW5jLjETMBEGA1UECxQKbGl2ZV9jZXJ0czERMA8GA1UEAxQIbGl2ZV9hcGkxHDAaBgkqhkiG9w0BCQEWDXJlQHBheXBhbC5jb20CAQAwDQYJKoZIhvcNAQEBBQAEgYBXUpGB/yNNm+0ZbLQ7TBqx96qsEe1LBbYOONz1QoKI4L4n1ZgxwXMRtW0JyFne7q7qFPYHzgMxfy5c3TAA0G/YfCbC4rFfF8ureHhilhC5vWrYcpR4ypb2/Z4rkFe6gkuLqoISvKvRBIKwAoO08VgBlp6F4/QeCCxwqketCKzYcTELMAkGBSsOAwIaBQAwgaQGCSqGSIb3DQEHATAUBggqhkiG9w0DBwQIrKIgupY1MAmAgYDIgMsTC9in+uN7F6k1NUELBPzamLZhFIHjiziQGI/ChUtrIwTSv+BbEGoewd8R3wwIxe0uLPS3vY94MV381E4YpOfUM/2UgrEyHWxht96ix6T2lNx74T1Lbs2zjD+ZTINcmvTw+p7kFoUDFcWeygz/jvC+f5mns5YzyDel+3CeFaCCA4cwggODMIIC7KADAgECAgEAMA0GCSqGSIb3DQEBBQUAMIGOMQswCQYDVQQGEwJVUzELMAkGA1UECBMCQ0ExFjAUBgNVBAcTDU1vdW50YWluIFZpZXcxFDASBgNVBAoTC1BheVBhbCBJbmMuMRMwEQYDVQQLFApsaXZlX2NlcnRzMREwDwYDVQQDFAhsaXZlX2FwaTEcMBoGCSqGSIb3DQEJARYNcmVAcGF5cGFsLmNvbTAeFw0wNDAyMTMxMDEzMTVaFw0zNTAyMTMxMDEzMTVaMIGOMQswCQYDVQQGEwJVUzELMAkGA1UECBMCQ0ExFjAUBgNVBAcTDU1vdW50YWluIFZpZXcxFDASBgNVBAoTC1BheVBhbCBJbmMuMRMwEQYDVQQLFApsaXZlX2NlcnRzMREwDwYDVQQDFAhsaXZlX2FwaTEcMBoGCSqGSIb3DQEJARYNcmVAcGF5cGFsLmNvbTCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAwUdO3fxEzEtcnI7ZKZL412XvZPugoni7i7D7prCe0AtaHTc97CYgm7NsAtJyxNLixmhLV8pyIEaiHXWAh8fPKW+R017+EmXrr9EaquPmsVvTywAAE1PMNOKqo2kl4Gxiz9zZqIajOm1fZGWcGS0f5JQ2kBqNbvbg2/Za+GJ/qwUCAwEAAaOB7jCB6zAdBgNVHQ4EFgQUlp98u8ZvF71ZP1LXChvsENZklGswgbsGA1UdIwSBszCBsIAUlp98u8ZvF71ZP1LXChvsENZklGuhgZSkgZEwgY4xCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEWMBQGA1UEBxMNTW91bnRhaW4gVmlldzEUMBIGA1UEChMLUGF5UGFsIEluYy4xEzARBgNVBAsUCmxpdmVfY2VydHMxETAPBgNVBAMUCGxpdmVfYXBpMRwwGgYJKoZIhvcNAQkBFg1yZUBwYXlwYWwuY29tggEAMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEFBQADgYEAgV86VpqAWuXvX6Oro4qJ1tYVIT5DgWpE692Ag422H7yRIr/9j/iKG4Thia/Oflx4TdL+IFJBAyPK9v6zZNZtBgPBynXb048hsP16l2vi0k5Q2JKiPDsEfBhGI+HnxLXEaUWAcVfCsQFvd2A1sxRr67ip5y2wwBelUecP3AjJ+YcxggGaMIIBlgIBATCBlDCBjjELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAkNBMRYwFAYDVQQHEw1Nb3VudGFpbiBWaWV3MRQwEgYDVQQKEwtQYXlQYWwgSW5jLjETMBEGA1UECxQKbGl2ZV9jZXJ0czERMA8GA1UEAxQIbGl2ZV9hcGkxHDAaBgkqhkiG9w0BCQEWDXJlQHBheXBhbC5jb20CAQAwCQYFKw4DAhoFAKBdMBgGCSqGSIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTEyMDIxOTE2MDc0NVowIwYJKoZIhvcNAQkEMRYEFArYO8ofRsxttgb589Cw390KZPbcMA0GCSqGSIb3DQEBAQUABIGAZuA+rnnlgR9K/8+VLTBiKWJI+WQ6P85XJhOTmOlQ5GXTvC94Ghd0mn8zbrYZ3IkGzqQ1tx1PsBpZX8vXky1XzpfRuPd30bea/ggrHBRnTL/sWONP0qpr27cwPJepBdekH85K/1U23a/14iwUm0tKICtlGg9H/Sw1S44obXatTpI=-----END PKCS7-----
+    ">
+    <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+    <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
+    </form>
+
+    <h2><a name="toc"></a>Table of Contents</h2>
+    <ul>
+      <li>
+        <a href="#description">Description</a>
+      </li>
+      <li>
+        <a href="#how_to_use">How to Use subs2srs</a>
+      </li>
+      <li>
+        <a href="#importing_into_anki">Importing Into Anki 1</a>
+      </li>
+      <li>
+        <a href="#importing_into_anki2">Importing Into Anki 2</a>
+      </li>
+      <li>
+        <a href="#batch_processing">How to Use Batch Processing in subs2srs</a>
+      </li>
+      <li>
+        Explanation of each option found in the user interface:
+        <ul>
+          <li>
+            <a href="#main_interface">Main Interface</a>
+          </li>
+          <li>
+            <a href="#advanced_options">Advanced Subtitle Options</a>
+          </li>
+          <li>
+            <a href="#preview">Preview</a>
+          </li>
+          <li>
+            <a href="#extract_audio">Extract Audio from Media Tool</a>
+          </li>
+          <li>
+            <a href="#dueling">The Dueling Subtitles Tool</a>
+          </li>
+          <li>
+            <a href="#subtitle_style">The Subtitle Style Interface</a>
+          </li>
+          <li>
+            <a href="../Utils/SubsReTimer/Help/usage.html">Subs Re-Timer</a>
+          </li>
+          <li>
+            <a href="#prefs">Preferences</a>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <a href="#faq">Frequently Asked Questions</a>
+      </li>
+    </ul>
+    <h2><a name="description"></a>Description</h2>
+
+    <p>
+      subs2srs allows you to create import files for <a href="http://ankisrs.net/">Anki</a> or other Spaced Repetition Systems (SRS) based on your favorite foreign language movies and TV shows to aid in the language learning process.
+    </p>
+    <p>
+      This utility will parse through subtitle files, extract the dialog and timing information and then use that information to generate audio clips, snapshots and video clips for each line of dialog.
+    </p>
+    <p>
+      Most popular subtitle formats are supported:
+    </p>
+    <ul>
+      <li>
+        Subrip (.srt)
+      </li>
+      <li>
+        Advanced Substation Alpha (.ass, .ssa)
+      </li>
+      <li>
+        Vobsub (.idx/.sub)
+      </li>
+      <li>
+        Lyric (.lrc)
+      </li>
+      <li>
+        Transcriber (.trs)
+      </li>
+    </ul>
+    <p>
+      subs2srs relies on <a href="http://www.ffmpeg.org/">ffmpeg</a>
+      to extract video and thus supports most video codecs (MPEG-4, h.264, XviD, DivX, MPEG-2, etc.) and most video containers (.avi, .mkv, .ogm, .mp4, .flv, .vob, etc.).
+    </p>
+    <p>
+      With all options enabled, a card will have this information generated for it (assume that it is a Japanese movie):
+    </p>
+    <ol>
+      <li>
+        Textual line of Japanese dialog (taken from the Japanese subtitle file)
+      </li>
+      <li>
+        English translation (taken from the English subtitle file)
+      </li>
+      <li>
+        Audio clip
+      </li>
+      <li>
+        Snapshot
+      </li>
+      <li>
+        Video clip
+      </li>
+      <li>
+        Tag information (for Anki import).
+      </li>
+      <li>
+        Sequence marker (episode #, line #, and timing)
+      </li>
+      <li>
+        Context information (previous and next lines)
+      </li>
+    </ol>
+    <p>
+      Here is an example of an Anki flash card that can be generated with subs2srs:
+    </p>
+    <img src="subs2srs_Usage_files/Toki_wo_Kakeru_Shoujo_Anki_Win7.png" alt="" />
+    <p>
+      Download the Toki wo Kakeru Shoujo sample Anki deck (via MediaFire):
+    </p>
+    <ul>
+      <li>
+        Audio Clip+Snapshot Version (68 MB): <a href="http://www.mediafire.com/?dl04vwfmsb8wa4m">Download here</a>
+      </li>
+      <li>
+        Video Clip+Snapshot Version (388 MB): <a href="http://www.mediafire.com/?nbpyeczpv8epdao">Part 1</a>, <a href="http://www.mediafire.com/?ib5z0zfjh6gs15g">Part 2</a>
+      </li>
+    </ul>
+    <p>
+      Download other sample decks from one of the subs2srs decks wiki pages:
+    </p>
+    <ul>
+      <li>
+        <a href="http://rtkwiki.koohii.com/wiki/Subs2srs#Shared_decks">http://rtkwiki.koohii.com/wiki/Subs2srs#Shared_decks</a>
+      </li>
+      <li>
+        <a href="http://learnanylanguage.wikia.com/wiki/Sub2srs_decks">http://learnanylanguage.wikia.com/wiki/Sub2srs_decks</a>
+      </li>
+      <li>
+        <a href="http://rtk.wikia.com/wiki/Subs2SRS">http://rtk.wikia.com/wiki/Subs2SRS</a>
+      </li>
+    </ul>
+    <h2><a name="how_to_use"></a>How to Use subs2srs </h2>
+    <p>
+      For those new to subs2srs, the number of options can seem overwhelming. DON'T PANIC. In most cases you can rely on the default options. When you go through the process a couple of times it will become second nature. In addition, all options are documented in this help file and most options have helpful tooltips. If you <i>do</i> get stuck, don't hesitate to E-mail me at cb4960 'at' [gmail] 'dot' [com].
+    </p>
+      Here are the general steps you will take:
+    <p>
+    </p>
+    <ol>
+      <li>
+        <p>
+          Obtain any subtitle files and multimedia files that you may need from the TV show or movie that you want to learn from.
+        </p>
+      </li>
+      <li>
+        <p>
+          Click on the <b>Subs1...</b>
+          button and select a subtitle file in the language that you are trying to learn (your target language).
+        </p>
+      </li>
+      <li>
+        <p>
+          Click on the <b>Output...</b>
+          button and select the directory that subs2srs can use to place the files that it generates.
+        </p>
+      </li>
+      <li>
+        <p>
+          <i>(Optional)</i> Click on the <b>Subs2...</b>
+          button and select a subtitle file in your native language. subs2srs will match up this subtitle file with the one that you specified previously in Subs1.
+        </p>
+      </li>
+      <li>
+        <p>
+          <i>(Optional)</i> Click on the <b>Video...</b>
+          button and select a video file. You need the video file in order to generate audio clips, snapshots and video clips for your flash cards.
+        </p>
+      </li>
+      <li>
+        <p>
+          If you want to generate audio clips for your flash cards, check the <b>Generate Audio Clips</b>
+          checkbox.
+        </p>
+      </li>
+      <li>
+        <p>
+          If you want to generate snapshots for your flash cards, check the <b>Generate Snapshots</b>
+          checkbox.
+        </p>
+      </li>
+      <li>
+        <p>
+          If you want to generate video clips for your flash cards, check the <b>Generate Video Clips</b>
+          checkbox.
+        </p>
+        <p>
+          Note: It doesn't usually make sense to check both the <b>Generate Audio Clips</b>
+          and the <b>Generate Video Clips</b>
+          checkboxes.
+        </p>
+      </li>
+      <li>
+        <p>
+          In the <b>Name of deck</b>
+          textbox, enter a name to use when generating various filenames. This is usually the name of the TV show or movie that you will be learning from.
+        </p>
+      </li>
+      <li>
+        <p>
+          Fill out any other option you may need. More information about these options can be found further down in this help file. Here is a screenshot showing an example setup with Snapshots and Video Clips enabled:
+        </p>
+        <img src="subs2srs_Usage_files/v26.0_Main.png" alt="" />
+      </li>
+      <li>
+        <p>
+          Click the <b>Preview...</b>
+          button to show a preview of what subs2srs will generate. Make sure that the lines from Subs1 and the lines from Subs2 match up correctly and that the audio precisely matches up with the subtitles.
+        </p>
+      </li>
+      <li>
+        <p>
+          Click the <b>Go!</b>
+          button to begin processing. You will see a progress bar appear. Wait until processing is complete.
+        </p>
+      </li>
+      <li>
+        <p>
+          After subs2srs is finished processing, open the directory that you entered for the <b>Output...</b>
+          option to see the files generated by subs2srs. You should see a .tsv file and a .media folder. You will use these during the Anki import.
+        </p>
+      </li>
+      <li>
+        <p>
+          See <a href="#importing_into_anki">Importing Into Anki 1</a> or <a href="#importing_into_anki2">Importing Into Anki 2</a>
+          to learn how to import the subs2srs files into <a href="http://ankisrs.net/">Anki</a>. Anki is Spaced Repetition Software (SRS)/electronic flash card software.
+        </p>
+      </li>
+    </ol>
+    <h2><a name="importing_into_anki"></a>Importing Into Anki 1</h2>
+    <p>
+      In <a href="#how_to_use">How to Use subs2srs</a>
+      you should have learned how to use subs2srs to generate a tab-separated-value (.tsv) SRS import file and .media folder that can be used with <a href="http://ankisrs.net/">Anki</a>. All you need to do now is create a new Anki deck with the fields that you require:
+    </p>
+    <ol>
+      <li>
+        Expression
+      </li>
+      <li>
+        Meaning
+      </li>
+      <li>
+        Audio clip
+      </li>
+      <li>
+        Snapshot
+      </li>
+      <li>
+        Video Clip
+      </li>
+    </ol>
+    <p>
+      You can either do this yourself, or you can use the Anki deck template that is packaged with subs2srs (it is named subs2srs_template_for_anki1.anki and is located in the Anki Deck Template folder).
+    </p>
+    <p>
+      Here is a simple guide demonstrating how to import the subs2srs generated files into Anki using the provided Anki deck template.
+    </p>
+    <ol>
+      <li>
+        <p>
+          Copy the Anki deck template (subs2srs_template_for_anki1.anki) into the output folder.
+        </p>
+        <img src="subs2srs_Usage_files/Setup_Anki_Folder1_Win7.png" alt="" />
+        <p>
+          Note: The above screenshot shows the old name for the template (subs2srs_template.anki).
+        </p>
+      </li>
+      <li>
+        <p>
+          Rename the Anki deck template to match the .media folder.
+        </p><img src="subs2srs_Usage_files/Setup_Anki_Folder2_Win7.png" alt="" />
+      </li>
+      <li>
+        <p>
+          Double-click the newly renamed .anki file to open it. Then click on the <b>File | Import</b>
+          menu option.
+        </p>
+        <img src="subs2srs_Usage_files/Setup_Anki_Import_Menu_Win7.png" alt="" />
+      </li>
+      <li>
+        <p>
+          Open the .tsv import file.
+        </p>
+        <img src="subs2srs_Usage_files/Setup_Anki_Import_Open_Win7.png" alt="" />
+      </li>
+      <li>
+        <p>
+          In the Import dialog, you should map each part of the import file to an Anki field. In the case of this example, the format of the import file is tag, sequence marker, image, video clip, expression, and meaning. Now just click <b>Import</b>
+          and you're done!
+        </p>
+        <img src="subs2srs_Usage_files/Setup_Anki_Import_Main_Win7.png" alt="" />
+        <p>
+          Note: The first value in the import file is always the tag and the second value in the import file is always the sequence marker.
+        </p>
+      </li>
+    </ol>
+
+    <h2><a name="importing_into_anki2"></a>Importing Into Anki 2</h2>
+    <p>
+      In <a href="#how_to_use">How to Use subs2srs</a> you should have learned how to use subs2srs to generate a tab-separated-value (.tsv) SRS import file and .media folder.
+    </p>
+
+    <p>
+      The following is an example showing how to import the .tsv file and media into Anki 2.
+    </p>
+    <ol>
+      <li>
+        <p>
+          First you will need to import the Ank 2 deck template that comes with subs2srs.
+        </p>
+      </li>
+      <li>
+        <p>
+          Open Anki 2.
+        </p>
+      </li>
+      <li>
+        <p>
+          From the menu, click &quot;File | Import...&quot;.
+        </p>
+      </li>
+      <li>
+        <p>
+          Navigate to the subs2srs &quot;Anki Deck Template&quot; folder.
+        </p>
+        <img src="subs2srs_Usage_files/anki2_import_import_template.png" alt="" />
+      </li>
+      <li>
+        <p>
+          Open &quot;subs2srs_template_for_anki2.apkg&quot;. This will place a deck called &quot;subs2srs_template_for_anki2&quot; in your Decks list.
+        </p>
+        <img src="subs2srs_Usage_files/anki2_import_after_template_import.png" alt="" />
+      </li>
+      <li>
+        <p>
+          Rename the &quot;subs2srs_template_for_anki2&quot; deck to something more meaningful. To do this, click the gear icon next to the deck, select &quot;rename&quot;, and then enter a name.
+        </p>
+        <img src="subs2srs_Usage_files/anki2_import_rename_template.png" alt="" />
+        <p>
+          For this example, I will rename the deck to &quot;Toki wo Kakeru Shoujo&quot;:
+        </p>
+        <img src="subs2srs_Usage_files/anki2_import_after_rename_template.png" alt="" />
+      </li>
+      <li>
+        <p>
+          Now you will need to import the .tsv file that was generated by subs2srs.
+        </p>
+      </li>
+      <li>
+        <p>
+          From the menu, click &quot;File | Import...&quot;.
+        </p>
+        <img src="subs2srs_Usage_files/anki2_import_open_tsv.png" alt="" />
+      </li>
+      <li>
+        <p>
+          Select the .tsv file and click the Open button.
+        </p>
+      </li>
+      <li>
+        <p>
+          Set the Type to &quot;subs2srs&quot;.
+        </p>
+      </li>
+      <li>
+        <p>
+          Set the Deck to the deck you just created. (For this example, the deck is named &quot;Toki wo Kakeru Shoujo&quot;).
+        </p>
+      </li>
+      <li>
+        <p>
+          Check the &quot;Allow HTML in fields&quot; checkbox.
+        </p>
+      </li>
+      <li>
+        <p>
+          In the &quot;Field mapping&quot; area, map each part of the import file to an Anki field. In the case of this example, the format of the import file is tag, sequence marker, audio, snapshot, expression, and meaning.
+        </p>
+        <p>
+          At this point, the Import dialog should like something like this:
+        </p>
+        <img src="subs2srs_Usage_files/anki2_import_field_mapping.png" alt="" />
+        <p>
+          Note: The first value in the import file is always the tag and the second value in the import file is always the sequence marker.
+        </p>
+      </li>
+      <li>
+        <p>
+          Click the Import button.
+        </p>
+      </li>
+      <li>
+        <p>
+          You should see an &quot;Importing complete.&quot; message. Click the Close button.
+        </p>
+      </li>
+      <li>
+        <p>
+          Now you need to copy the media files to Anki 2's media folder.
+        </p>
+        <ol type="A">
+          <li>
+            <p>
+              Open your &quot;My Documents&quot; folder, or if your using Windows 7, open the &quot;Documents&quot; folder.
+            </p>
+          </li>
+          <li>
+            <p>
+              Navigate to the &quot;Anki&quot; folder.
+            </p>
+          </li>
+          <li>
+            <p>
+              Navigate to the folder that contains your Anki user profile. Example: &quot;User 1&quot;.
+            </p>
+          </li>
+          <li>
+            <p>
+               Navigate to the &quot;collection.media&quot; folder.
+            </p>
+          </li>
+          <li>
+            <p>
+              Copy all of the files from the .media folder that subs2srs generated to the collection.media folder. The following screenshot shows the files copied to the &quot;collection.media&quot; folder for my &quot;User 1&quot; Anki profile:
+            </p>
+            <img src="subs2srs_Usage_files/anki2_import_after_copy.png" alt="" />
+          </li>
+        </ol>
+      </li>
+      <li>
+        <p>
+          You can now start reviewing your subs2srs Anki deck. The first card is a placeholder card that was included with the template – you may delete it.
+        </p>
+      </li>
+    </ol>
+
+    <h2><a name="batch_processing"></a>How to Use Batch Processing in subs2srs </h2>
+    <p>
+      Batch processing is the execution of multiple tasks without manual intervention. subs2srs batch processing enables the user to do such things as processes multiple episodes of a TV show at once. Contrast this to the method described in the How to Use subs2srs section above where you processed one episode at a time.
+    </p>
+    <p>
+      subs2srs allows you to perform batch processing through the use of wildcard characters. There are two wildcard characters that you may use:
+    </p>
+    <table>
+      <tr>
+        <th>
+          Wildcard
+        </th>
+        <th>
+          Meaning
+        </th>
+      </tr>
+      <tr>
+        <td>
+          *
+        </td>
+        <td>
+          Match zero or more characters
+        </td>
+      </tr>
+      <tr>
+        <td>
+          ?
+        </td>
+        <td>
+          Match exactly zero or one character
+        </td>
+      </tr>
+    </table>
+    <p>
+      When working with multiple files, the files will be matched up alphabetically.
+    </p>
+    <p>
+      As an example of batch processing, say that you have 3 episodes of a TV show. Here is the setup:
+    </p>
+    <img src="subs2srs_Usage_files/v26.0_Main_Wildcard.png" alt="" />
+    <h2><a name="main_interface"></a>The Main Interface </h2>
+    <img src="subs2srs_Usage_files/v26.0_Ano_Main.png" alt="" />
+    <ol>
+      <li>
+        <p>
+          <b><a name="main_interface_menu"></a>Menu</b>
+          <br/>
+          <b>File | New:</b>
+          Reset all fields to default values.
+          <br/>
+          <b>File | Open...:</b>
+          Restore previous interface state.
+          <br/>
+          <b>File | Save...:</b>
+          Save current state of the interface.
+          <br/>
+          <b>File | Exit:</b>
+          Exit subs2srs
+          <br/>
+          <b>Tools | Extract Audio from Media...:</b>
+          Show the <a href="#extract_audio">Extract Audio from Media</a> tool.
+          <br/>
+          <b>Tools | Dueling Subtitles Tool...:</b>
+          Show the <a href="#dueling">Dueling Subtitles</a> tool.
+          <br/>
+          <b>Tools | Subs Re-Timer...:</b>
+          Show the <a href="../Utils/SubsReTimer/Help/usage.html">Subs Re-Timer</a> tool.
+          <br/>
+          <b>Tools | Preferences...:</b>
+          Show the <a href="#prefs">Preferences</a> dialog.
+          <br/>
+          <b>Help | Usage...:</b>
+          Show this file
+          <br/>
+          <b>Help | About...:</b>
+          Display information about subs2srs.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_subs1"></a>Subs1: </b>The substitle file(s) in the language that you are trying to learn (your target language). For example, the Japanese subtitles for a TV show. The file(s) may be in .srt, .ass, .ssa, .lrc, .trs and/or Vobsub (.idx/.sub) format.
+        </p>
+        <p>
+          You may use the following wildcards in order to specify multiple files:
+          <br/>
+          * = Match zero or more characters
+          <br/>
+          ? = Match exactly zero or one character
+        </p>
+        <p>
+          Example: enter C:\Temp\*.srt to use all .srt files in C:\Temp.
+        </p>
+        <p>
+          <b>Note: </b>When working with multiple files, the files will be matched up alphabetically.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_subs1_subtitle_stream"></a>Subs1 Encoding/Subtitle Stream: </b>This box will change depending on the type of subfile file that appears in the Subs1 text box. If the subtitle file is text-based (.srt, .ass, .ssa, .lrc, .trs) then the Encoding box will appear and allow you to specify the text encoding of the subtitle file. If the subtitle file is Vobsub (.idx/.sub) then the Stream box will appear and allow allow you to choose which vobsub stream to use.
+        </p>
+        <p>
+          <b>Note: </b>A single Vobsub (.idx/.sub) can have multiple streams (one for English, one for Japanese, etc.). Because of this, you can use the same subtitle file for Subs1 and Subs2 but choose different streams for each.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_output"></a>Output: </b>Directory where the generated files will be placed. The following files and directories will be generated here:
+        </p>
+        <ul>
+          <li>
+            /Media directory
+            <ul>
+              <li>
+                All audio clips
+              </li>
+              <li>
+                All snapshots
+              </li>
+              <li>
+                All video clips
+              </li>
+              <li>
+                All image text from a vobsub
+              </li>
+            </ul>
+          </li>
+        </ul>
+        <ul>
+          <li>
+            SRS (ex. Anki) input file (a .tsv file - tab separated values)
+          </li>
+        </ul>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_subs2"></a>Subs2: </b>The corresponding subtitle file(s) in your native language. For example, the English subtitles for a movie. The file(s) may be in .srt, .ass, .ssa, .lrc, .trs and/or Vobsub (.idx/.sub) format. This field is optional and you may leave it blank if desired.
+        </p>
+        <p>
+          You may use the following wildcards in order to specify multiple files:
+          <br/>
+          * = Match zero or more characters
+          <br/>
+          ? = Match exactly zero or one character
+        </p>
+        <p>
+          Example: enter C:\Temp\*.srt to use all .srt files in C:\Temp.
+        </p>
+        <p>
+          <b>Note 1:</b>
+          When working with multiple files, the files will be matched up alphabetically.
+        </p>
+        <p>
+          <span class="important">Note 2 (important):</span>
+          Subs1 is compared against Subs2 and not the other way around.
+        </p>
+        <p>
+          This means that if a subtitle file from Subs1 contains 300 lines and a subtitle file from Subs2 contains 310 lines, the maximum number of lines that will be processed is 300 (the number of lines from Subs1).
+        </p>
+        <p>
+          Of course, this also means that if a subtitle file from Subs1 contains 310 lines and a subtitle file from Subs2 contains only 300 lines, then 310 lines will be processed and 10 of those lines will be mismatched (subs2srs will attempt to intelligently combine or remove lines to deal with mismatches).
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_subs2_subtitle_stream"></a>Subs2 Encoding/Subtitle Stream: </b>This box will change depending on the type of subfile file that appears in the Subs2 text box. If the subtitle file is text-based (.srt, .ass, .ssa, .lrc, .trs) then the Encoding box will appear and allow you to specify the text encoding of the subtitle file. If the subtitle file is Vobsub (.idx/.sub) then the Stream box will appear and allow allow you to choose which vobsub stream to use.
+        </p>
+        <p>
+          <b>Note: </b>A single Vobsub (.idx/.sub) can have multiple streams (one for English, one for Japanese, etc.). Because of this, you can use the same subtitle file for Subs1 and Subs2 but choose different streams for each.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_video"></a>Video: </b>The video file(s) that correspond to the subtitle file(s). Videos may use any format supported by ffmpeg (.avi, .mkv, etc.).
+        </p>
+        <p>
+          <b>Note 1:</b>
+          Video filenames must not contain any Unicode characters
+        </p>
+        <p>
+          You may use the following wildcards in order to specify multiple files:
+          <br/>
+          * = Match zero or more characters
+          <br/>
+          ? = Match exactly zero or one character
+        </p>
+        <p>
+          Example: enter C:\Temp\*.avi to use all .avi files in C:\Temp.
+        </p>
+        <p>
+          <b>Note 2:</b>
+          When working with multiple files, the files will be matched up alphabetically.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_audio_stream"></a>Audio Stream: </b>Some videos contain multiple audio streams/tracks. This option allows you to select which audio to use when making audio clips and video clips.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_use_timings_from"></a>Use Timings From: </b>Subtitles contain timing information that determines when they appear and for how long. You may select to use the timing information of Subs1 or Subs2. The timings are used for generating the snapshots, audio clips, and video clips. This option may be useful if one of your subtitles was specifically timed for the specific video source that you are using.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_span"></a>Span (h:mm:ss): </b>Only process lines that start within the specified span of time. Span is applied <i>after</i> the time shift is applied.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_shift_timings"></a>Time Shift: </b>Allows you to independently shift the subtitle timings by the specified number of milliseconds. <br /><br />
+          This is used for:<br />
+          1) Syncing the Subs1 and Subs2 timings.<br />
+          2) Syncing the subtitles to the video.<br /><br />
+          Example: <br />
+          If Subs1 and the video are in sync but Subs2 is 3 seconds fast, you can shift Subs2 by -3000 milliseconds to properly sync everything.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_adv_sub_opt"></a>Advanced Subtitle Options...: </b>Show the <a href="#advanced_options">Advanced Subtitle Options</a>
+          dialog.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_generate_audio_clips"></a>Generate Audio Clips: </b>Enable/Disable the generation of audio clips.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_audio_clip_source"></a>Source: </b>Select where to get the audio tracks from. You have two options here. You can either have subs2srs automatically extract the audio from the video file(s) at the specified bitrate or you can provide corresponding audio tracks for each subtitle file. That is, one audio track for each episode of a TV show. You may want to provide the audio files when you use subs2srs with songs or audiobooks.
+        </p>
+        <p>
+          You may use the following wildcards in order to specify multiple files:
+          <br/>
+          * = Match zero or more characters
+          <br/>
+          ? = Match exactly zero or one character
+        </p>
+        <p>
+          Example: enter C:\Temp\*.mp3 to use all .mp3 files in C:\Temp.
+        </p>
+        <p>
+          <b>Note 1: </b>When working with multiple files, the files will be matched up alphabetically.
+        </p>
+        <p>
+          <b>Note 2: </b>Automatic audio extraction has been successfully tested with audio tracks that are in the following formats: AC3, AAC, VORBIS, and MP3. Make sure that your AC3 file does not have DRM protection.
+        </p>
+        <p>
+          <b>Note 3: </b>If you choose to supply the audio file(s), the filenames within must not contain any Unicode characters.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_audio_clip_pad_timings"></a>Audio Clip Pad Timings: </b>Pad the start and end times of each line of dialog when generating an audio clip. For example, setting the start pad to 250 means that the audio clip will start 250 milliseconds sooner than it would normally. Setting the end pad to 300 means that the audio clip will end 300 milliseconds later than it would normally.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_audio_clip_normalize"></a>Normalize Audio: </b>Normalize the audio clips. Or in other words, make each audio clip the same loudness. This makes it so that you don't have to keep adjusting the volume to compensate for clips that are too soft or too loud.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_generate_snapshots"></a>Generate Snapshots: </b>Enable/Disable the generation of snapshots. All snapshots will be taken at the halfway point of the dialog.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_snapshot_dimensions"></a>Snapshot Dimensions: </b>Width and height of the generated snapshots (in pixels). You do not need to compensate for the crop. subs2srs will automatically resize as appropriate in order to compensate for the crop.
+        </p>
+        <p>
+          When you click the "&gt;" button, the following dialog will appear to help you choose the snapshot dimensions to use based on a percentage of the actual video size.
+        </p>
+        <img src="subs2srs_Usage_files/v24.0_Dimensions_Chooser.png" alt="" />
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_snapshot_crop"></a>Crop Bottom: </b>A crop may be applied to the bottom of the snapshot. This might to useful for removing hard subbed subtitles. The crop is applied against the original resolution of the video and not the resized resolution. Enter 0 if you do not wish to crop.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_generate_video_clips"></a>Generate Video Clips: </b>Enable/Disable the generation of video clips. All generated video clips use MPEG4 for the video and MP3 for the audio. These are stuffed into an AVI container.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_video_clip_dimensions"></a>Video Clip Dimensions: </b>Width and height of the generated video clips (in pixels). You do not need to compensate for the crop. subs2srs will automatically resize as appropriate in order to compensate for the crop.
+        </p>
+        <p>
+          When you click the "&gt;" button, a dialog will appear to help you choose the video clip dimensions to use based on a percentage of the actual video size (see above image).
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_video_clip_crop"></a>Crop Bottom: </b>A crop may be applied to the bottom of the video clip. This might to useful for removing hard subbed subtitles. The crop is applied against the original resolution of the video and not the resized resolution. Enter 0 if you do not wish to crop.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_video_clip_bitrates"></a>Bitrates: </b>The bitrate to use for audio and video when generating video clips. Higher bitrates mean higher quality at the expense of larger file sizes.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_video_clip_pad_timings"></a>Video Clip Pad Timings: </b>Pad the start and end times of each line of dialog when generating a video clip. For example, setting the start pad to 250 means that the video clip will start 250 milliseconds sooner than it would normally. Setting the end pad to 300 means that the video clip will end 300 milliseconds later than it would normally.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_video_clip_ipod_support"></a>iPod Support: </b>Output iPhone/iPod/iPad compatible video clips. AnkiMobile users should check this. The clips have h.264 encoded video, AAC encoded audio and are placed into an MP4 container.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_name_of_deck"></a>Name of Deck: </b>An arbitrary name to associate with your deck. It will be used in the filenames of the generated files. Any space characters will be converted to an underscore.
+        </p>
+        <p>
+          <b>Note 1: </b>You cannot use the following characters (as Windows will not allow these in filenames): \ / : * ? " &lt; &gt; |
+        </p>
+        <p>
+          <b>Note 2: </b>You cannot use any Unicode characters.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_first_episode"></a>First Episode: </b>The first number to use when generating filenames, tags, and sequence markers. If you wanted to start at episode 3 (that is, the files for episode 1 and episode 2 are not in the provided directories), then put a 3 in this box.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_preview"></a>Preview: </b>Show the <a href="#preview">Preview</a>
+          dialog.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="main_interface_go"></a>Go!: </b>Start processing the subtitles. subs2srs will warn you if you have made any input errors (a red icon will appear next to each field that contains an error). A progress bar will appear for each step (subtitle processing, Anki import file generation, audio clip generation, snapshot generation, and video clip generation).
+        </p>
+      </li>
+    </ol>
+
+
+
+    <h2><a name="advanced_options"></a>The Advanced Subtitle Options Interface </h2>
+    <img src="subs2srs_Usage_files/v25.0_Ano_Adv_Prune_Subs1.png" alt="" />
+    <ol>
+      <li>
+        <p>
+          <b><a name="adv_options_prune_remove_no_counterpart_lines"></a>Remove Lines With No Obvious Counterpart:</b> Remove any lines that do not have an obvious counterpart in the other set of subtitles. Useful for removing unwanted credits, descriptions of audio (such as 'wind blowing' or 'door creaking'), and things that aren't quite words (such as grunts or coughs).
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_prune_remove_styled_lines"></a>Remove Styled Lines: </b>Remove styled lines when parsing .ass subtitles. A styled line is one that starts with a '{' character. It is often something unwanted such as a karaoke effect.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_prune_exclude_duplicates_from"></a>Exclude Duplicate Lines: </b>Remove duplicate lines of dialog from either Subs1 or Subs2. When enabled, only the first instance of a line will be used. Has no effect when using Vobsubs (.idx/.sub).
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_prune_exclude_lines_with_fewer_than_n_characters"></a>Exclude lines with fewer than # characters: </b>You may set a minimum character length for a line of dialog.  Any line not meeting the minimum character length will not be processed. The purpose is to help eliminate easy/trivial lines. This feature may be Enabled/Disabled. Has no effect when using Vobsubs (.idx/.sub).
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_prune_exclude_lines_shorter_than_n_milliseconds"></a>Exclude lines shorter than # milliseconds: </b>You may set a minimum length for a line in milliseconds. Any line whose timing not meeting the minimum number of milliseconds will not be processed. In the 'Prune Subs1' tab, this option will only be used if the 'Use Timings From' option is set to Subs1. Likewise for 'Prune Subs2'.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_prune_exclude_lines_longer_than_n_milliseconds"></a>Exclude lines longer than # milliseconds: </b>You may set a maximum length for a line in milliseconds. Any line whose timing exceeds the maximum number of milliseconds will not be processed. In the 'Prune Subs1' tab, this option will only be used if the 'Use Timings From' option is set to Subs1. Likewise for 'Prune Subs2'.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_prune_open_from_file_include"></a>Open From File (Include): </b>Open a file containing a semicolon separated list of words or phrases to use as the include list.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_prune_include_list"></a>Include List: </b>Enter a semicolon separated list of words or phrases here. In order to be processed, a line of dialog will have to contain at least one of these words or phrases. This can be helpful if you are trying to get examples of certain words that you are studying. Space characters will not be stripped out. Has no effect when using Vobsubs (.idx/.sub).
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_prune_open_from_file_exclude"></a>Open From File (Exclude): </b>Open a file containing a semicolon separated list of words or phrases to use as the exclude list.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_prune_exclude_list"></a>Exclude List: </b>Enter a semicolon separated list of words or phrases here. In order to be processed, a line of dialog must not contain any of these words or phrases. Space characters will not be stripped out. Has no effect when using Vobsubs (.idx/.sub).
+        </p>
+      </li>
+    </ol>
+    <img src="subs2srs_Usage_files/v25.0_Ano_Adv_Context.png" alt="" />
+    <ol>
+      <li>
+        <p>
+          <b><a name="adv_options_context_leading_number"></a>Number of lines leading up to a line of dialog: </b>The number of lines before a line of dialog to attach to a fact.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_context_leading_options"></a>Include audio clip / snapshot / video clip: </b>You may choose which information from the leading lines that you would like to appear in the .tsv import file. For example, if would only like to import the audio clip information from a leading lines, than check only that option. This feature makes the .tsv import file less cluttered with information that is not important to you and makes it easier to import into Anki.
+        </p>
+        <p>
+          <b>Note: </b>The Subs1 text and Subs2 text of the leading lines are always placed into the .tsv file.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_context_trailing_number"></a>Number of lines trailing a line of dialog: </b>The number of lines after a line of dialog to attach to a fact.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_context_trailing_options"></a>Include audio clip / snapshot / video clip: </b>You may choose which information from the trailing lines that you would like to appear in the .tsv import file. For example, if would only like to import the audio clip information from a trailing lines, than check only that option. This feature makes the .tsv import file less cluttered with information that is not important to you and makes it easier to import into Anki.
+        </p>
+        <p>
+          <b>Note: </b>The Subs1 text and Subs2 text of the trailing lines are always placed into the .tsv file.
+        </p>
+      </li>
+    </ol>
+    <img src="subs2srs_Usage_files/v25.0_Ano_Adv_Actors.png" alt="" />
+    <ol>
+      <li>
+        <p>
+          <b><a name="adv_options_actor_use_actors_from"></a>Use Actors From: </b>Use the actor/character names found in the .ass/.ssa files of either the Subs1 or Subs2 directory.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_actor_find_actors"></a>Find Actors: </b>Scan the .ass files of the selected subtitle directory for actor/character names. If any names are found, they will be listed to the right. Since the actor/character name field is optional, not all .ass files will have actor/character names associated with each line of dialog.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_actor_available_actors"></a>Available Actors: </b>The list of available actor/character names. Only lines that are associated with one of the selected names will be processed. For example, if you only want to hear the lines of the character "Makoto", deselect all other names and then select "Makoto" from the list. If no actors are selected, processing will take place as normal.
+        </p>
+      </li>
+    </ol>
+    <img src="subs2srs_Usage_files/v25.0_Ano_Adv_Lang.png" alt="" />
+    <ol>
+      <li>
+        <p>
+          <b><a name="adv_options_lang_jap_kanji_only"></a>Only process lines containing kanji: </b>If selected, only lines containing one or more kanji will be processed.
+        </p>
+      </li>
+    </ol>
+    <img src="subs2srs_Usage_files/v25.0_Ano_Adv_Vobsub.png" alt="" />
+    <ol>
+      <li>
+        <p>
+          <b><a name="adv_options_vobsub_enable_custom_colors"></a>Enable Custom Vobsub Colors: </b>Use custom colors when processing images extracted from Vobsub (.idx/.sub) files.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_vobsub_colors"></a>Colors: </b>Select a color to use for each part of the subtitle.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_vobsub_transparent"></a>Transparent: </b>Select whether or not a part of the subtitle should be transparent. The color is ignored when this is enabled.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="adv_options_vobsub_reset"></a>Reset Colors: </b>Reset the colors and transparency settings to their defaults.
+        </p>
+      </li>
+    </ol>
+    <h2><a name="preview"></a>The Preview Interface </h2>
+    <img src="subs2srs_Usage_files/v24.0_Ano_Preview.png" alt="" />
+    <p>
+      <b>Overview:</b>
+    </p>
+    <p>
+      The Preview interface will show you a list of the lines that may be processed by subs2srs when the Go! button is pressed. After entering the desired settings you can use this preview to verify that subs2srs is correctly matching lines between Subs1 and Subs2, as well as verify that the audio timings and snapshots are correct. If something doesn't seem right to you, just modify the settings and click the Regenerate Preview button.
+    </p>
+    <p>
+      The preview will also show you which lines will be processed (and end up in the Anki export file) and which lines will be discarded. subs2srs provides this capability with the concept of active and inactive lines. Active lines (shown in pale green) will be processed by subs2srs and inactive lines (shown in pink) will be discarded. With the default settings, all lines are set to active. The active state of the lines can be affected by various settings such as the Span settings in the Main interface or the Prune settings in the Advanced Subtitle Options interface. In addition, you may hand pick exactly which lines are active and which lines are inactive with the Activate and Deactivate buttons.
+    </p>
+    <p>
+      For really pesky lines, you may use this interface to hand edit the text for each line. However, for the time being, you may not edit the timings for each individual line.
+    </p>
+    <p>
+      Note of caution: By clicking the Regenerate Preview button or exiting the Preview dialog, you will lose all hand edits that you have made to the text and to the active state for each line. In order to prevent accidents, subs2srs will warn you if you are about to wipe out your edits. It is recommended that you adjust the settings first and <i>then</i> hand edit the text and the active state.
+    </p>
+    <ol>
+      <li>
+        <p>
+          <b><a name="preview_interface_episode"></a>Episode: </b>Allows you to select the episode to preview.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_find"></a>Find: </b>Allows you to search for the provided text in the current episode. The search will start from the currently selected line and will wrap around to the beginning if necessary. The search is not case-sensitive. Wild cards and regular expressions are not supported at this time.
+        </p>
+        <p>
+          <b>Special search options:</b>
+        </p>
+        <p>
+          Begin the search text with "a:" to search only active items. Example search: "a:search text". Omit the search text to search for the next active item.
+        </p>
+        <p>
+          Begin the search text with "i:" to search only inactive items. Example search: "i:search text". Omit the search text to search for the next inactive item.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_stats"></a>Statistics Box: </b>Allows you to see the number of lines in the current episode and the total number of lines in all episodes. It includes a breakdown of the number active and inactive lines.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_list_of_lines"></a>List of Lines: </b>Displays each Subs1 line and its corresponding Subs2 line. Active lines are drawn in pale green and inactive lines are drawn in pink. This is a good place to make sure that subs2srs is matching up the lines correctly. If the lines aren't matching very well, try shifting the timings in the Main interface or editing the subtitles file(s) with Aegisub. Afterwards, click the "Regenerate Preview" button to update the preview. Select a line from the list in order to preview its corresponding audio clip and snapshot (see below).
+        </p>
+        <p>
+          <b>Note: </b>If you checked the snapshot preview box, expect a short delay when selecting a line as the snapshot is extracted from the video file.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_select_all"></a>Select All: </b>Select all lines in the list.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_select_none"></a>Select None: </b>Deselect all lines in the list.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_invert"></a>Invert: </b>Invert the selected lines in the list.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_activate"></a>Activate: </b>Make the selected lines active. subs2srs will only process lines marked as active. Active lines have a pale green background.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_deactivate"></a>Deactivate: </b>Make the selected lines inactive. Inactive lines will not be processed by subs2srs and will not be placed into the Anki export file. Inactive lines have a pink background.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_snapshot_preview_checkbox"></a>Snapshot Preview Checkbox: </b>Check this box to generate a preview of the snapshot. Generating a snapshot preview will introduce a slight delay when selecting lines.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_snapshot_preview"></a>Snapshot Preview: </b>A thumbnail preview of the snapshot will be generated for this line. This is good place to check the Crop setting from the Generate Snapshots section of the Main interface. The thumbnail preview will scale to preserve the correct aspect ratio. Click on the thumbnail preview to display the un-scaled, actual-size snapshot based on the Dimensions setting.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_subs1_text"></a>Subs1 Text: </b>The text of Subs1. You may edit the text if you so desire. For Vobsub (.idx/.sub) subtitles, the actual Vobsub image will be displayed here (unlike in the list). This is a good place to test custom Vobsub colors.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_subs2_text"></a>Subs2 Text: </b>The text of Subs2. You may edit the text if you so desire. For Vobsub (.idx/.sub) subtitles, the actual Vobsub image will be displayed here (unlike in the list). This is a good place to test custom Vobsub colors.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_preview_audio"></a>Preview Audio: </b>Play the audio clip associated with the currently selected line. This is a good place to make sure that your Time Shift, Pad Timings, and Bitrate settings are acceptable.
+        </p>
+        <p>
+          <b>Note: </b>Expect a short delay the first time you press the button after selecting a line. The audio is being extracted/cut during this delay. Subsequent clicks should be instantaneous until a new line is selected.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_regenerate_preview"></a>Regenerate Preview: </b>Each time you finish making updates to the settings (for example, to change the pad for the audio timings) you should click this button to update the preview with the latest settings.
+        </p>
+        <p>
+          <span class="important">Warning: </span>By pressing this button you will lose all hand edits that you have made to the text and to the active state for each line.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="preview_interface_go"></a>Go!: </b>Start processing the subtitles. Only lines marked as active (the pale green lines) will be processed.
+        </p>
+      </li>
+    </ol>
+    <p>
+      <b><a name="preview_interface_howto_enable_video_preview"></a>How to enable the hidden video preview option: </b>In order to enable the video preview button on the video preview interface, open <b>Tools | Preferences...</b> and fill in the 'Video Player Path' and 'Video Player Arguments' preferences.
+    </p>
+    <p>
+      Example:
+    </p>
+    <p>
+      Video Player Path = C:\Program Files\vlc\vlc.exe
+      <br/>
+      <br/>
+      Video Player Arguments = --one-instance --start-time=${s_total_sec} --stop-time=${e_total_sec} --video-x=0 --video-y=0 --width=${width} --height=${height} --video-title=${s_hour}:${s_min}:${s_sec}
+    </p>
+    <p>
+      The tokens (things like ${s_total_sec}) are defined <a href="#prefs_tokens">here</a>.
+    </p>
+    <h2><a name="extract_audio"></a>The Extract Audio from Media Tool Interface </h2>
+    <img src="subs2srs_Usage_files/v25.0_Ano_Extract_Audio_Tool.png" alt="" />
+    <p>
+      <b><a name="exract_audio_interface_overview"></a>Overview:</b>
+    </p>
+    <p>
+      Use this tool to extract, convert, and split the audio track from a media file. You may extract the audio track as a single clip or break the audio track into multiple clips of a provided length. The audio track will be extracted in mp3 format.
+    </p>
+    <ol>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_media"></a>Media: </b>The media file(s) to extract, convert, and split.
+        </p>
+        <p>
+          <b>Note 1: </b>The filenames within must not contain any Unicode characters.
+        </p>
+        <p>
+          You may use the following wildcards in order to specify multiple files:
+          <br/>
+          * = Match zero or more characters
+          <br/>
+          ? = Match exactly zero or one character
+        </p>
+        <p>
+          Example: enter C:\Temp\*.avi to use all .avi files in C:\Temp.
+        </p>
+        <p>
+          <b>Note 2: </b>When working with multiple files, the files will be matched up alphabetically.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_audio_stream"></a>Audio Stream: </b>Some videos contain multiple audio streams/tracks. This option allows you to select which audio to use.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_output"></a>Output: </b>The directory where the generated .mp3 files will be placed.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_span"></a>Span (h:mm:ss): </b>Only process lines that start within the specified span of time.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_bitrate"></a>Bitrate: </b>The bitrate of the extracted mp3 files. Higher bitrates mean higher quality at the expense of larger file sizes
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_format"></a>Format: </b>You have two options here: you can either extract the entire audio track as a single clip or you can break the audio track into multiple clips. If you choose the latter, can must specify the length of each clip (in h:mm:ss) format.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_lyrics"></a>Lyrics: </b>Enable/Disable adding lyrics to each generated .mp3's ID3 Lyrics tag. The lyrics are based off of subtitle files. The timestamps in the lyrics are relative to the start of the clip.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_lyrics_subs1"></a>Subs1: </b>The subtitle files(s) in the language that you are trying to learn (your target language) to use in the lyrics. For example, the Japanese subtitles for a TV show. The file(s) may be in .srt, .ass, .ssa, .lrc and/or .trs format.
+        </p>
+        <p>
+          You may use the following wildcards in order to specify multiple files:
+          <br/>
+          * = Match zero or more characters
+          <br/>
+          ? = Match exactly zero or one character
+        </p>
+        <p>
+          Example: enter C:\Temp\*.srt to use all .srt files in C:\Temp.
+        </p>
+        <p>
+          <b>Note: </b>When working with multiple files, the files will be matched up alphabetically.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_encoding_subs1"></a>Subs1 Encoding: </b>Choose the encoding of the Subs1 file.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_lyrics_subs2"></a>Subs2: </b>The corresponding subtitle file(s) in your native language for use in the lyrics. For example, the English subtitles for a movie. The file(s) may be in .srt, .ass, .ssa, .lrc and/or .trs format. This field is optional. Leave blank if you do not want or have the corresponding set of subtitles.
+        </p>
+        <p>
+          You may use the following wildcards in order to specify multiple files:
+          <br/>
+          * = Match zero or more characters
+          <br/>
+          ? = Match exactly zero or one character
+        </p>
+        <p>
+          Example: enter C:\Temp\*.srt to use all .srt files in C:\Temp.
+        </p>
+        <p>
+          <b>Note 1: </b>When working with multiple files, the files will be matched up alphabetically.
+        </p>
+        <p>
+          <span class="important">Note 2 (important): </span>Subs1 is compared against Subs2 and not the other way around.
+        </p>
+        <p>
+          This means that if a subtitle file from Subs1 contains 300 lines and a subtitle file from Subs2 contains 310 lines, the maximum number of lines that will be processed is 300 (the number of lines from Subs1).
+        </p>
+        <p>
+          Of course, this also means that if a subtitle file from Subs1 contains 310 lines and a subtitle file from Subs2 contains only 300 lines, then 310 lines will be processed and 10 of those lines will be mismatched (subs2srs will attempt to intelligently combine or remove lines to deal with mismatches).
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_encoding_subs2"></a>Subs2 Encoding: </b>Choose the encoding of the Subs2 file.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_use_timings_from"></a>Use Timings From: </b>Subtitles contain timing information that determines when they appear and for how long. You may select to use the timing information of Subs1 or Subs2. This option may be useful if one of your subtitles was specifically timed for the specific video source that you are using.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_lyrics_shift_timings"></a>Time Shift: </b>Allows you to independently shift the subtitle timings by the specified number of milliseconds. <br /><br />
+          This is used for:<br />
+          1) Syncing the Subs1 and Subs2 timings.<br />
+          2) Syncing the subtitles to the video.<br /><br />
+          Example: <br />
+          If Subs1 and the video are in sync but Subs2 is 3 seconds fast, you can shift Subs2 by -3000 milliseconds to properly sync everything.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_remove_no_counterpart_lines"></a>Remove Lines w/o Counterpart:</b> Remove any lines that do not have an obvious counterpart in the other set of subtitles. Useful for removing unwanted credits, descriptions of audio (such as 'wind blowing' or 'door creaking'), and things that aren't quite words (such as grunts or coughs).
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_remove_styled_lines"></a>Remove Styled Lines: </b>Remove styled lines when parsing .ass subtitles. A styled line is one that starts with a '{' character. It is often something unwanted such as a karaoke effect.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_name"></a>Name: </b>An arbitrary name to associate with the filenames of the generated files. Any space characters will be converted to an underscore.
+        </p>
+        <p>
+          <b>Note 1: </b>You cannot use the following characters (as Windows will not allow these in filenames): \ / : * ? " &lt; &gt; |
+        </p>
+        <p>
+          <b>Note 2: </b>You cannot use any Unicode characters.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_first_episode"></a>First Episode: </b>The first number to use when generating filenames. If you wanted to start at episode 3 (that is, the video files for episode 1 and episode 2 are not in the provided directories), then put a 3 in this box.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="exract_audio_interface_extract_audio"></a>Extract Audio: </b>Start the audio extraction process.
+        </p>
+        <p>
+          <b>Note: </b>Audio extraction has been successfully tested with audio tracks that are in the following formats: AC3, AAC, VORBIS, and MP3. Make sure that your AC3 file does not have DRM protection.
+        </p>
+      </li>
+    </ol>
+    <h2><a name="dueling"></a>The Dueling Subtitles Tool Interface </h2>
+    <img src="subs2srs_Usage_files/v25.0_Ano_Dueling_Subtitles.png" alt="" />
+    <p>
+      <b><a name="dueling_subtitles_interface_overview"></a>Overview:</b>
+    </p>
+    <p>
+      Use this tool to create subtitle files (in .ass format) that will simultaneously display a line from Subs1 and its corresponding line from Subs2.  Here are some screenshots that demonstrate the Dueling Subtitles feature:
+    </p>
+    <p>
+      The following screenshot shows the default style settings:
+    </p>
+    <img src="subs2srs_Usage_files/Sample_Dueling_Subtitles_Toki_wo_Kakeru_Shoujo.png" alt="" />
+    <p>
+      The following screenshot shows Subs2 displayed at the top of the screen with a different style
+    </p>
+    <img src="subs2srs_Usage_files/Sample_Dueling_Subtitles_Suzumiya_Haruhi_no_Yuuutsu.png" alt="" />
+    <p>
+      These subtitles can be used in any video player that accepts .ass subtitle files. In order to display the subtitles, it is usually as simple as renaming the subtitles to match the name of the video file and then opening the video file or finding your player's "open subtitles" feature. This feature might be useful for those who are hesitant about viewing only the foreign language subtitles for fear that they might not get as much enjoyment out of it. And for those who want to instantly check their listening comprehension.
+    </p>
+    <ol>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_subs1"></a>Subs1: </b>The subtitle files(s) in the language that you are trying to learn (your target language). For example, the Japanese subtitles for a TV show. The file(s) may be in .srt, .ass, and/or .ssa format.
+        </p>
+        <p>
+          You may use the following wildcards in order to specify multiple files:
+          <br/>
+          * = Match zero or more characters
+          <br/>
+          ? = Match exactly zero or one character
+        </p>
+        <p>
+          Example: enter C:\Temp\*.srt to use all .srt files in C:\Temp.
+        </p>
+        <p>
+          <b>Note: </b>When working with multiple files, the files will be matched up alphabetically.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_encoding_subs1"></a>Subs1 Encoding: </b>Choose the encoding of the Subs1 file.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_subs2"></a>Subs2: </b>The corresponding subtitle file(s) in your native language for use in the lyrics. For example, the English subtitles for a movie. The file(s) may be in .srt, .ass, and/or .ssa format. This field is optional. Leave blank if you do not want or have the corresponding set of subtitles.
+        </p>
+        <p>
+          You may use the following wildcards in order to specify multiple files:
+          <br/>
+          * = Match zero or more characters
+          <br/>
+          ? = Match exactly zero or one character
+        </p>
+        <p>
+          Example: enter C:\Temp\*.srt to use all .srt files in C:\Temp.
+        </p>
+        <p>
+          <b>Note 1: </b>When working with multiple files, the files will be matched up alphabetically.
+        </p>
+        <p>
+          <span class="important">Note 2 (important): </span>Subs1 is compared against Subs2 and not the other way around.
+        </p>
+        <p>
+          This means that if a subtitle file from Subs1 contains 300 lines and a subtitle file from Subs2 contains 310 lines, the maximum number of lines that will be processed is 300 (the number of lines from Subs1).
+        </p>
+        <p>
+          Of course, this also means that if a subtitle file from Subs1 contains 310 lines and a subtitle file from Subs2 contains only 300 lines, then 310 lines will be processed and 10 of those lines will be mismatched (subs2srs will attempt to intelligently combine or remove lines to deal with mismatches).
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_encoding_subs2"></a>Subs2 Encoding: </b>Choose the encoding of the Subs2 file.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_output"></a>Output: </b>The directory where the generated files will be placed.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_use_timings_from"></a>Use Timings From: </b>Subtitles contain timing information that determines when they appear and for how long. You may select to use the timing information of Subs1 or Subs2. The timings are used for combining lines from Subs1 and Subs2. This option may be useful if one of your subtitles was specifically timed for the specific video source that you are using.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_shift_timings"></a>Time Shift: </b>Allows you to independently shift the subtitle timings by the specified number of milliseconds. <br /><br />
+          This is used for:<br />
+          1) Syncing the Subs1 and Subs2 timings.<br />
+          2) Syncing the subtitles to the video.<br /><br />
+          Example: <br />
+          If Subs1 and the video are in sync but Subs2 is 3 seconds fast, you can shift Subs2 by -3000 milliseconds to properly sync everything.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_remove_no_counterpart_lines"></a>Remove Lines w/o Counterpart:</b> Remove any lines that do not have an obvious counterpart in the other set of subtitles. Useful for removing unwanted credits, descriptions of audio (such as 'wind blowing' or 'door creaking'), and things that aren't quite words (such as grunts or coughs).
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_remove_styled_lines"></a>Remove Styled Lines: </b>Remove styled lines when parsing .ass subtitles. A styled line is one that starts with a '{' character. It is often something unwanted such as a karaoke effect.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_subs1_style"></a>Subs1 Style: </b>Adjust the styling of a Dueling Subtitle's Subs1 lines. See <a href="#subtitle_style">The Subtitle Style Interface</a>.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_subs2_style"></a>Subs2 Style: </b>Adjust the styling of a Dueling Subtitle's Subs2 lines. See <a href="#subtitle_style">The Subtitle Style Interface</a>.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_alignment_priority"></a>Alignment Priority: </b>When Subs1 and Subs2 both have the same alignment style, this option determines which one gets priority. For example:  If both Subs1 and Subs2 are aligned to the bottom of the screen, set this value to "Subs2" to force Subs2 to be drawn below Subs1.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_create_every_x_lines"></a>Create a dueling subtitle every X lines: </b>Determine the sequence at which a line from Subs2 is displayed simultaneously with the line from Subs1. Setting this value greater than one acts as a sort of "hint". For example: Set this value to 3 to display the corresponding line from Subs2 every 3 subtitle lines. The sequence would be:
+        </p>
+        <ol>
+          <li>
+            Subs1 Line
+          </li>
+          <li>
+            Subs1 Line
+          </li>
+          <li>
+            Subs1 Line + Subs2 Line
+          </li>
+          <li>
+            Subs1 Line
+          </li>
+          <li>
+            Subs1 Line
+          </li>
+          <li>
+            Subs1 Line + Subs2 Line
+          </li>
+          <li>
+            Etc...
+          </li>
+        </ol>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_quick_reference"></a>Also generate quick reference .txt file: </b>In addition to the subtitle file, also generate a quick reference .txt file with just the Subs1 and Subs2 text. Can be useful for following the dialog and looking up unknown words.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_name_of_deck"></a>Name of Deck: </b>An arbitrary name to associate with the filenames of the generated files. Any space character will be converted to an underscores.
+        </p>
+        <p>
+          <b>Note: </b>You cannot use the following characters (as Windows will not allow these in filenames): \ / : * ? " &lt; &gt; |
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_first_episode"></a>First Episode: </b>The first number to use when generating filenames. If you wanted to start at episode 3 (that is, the files for episode 1 and episode 2 are not in the provided directories), then put a 3 in this box.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="dueling_subtitles_interface_create_dueling_subtitles"></a>Create Dueling subtitles!: </b>Process each of the Subs1 and Subs2 subtitles files and combine them to create corresponding Dueling Subtitles in .ass format.
+        </p>
+      </li>
+    </ol>
+    <h2><a name="subtitle_style"></a>The Subtitle Style Interface </h2>
+    <img src="subs2srs_Usage_files/v24.0_Ano_Dueling_Subtitles_Style.png" alt="" />
+    <p>
+      <b><a name="subtitle_style_interface_overview"></a>Overview:</b>
+    </p>
+    <p>
+      This interface allows you to modify the Subs1 or Subs2 subtitle style when generating Dueling Subtitles. It should be somewhat familiar to those who use Aegisub.
+    </p>
+    <ol>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_font"></a>Font: </b>Launches the standard font chooser dialog which allows you to choose the font and its size. It also allows you to select the bold, italic, underline, and strikeout settings.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_primary_color"></a>Primary Color: </b>Select the primary color and its opacity. Opacity ranges from 0 (opaque) to 255 (transparent). This is the color that a subtitle will normally appear in.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_secondary_color"></a>Secondary Color: </b>Select the secondary color and its opacity. Opacity ranges from 0 (opaque) to 255 (transparent). This color may be used instead of the Primary color when a subtitle is automatically shifted to prevent an onscreen collision, to distinguish the different subtitles.
+        </p>
+        <p>
+          <b>Note: </b>In practice, I don't think that I have ever seen the Secondary color used by a video player.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_outline_color"></a>Outline Color: </b>Select the outline color and its opacity. Opacity ranges from 0 (opaque) to 255 (transparent).
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_shadow_color"></a>Shadow Color: </b>Select the shadow color and its opacity. Opacity ranges from 0 (opaque) to 255 (transparent).
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_outline"></a>Outline: </b>The width (in pixels) of the outline that surrounds the text.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_shadow"></a>Shadow: </b>The depth (in pixels) of the shadow behind the text.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_opaque_box"></a>Opaque box: </b>Choose to display a box behind the subtitles.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_alignment"></a>Alignment: </b>Choose how text is aligned on the screen.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_left_margins"></a>Left Margin: </b>Define the left margin in pixels. It is the distance from the left-hand edge of the screen. The three onscreen margins define areas in which the subtitle text will be displayed.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_right_margins"></a>Right Margin: </b>Define the right margin in pixels. It is the distance from the right-hand edge of the screen. The three onscreen margins define areas in which the subtitle text will be displayed.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_vertical_margin"></a>Vertical Margin: </b>Define the vertical margin in pixels. It is the distance from the top/bottom edge of the screen. The three onscreen margins define areas in which the subtitle text will be displayed.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_scale_x"></a>Scale X: </b>Percent to modify the width of the text.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_scale_y"></a>Scale Y: </b>Percent to modify the height of the text.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_rotation"></a>Rotation: </b>Number of degrees to rotate the text. The origin of the rotation is defined by the alignment.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_spacing"></a>Spacing: </b>Extra space between characters (in pixels).
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="subtitle_style_interface_encoding"></a>Encoding: </b>This specifies the font character set or encoding and on multi-lingual Windows installations it provides access to characters used in multiple than one language. You can probably ignore this setting.
+        </p>
+      </li>
+    </ol>
+
+    <h2><a name="prefs"></a>Preferences</h2>
+    <img src="subs2srs_Usage_files/v25.0_Ano_Preferences.png" alt="" />
+    <p>
+      <b><a name="prefs_overview"></a>Overview:</b>
+    </p>
+    <p>
+      This interface allows advanced users to modify preferences such as common GUI defaults and output formats.
+    </p>
+    <p> <a name="prefs_tokens"></a>
+      Some of the preferences allow the use of tokens. If a preference does allow the use of tokens, it will specify which tokens are valid in its description. Here is the list of all tokens:
+    </p>
+
+    <table>
+      <tr>
+        <th>Token</th>
+        <th>Description</th>
+      </tr>
+        <tr><td>${episode_num}</td><td>Number of the current episode. Range: first episode-last episode.</td></tr>
+        <tr><td>${sequence_num}</td><td>Number of the current line being processed. Range: 0-${total_line_num}.</td></tr>
+        <tr><td>${total_line_num}</td><td>Total number of lines that will be processed.</td></tr>
+        <tr><td>${width}</td><td>Width of the video.</td></tr>
+        <tr><td>${height}</td><td>Height of the video.</td></tr>
+        <tr><td>${deck_name}</td><td>Name of the deck.</td></tr>
+        <tr><td>${subs1_line}</td><td>Current line of dialog from Subs1.</td></tr>
+        <tr><td>${subs2_line}</td><td>Current line of dialog from Subs2.</td></tr>
+        <tr><td>${cr}</td><td>Insert a carriage return ('\r') character.</td></tr>
+        <tr><td>${lf}</td><td>Insert a line feed ('\n') character.</td></tr>
+        <tr><td>${tab}</td><td>Insert a tab ('\t') character.</td></tr>
+        <tr><td>${s_hour}</td><td>Hours based on the START TIME of the current line of dialog. Range: 0-24.</td></tr>
+        <tr><td>${s_min}</td><td>Minutes based on the start time of the current line of dialog. Range: 0-59.</td></tr>
+        <tr><td>${s_sec}</td><td>Seconds based on the start time of the current line of dialog. Range: 0-59.</td></tr>
+        <tr><td>${s_hsec}</td><td>Hundredths of seconds based on the start time of the current line of dialog. Range: 0-99.</td></tr>
+        <tr><td>${s_msec}</td><td>Milliseconds based on the start time of the current line of dialog. Range: 0-999.</td></tr>
+        <tr><td>${s_total_hour}</td><td>Total hours based on the start time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${s_total_min}</td><td>Total minutes based on the start time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${s_total_sec}</td><td>Total seconds based on the start time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${s_total_hsec}</td><td>Total hundredths of seconds based on the start time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${s_total_msec}</td><td>Total milliseconds based on the start time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${e_hour}</td><td>Hours based on the END TIME of the current line of dialog. Range: 0-24.</td></tr>
+        <tr><td>${e_min}</td><td>Minutes based on the end time of the current line of dialog. Range: 0-59.</td></tr>
+        <tr><td>${e_sec}</td><td>Seconds based on the end time of the current line of dialog. Range: 0-59.</td></tr>
+        <tr><td>${e_hsec}</td><td>Hundredths of seconds based on the end time of the current line of dialog. Range: 0-99.</td></tr>
+        <tr><td>${e_msec}</td><td>Milliseconds based on the end time of the current line of dialog. Range: 0-999.</td></tr>
+        <tr><td>${e_total_hour}</td><td>Total hours based on the end time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${e_total_min}</td><td>Total minutes based on the end time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${e_total_sec}</td><td>Total seconds based on the end time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${e_total_hsec}</td><td>Total hundredths of seconds based on the end time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${e_total_msec}</td><td>Total milliseconds based on the end time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${d_hour}</td><td>Hours based on the DURATION time of the current line of dialog. Range: 0-24.</td></tr>
+        <tr><td>${d_min}</td><td>Minutes based on the duration time of the current line of dialog. Range: 0-59.</td></tr>
+        <tr><td>${d_sec}</td><td>Seconds based on the duration time of the current line of dialog. Range: 0-59.</td></tr>
+        <tr><td>${d_hsec}</td><td>Hundredths of seconds based on the duration time of the current line of dialog. Range: 0-99.</td></tr>
+        <tr><td>${d_msec}</td><td>Milliseconds based on the duration time of the current line of dialog. Range: 0-999.</td></tr>
+        <tr><td>${d_total_hour}</td><td>Total hours based on the duration time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${d_total_min}</td><td>Total minutes based on the duration time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${d_total_sec}</td><td>Total seconds based on the duration time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${d_total_hsec}</td><td>Total hundredths of seconds based on the duration time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${d_total_msec}</td><td>Total milliseconds based on the duration time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${m_hour}</td><td>Hours based on the MIDPOINT TIME of the current line of dialog. Range: 0-24.</td></tr>
+        <tr><td>${m_min}</td><td>Minutes based on the midpoint time of the current line of dialog. Range: 0-59.</td></tr>
+        <tr><td>${m_sec}</td><td>Seconds based on the midpoint time of the current line of dialog. Range: 0-59.</td></tr>
+        <tr><td>${m_hsec}</td><td>Hundredths of seconds based on the midpoint time of the current line of dialog. Range: 0-99.</td></tr>
+        <tr><td>${m_msec}</td><td>Milliseconds based on the midpoint time of the current line of dialog. Range: 0-999.</td></tr>
+        <tr><td>${m_total_hour}</td><td>Total hours based on the midpoint time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${m_total_min}</td><td>Total minutes based on the midpoint time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${m_total_sec}</td><td>Total seconds based on the midpoint time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${m_total_hsec}</td><td>Total hundredths of seconds based on the midpoint time of the current line of dialog. Range: 0-inf.</td></tr>
+        <tr><td>${m_total_msec}</td><td>Total milliseconds based on the midpoint time of the current line of dialog. Range: 0-inf.</td></tr>
+      </tr>
+    </table>
+
+    <p>
+      To specify leading zeroes use the following notation:<br />
+      ${&lt;&lt;# of leading zeros&gt;&gt;:&lt;&lt;token&gt;&gt;}.<br /><br />
+      For example: ${4:sequence_num} will specify up to 4 leading zeroes.<br /><br />
+      To have subs2srs choose the minimum number of leading zeroes needed, specify 0 for &lt;&lt;# of leading zeros&gt;&gt;.<br /><br />
+      For example: ${0:sequence_num} will use up to 2 leading zeroes when ${total_line_num} is 84.<br />
+      It will use up to 3 leading zeroes when ${total_line_num} is 537. Etc.<br />
+    </p>
+    <p>
+       The default value will be used for any preference that requires a non-blank value but is not given one.
+    </p>
+    <p>
+      If a preference has a valid range of values, it will be provided in the description of that preference. If a value is out of range, the default value will be used instead.
+    </p>
+    <p>
+      For filename format preferences, you should make certain that the resulting filename will be unique. Otherwise, the file may by overwritten.
+    </p>
+
+    <ol>
+      <li>
+        <p>
+          <b><a name="prefs_editor"></a>Preferences Editor: </b>Allows you to edit a preference. The name of the preference is on the left side and the value of the preference is on the right side. Just click on a value to start editing.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="prefs_desc"></a>Preference Description: </b>Shows you the description of the selected preference and (if applicable) it&#39;s range or valid tokens.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="prefs_reset_all"></a>Reset All: </b>Reset all preferences to default values. You will be asked for confirmation before doing so.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="prefs_reset_selected_item"></a>Reset Selected Item: </b>Reset the selected item to it&#39;s default value.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="prefs_token_list_help"></a>Token List...: </b>Show the <a href="#prefs_tokens">list of tokens</a>.
+        </p>
+      </li>
+    </ol>
+
+    <h2><a name="faq"></a>Frequently Asked Questions </h2>
+    <ol>
+      <li>
+        <p>
+          <b><a name="faq_strange_characters"></a>Why do certain characters from my text-based subtitles look strange when I view them in the Preview Interface or when I import them into Anki? </b>
+        </p>
+        <p>
+          Probably because the subtitles are not encoded in UTF-8. By default, subs2srs expects UTF-8 encoded subtitles. You may specify the subtitle encoding using either the Subs1 or Subs2 <a href="#main_interface_subs1_subtitle_stream"> Encoding box</a>.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="faq_lines_not_processed"></a>Why don't some of the lines from my text-based subtitles get processed? Also why don't some lines from my subtitle file look exactly the same after being processed? </b>
+        </p>
+        <p>
+          First, see the notes in the <a href="#main_interface_subs2">Subs2...</a>
+          part of the Main Interface section. To add to that, subs2srs tries to fix mismatched lines by combining one or more lines to form a better match. If you have the <a href="#adv_options_prune_remove_no_counterpart_lines">Remove Lines With No Obvious Counterpart</a> option checked, subs2srs may remove lines that do not have a counterpart in the other subtitle file.
+        </p>
+        <p>
+          It could also be that the subtitle parser is removing/modified lines:
+        </p>
+        <p>
+          Subrip (.srt)
+        </p>
+        <ul>
+          <li>
+            The italic, bold, and underline style tags will be removed.
+          </li>
+          <li>
+            A space will be added in between each line of a multiline subtitle.
+          </li>
+        </ul>
+        <p>
+          Advanced Substation Alpha (.ass/.ssa)
+        </p>
+        <ul>
+          <li>
+            Lines beginning with a '{' will not be processed because its probably part of an unwanted karaoke effect. You may uncheck the <a href="#adv_options_prune_remove_styled_lines">Remove Styled Lines</a> option to force these styled lines to be processed.
+          </li>
+          <li>
+            "\N" style newlines will be replaced with a space.
+          </li>
+          <li>
+            Embedding styles (anything between two curly braces) will be removed.
+          </li>
+          <li>
+            Blank lines will be removed.
+          </li>
+        </ul>
+        <p>
+          Lyric (.lrc)
+        </p>
+        <ul>
+          <li>
+            Lines with the same start and end times will be removed because it's probably metadata or an advertisement.
+          </li>
+          <li>
+            Lines containing a colon will be removed because it's probably metadata.
+          </li>
+          <li>
+            Lines containing a "www." will be removed because it's probably in advertisement.
+          </li>
+          <li>
+            Blank lines will be removed.
+          </li>
+        </ul>
+        <p>
+          Transcriber (.trs)
+        </p>
+        <ul>
+          <li>
+            Blank lines will be removed.
+          </li>
+          <li>
+            Carriage returns and linefeeds will be replaced with a space.
+          </li>
+        </ul>
+      </li>
+      <li>
+        <p>
+          <b><a name="faq_failed_to_extract_audio"></a>I'm getting this error message: "Failed to extract the audio from the video. Make sure that the video does not have any DRM restrictions." What did I do wrong? </b>
+        </p>
+        <p>
+          You haven't done anything wrong. subs2srs relies on a tool called ffmpeg to do all of its video and audio processing. ffmpeg is a great tool, but it's not perfect and sometimes it will refuse to process the audio (especially multi-channel audio). You can work around this by extracting the audio for the video file in another program, converting the audio to mp3 format and then <a href="#main_interface_audio_clip_source">providing that mp3 to subs2srs</a>.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="faq_command_line_options"></a>Are there any command line options? </b>
+        </p>
+        <p>
+          Just one. The first argument may be the path to a .s2s file that you want load upon startup. Note: You can create a .s2s with the <b>File | Save...</b>
+          menu option.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="faq_where_can_i_find_subtitles"></a>Where can I find foreign language subtitles? </b>
+        </p>
+        <p>
+          I only know of these resources:
+        </p>
+        <dl>
+          <dt>
+            <a href="http://www.d-addicts.com/forum/subtitles.php">http://www.d-addicts.com/forum/subtitles.php</a>
+          </dt>
+          <dd>
+            Has a large amount of subtitles for Asian dramas. It also has English subtitles.
+          </dd>
+          <dt>
+            <a href="http://kitsunekko.net/subtitles/japanese/">http://kitsunekko.net/subtitles/japanese/</a>
+          </dt>
+          <dd>
+            Has a large amount of Japanese-language subtitles for Anime.
+          </dd>
+        </dl>
+      </li>
+      <li>
+        <p>
+          <b><a name="faq_subtitle_timing_tool"></a>What tool can I use to modify subtitle timings? </b>
+        </p>
+        <p>
+          Use <a href="http://www.aegisub.org/">Aegisub</a> or <a href="../Utils/SubsReTimer/Help/usage.html">Subs Re-Timer</a>.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="faq_mkv_extract"></a>What tool(s) can I use to extract subtitles from an MKV file? </b>
+        </p>
+        <p>
+          Use <a href="http://www.videohelp.com/tools/MKVExtractGUI-2">MKVExtractGUI-2</a>. It requires <a href="http://www.bunkus.org/videotools/mkvtoolnix/downloads.html#windows">mkvtoolnix</a>.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="faq_dvd_extract"></a>How can I extract subtitles from a DVD? </b>
+        </p>
+        <p>
+          To convert DVD subtitles to Vobsub subtitles, use <a href="http://www.videohelp.com/tools/VSRip">VSRip</a>.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="faq_vobsub_images_instead_of_text"></a>Why does subs2srs create .png files instead of text when I provide subtitles in Vobsub (.idx/.sub) format? </b>
+        </p>
+        <p>
+          Vobsub (.idx/.sub) is an image-based subtitle format, not a text-based subtitle format. subs2srs merely extract the images and converts them to a format that can be used with Anki (.png).
+        </p>
+        <p>
+          If you want to convert Vobsubs to text-based subtitle format (like .srt), you will need to use some sort of OCR software such as <a href="http://www.videohelp.com/tools/Subrip">SubRip</a>.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="faq_i_have_a_problem"></a>I have a problem with subs2srs and nothing in this file has helped me to resolve it. What is the best way to get my problem resolved? </b>
+        </p>
+        <p>
+          E-mail me at cb4960 'at' [gmail] 'dot' [com]. Be sure to attach the appropriate log file (in the Logs directory), subtitle files and, if applicable, the generated .tsv file.
+        </p>
+      </li>
+      <li>
+        <p>
+          <b><a name="faq_feature_suggestion"></a>I have feature suggestion, are you willing to entertain it? </b>
+        </p>
+        <p>
+          Sure, post the suggestion in the feedback thread at <a href="http://forum.koohii.com/viewtopic.php?id=2643&amp;p=1">http://forum.koohii.com/viewtopic.php?id=2643&amp;p=1</a>. Most of the features currently in subs2srs were originally suggestions from the community so don't hesitate.
+        </p>
+      </li>
+    </ol>
+  </body>
+</html>

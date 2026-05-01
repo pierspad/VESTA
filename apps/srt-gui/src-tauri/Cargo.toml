@@ -29,6 +29,9 @@ tempfile = "3"
 dirs = "5"
 whisper-rs = "0.15"
 hound = "3"
+rusqlite = { version = "0.31", features = ["bundled"] }
+sha1_smol = "1.0"
+ffmpeg-sidecar = { version = "2.5.1", features = ["download_ffmpeg"] }
 
 # Dipendenze dal workspace
 srt-parser = { workspace = true }
