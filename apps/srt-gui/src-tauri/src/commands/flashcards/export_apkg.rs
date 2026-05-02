@@ -1,19 +1,9 @@
-use anyhow::{Context as _, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter, State};
-use tokio_util::sync::CancellationToken;
-use crate::state::AppFlashcardState;
 
+use super::export_tsv::{render_text_with_context, sanitize_filename};
+use super::media::ms_to_ffmpeg_ts;
 use super::types::*;
-use super::parser::*;
-use super::matcher::*;
-use super::filters::*;
-use super::media::*;
-use super::export_tsv::*;
-
 
 // ─── APKG Generation ─────────────────────────────────────────────────────────
 
@@ -68,7 +58,8 @@ pub(crate) fn generate_apkg(
         sql.push_str("BEGIN TRANSACTION;\n");
 
         // Create tables
-        sql.push_str("CREATE TABLE col (
+        sql.push_str(
+            "CREATE TABLE col (
             id INTEGER PRIMARY KEY,
             crt INTEGER NOT NULL,
             mod INTEGER NOT NULL,
@@ -82,9 +73,11 @@ pub(crate) fn generate_apkg(
             decks TEXT NOT NULL,
             dconf TEXT NOT NULL,
             tags TEXT NOT NULL
-        );\n");
+        );\n",
+        );
 
-        sql.push_str("CREATE TABLE notes (
+        sql.push_str(
+            "CREATE TABLE notes (
             id INTEGER PRIMARY KEY,
             guid TEXT NOT NULL,
             mid INTEGER NOT NULL,
@@ -96,9 +89,11 @@ pub(crate) fn generate_apkg(
             csum INTEGER NOT NULL,
             flags INTEGER NOT NULL,
             data TEXT NOT NULL
-        );\n");
+        );\n",
+        );
 
-        sql.push_str("CREATE TABLE cards (
+        sql.push_str(
+            "CREATE TABLE cards (
             id INTEGER PRIMARY KEY,
             nid INTEGER NOT NULL,
             did INTEGER NOT NULL,
@@ -117,15 +112,19 @@ pub(crate) fn generate_apkg(
             odid INTEGER NOT NULL,
             flags INTEGER NOT NULL,
             data TEXT NOT NULL
-        );\n");
+        );\n",
+        );
 
-        sql.push_str("CREATE TABLE graves (
+        sql.push_str(
+            "CREATE TABLE graves (
             usn INTEGER NOT NULL,
             oid INTEGER NOT NULL,
             type INTEGER NOT NULL
-        );\n");
+        );\n",
+        );
 
-        sql.push_str("CREATE TABLE revlog (
+        sql.push_str(
+            "CREATE TABLE revlog (
             id INTEGER PRIMARY KEY,
             cid INTEGER NOT NULL,
             usn INTEGER NOT NULL,
@@ -135,7 +134,8 @@ pub(crate) fn generate_apkg(
             factor INTEGER NOT NULL,
             time INTEGER NOT NULL,
             type INTEGER NOT NULL
-        );\n");
+        );\n",
+        );
 
         // Build model fields based on what the user selected
         let mut field_defs = Vec::new();
@@ -204,8 +204,14 @@ pub(crate) fn generate_apkg(
         }
 
         // Use custom templates if provided, otherwise use defaults
-        let qfmt = config.card_front_html.as_deref().unwrap_or(ANKI_FRONT_TEMPLATE);
-        let afmt = config.card_back_html.as_deref().unwrap_or(ANKI_BACK_TEMPLATE);
+        let qfmt = config
+            .card_front_html
+            .as_deref()
+            .unwrap_or(ANKI_FRONT_TEMPLATE);
+        let afmt = config
+            .card_back_html
+            .as_deref()
+            .unwrap_or(ANKI_BACK_TEMPLATE);
         let css = config.card_css.as_deref().unwrap_or(ANKI_CARD_STYLING);
 
         let note_type_name = config.note_type_name.as_deref().unwrap_or("subs2srs");
@@ -261,9 +267,12 @@ pub(crate) fn generate_apkg(
             // Expression (subs1)
             if config.output_fields.include_subs1 {
                 fields.push(render_text_with_context(
-                    &line.subs1.text, line, lines,
+                    &line.subs1.text,
+                    line,
+                    lines,
                     |m| Some(m.subs1.text.as_str()),
-                    "class=\"context\"", false,
+                    "class=\"context\"",
+                    false,
                 ));
             }
 
@@ -271,9 +280,12 @@ pub(crate) fn generate_apkg(
             if config.output_fields.include_subs2 {
                 if let Some(ref s2) = line.subs2 {
                     fields.push(render_text_with_context(
-                        &s2.text, line, lines,
+                        &s2.text,
+                        line,
+                        lines,
                         |m| m.subs2.as_ref().map(|s| s.text.as_str()),
-                        "class=\"context\"", false,
+                        "class=\"context\"",
+                        false,
                     ));
                 } else {
                     fields.push(String::new());
@@ -304,7 +316,11 @@ pub(crate) fn generate_apkg(
 
             // Video — only reference if the file actually exists
             if config.output_fields.include_video {
-                let ext = if config.video_codec == "h264" { "mp4" } else { "avi" };
+                let ext = if config.video_codec == "h264" {
+                    "mp4"
+                } else {
+                    "avi"
+                };
                 let filename = format!("{}_{:03}_{:04}.{}", deck_sanitized, ep, seq_num, ext);
                 let file_path = media_dir.join(&filename);
                 if file_path.exists() {
@@ -403,7 +419,11 @@ pub(crate) fn generate_apkg(
 
         // Video
         if config.generate_video_clips {
-            let ext = if config.video_codec == "h264" { "mp4" } else { "avi" };
+            let ext = if config.video_codec == "h264" {
+                "mp4"
+            } else {
+                "avi"
+            };
             let filename = format!("{}_{:03}_{:04}.{}", deck_sanitized, ep, seq_num, ext);
             let file_path = media_dir.join(&filename);
             if file_path.exists() {
@@ -416,12 +436,15 @@ pub(crate) fn generate_apkg(
 
     // Write media JSON to temp
     let media_json_path = tmp_dir.path().join("media");
-    std::fs::write(&media_json_path, serde_json::to_string(&media_map).unwrap_or_else(|_| "{}".to_string()))
-        .map_err(|e| format!("Cannot write media JSON: {e}"))?;
+    std::fs::write(
+        &media_json_path,
+        serde_json::to_string(&media_map).unwrap_or_else(|_| "{}".to_string()),
+    )
+    .map_err(|e| format!("Cannot write media JSON: {e}"))?;
 
     // Create the APKG ZIP file
-    let apkg_file = std::fs::File::create(output_path)
-        .map_err(|e| format!("Cannot create APKG: {e}"))?;
+    let apkg_file =
+        std::fs::File::create(output_path).map_err(|e| format!("Cannot create APKG: {e}"))?;
     let mut zip = zip::ZipWriter::new(apkg_file);
     let options = zip::write::SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated);
@@ -429,16 +452,15 @@ pub(crate) fn generate_apkg(
     // Add collection.anki2
     zip.start_file("collection.anki2", options)
         .map_err(|e| format!("ZIP error: {e}"))?;
-    let db_bytes = std::fs::read(&db_path)
-        .map_err(|e| format!("Cannot read DB: {e}"))?;
+    let db_bytes = std::fs::read(&db_path).map_err(|e| format!("Cannot read DB: {e}"))?;
     zip.write_all(&db_bytes)
         .map_err(|e| format!("ZIP write error: {e}"))?;
 
     // Add media JSON
     zip.start_file("media", options)
         .map_err(|e| format!("ZIP error: {e}"))?;
-    let media_json_bytes = std::fs::read(&media_json_path)
-        .map_err(|e| format!("Cannot read media JSON: {e}"))?;
+    let media_json_bytes =
+        std::fs::read(&media_json_path).map_err(|e| format!("Cannot read media JSON: {e}"))?;
     zip.write_all(&media_json_bytes)
         .map_err(|e| format!("ZIP write error: {e}"))?;
 
@@ -446,8 +468,8 @@ pub(crate) fn generate_apkg(
     for (idx_str, file_path) in &media_files {
         zip.start_file(idx_str, options)
             .map_err(|e| format!("ZIP error adding media: {e}"))?;
-        let file_bytes = std::fs::read(file_path)
-            .map_err(|e| format!("Cannot read media file: {e}"))?;
+        let file_bytes =
+            std::fs::read(file_path).map_err(|e| format!("Cannot read media file: {e}"))?;
         zip.write_all(&file_bytes)
             .map_err(|e| format!("ZIP write error: {e}"))?;
     }
@@ -499,14 +521,14 @@ try {
 "#;
 
 pub(crate) const ANKI_FRONT_TEMPLATE: &str = concat!(
-r#"
+    r#"
 <div id="tags-container"></div>
 <div id="tags-source" style="display: none;">{{Tags}}</div>
 <div id="timestamp-source" style="display: none;">{{SequenceMarker}}</div>
 <div class='expression'>{{Expression}}</div>
 <hr>
 "#,
-r#"
+    r#"
 <script>
 try {
     var container = document.getElementById('tags-container');
@@ -535,10 +557,11 @@ try {
     } catch (e_tags) {}
 } catch (e) {}
 </script>
-"#);
+"#
+);
 
 pub(crate) const ANKI_BACK_TEMPLATE: &str = concat!(
-r#"
+    r#"
 <div id="tags-container"></div>
 <div id="tags-source" style="display: none;">{{Tags}}</div>
 <div id="timestamp-source" style="display: none;">{{SequenceMarker}}</div>
@@ -553,7 +576,7 @@ r#"
 <span class='media'>{{Video}}</span>
 <br />
 "#,
-r#"
+    r#"
 <script>
 try {
     var container = document.getElementById('tags-container');
@@ -582,7 +605,8 @@ try {
     } catch (e_tags) {}
 } catch (e) {}
 </script>
-"#);
+"#
+);
 
 pub(crate) const ANKI_CARD_STYLING: &str = r#"
 #tags-container {
@@ -643,4 +667,3 @@ hr.solid {
   color: #000000;
 }
 "#;
-

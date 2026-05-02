@@ -33,3 +33,15 @@ Test_Subs/Detour-1945-Public_domain.mkv
 *.mp3
 *.flac
 .directory
+
+
+original_subs2srs
+subs2srs_source
+Test_Subs/Interstellar-en.srt
+Test_Subs/Interstellar-it.srt
+Test_Subs/Trainspotting-en.srt
+Test_Subs/Trainspotting-it.srt
+Test_Subs/Zootopia-en.srt
+Test_Subs/Zootopia-it.srt
+Test_Subs/Uncut Gems-en.srt
+Test_Subs/Uncut Gems-it.srt

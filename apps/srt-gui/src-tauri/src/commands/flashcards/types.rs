@@ -4,15 +4,8 @@
 //! matching temporale, estrazione audio/snapshot/video via FFmpeg,
 //! generazione TSV per Anki, filtri avanzati, context lines.
 
-use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter, State};
-use tokio_util::sync::CancellationToken;
-
-use crate::state::AppFlashcardState;
+use std::collections::HashMap;
 
 // ─── Data Types ──────────────────────────────────────────────────────────────
 
@@ -88,6 +81,7 @@ pub struct FlashcardConfig {
     // Audio
     pub generate_audio: bool,
     pub audio_bitrate: u32,
+    pub audio_track_index: Option<usize>,
     pub normalize_audio: bool,
     pub audio_pad_start_ms: i64,
     pub audio_pad_end_ms: i64,
@@ -100,8 +94,8 @@ pub struct FlashcardConfig {
 
     // Video clips
     pub generate_video_clips: bool,
-    pub video_codec: String,     // "h264" or "mpeg4"
-    pub h264_preset: String,     // ultrafast..placebo
+    pub video_codec: String, // "h264" or "mpeg4"
+    pub h264_preset: String, // ultrafast..placebo
     pub video_bitrate: u32,
     pub video_audio_bitrate: u32,
     pub video_pad_start_ms: i64,
@@ -163,6 +157,16 @@ pub struct OutputFields {
     pub include_subs2: bool,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct AudioTrackInfo {
+    pub index: usize,
+    pub stream_index: usize,
+    pub codec: Option<String>,
+    pub language: Option<String>,
+    pub title: Option<String>,
+    pub channels: Option<u32>,
+}
+
 /// Progress event emitted to frontend
 #[derive(Debug, Clone, Serialize)]
 pub struct FlashcardProgressEvent {
@@ -201,4 +205,3 @@ pub struct PreviewLine {
     pub leading_context: Vec<usize>,
     pub trailing_context: Vec<usize>,
 }
-

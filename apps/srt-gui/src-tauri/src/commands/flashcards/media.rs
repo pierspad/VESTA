@@ -1,19 +1,6 @@
 use anyhow::{Context as _, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter, State, Manager};
-use tokio_util::sync::CancellationToken;
-use crate::state::AppFlashcardState;
-
-use super::types::*;
-use super::parser::*;
-use super::matcher::*;
-use super::filters::*;
-
-use super::export_tsv::*;
-use super::export_apkg::*;
+use std::path::Path;
+use tauri::{AppHandle, Manager};
 
 // ─── FFmpeg Media Extraction ─────────────────────────────────────────────────
 
@@ -55,11 +42,11 @@ pub(crate) async fn resolve_ffprobe_path(app: Option<&AppHandle>) -> String {
         .await
         .map(|o| o.status.success())
         .unwrap_or(false);
-        
+
     if is_in_path {
         return "ffprobe".to_string();
     }
-    
+
     // Check local AppData
     if let Some(app) = app {
         if let Ok(app_data) = app.path().app_local_data_dir() {
@@ -96,6 +83,7 @@ pub(crate) async fn extract_audio_clip(
     pad_start_ms: i64,
     pad_end_ms: i64,
     bitrate: u32,
+    audio_track_index: Option<usize>,
     ffmpeg_cmd: &str,
 ) -> Result<()> {
     let actual_start = (start_ms - pad_start_ms).max(0);
@@ -104,20 +92,39 @@ pub(crate) async fn extract_audio_clip(
     let mut cmd = tokio::process::Command::new(ffmpeg_cmd);
     cmd.args([
         "-nostdin",
-        "-loglevel", "error",
+        "-loglevel",
+        "error",
         "-y",
-        "-ss", &ms_to_ffmpeg_ts(actual_start),
-        "-t", &ms_to_ffmpeg_ts(duration_ms),
-        "-i", source_path,
-        "-vn", "-sn", "-dn",
-        "-ac", "2",
-        "-ab", &format!("{}k", bitrate),
-        "-ar", "44100",
-        "-f", "mp3",
+        "-ss",
+        &ms_to_ffmpeg_ts(actual_start),
+        "-t",
+        &ms_to_ffmpeg_ts(duration_ms),
+        "-i",
+        source_path,
+        "-vn",
+        "-sn",
+        "-dn",
+    ]);
+    if let Some(track_index) = audio_track_index {
+        let audio_map = format!("0:a:{}", track_index);
+        cmd.args(["-map", audio_map.as_str()]);
+    }
+    cmd.args([
+        "-ac",
+        "2",
+        "-ab",
+        &format!("{}k", bitrate),
+        "-ar",
+        "44100",
+        "-f",
+        "mp3",
     ]);
     cmd.arg(output_path.as_os_str());
 
-    let output = cmd.output().await.context("Failed to run ffmpeg for audio")?;
+    let output = cmd
+        .output()
+        .await
+        .context("Failed to run ffmpeg for audio")?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         anyhow::bail!("ffmpeg audio error: {}", stderr);
@@ -148,19 +155,31 @@ pub(crate) async fn extract_snapshot(
     let mut cmd = tokio::process::Command::new(ffmpeg_cmd);
     cmd.args([
         "-nostdin",
-        "-loglevel", "error",
+        "-loglevel",
+        "error",
         "-y",
-        "-ss", &ms_to_ffmpeg_ts(midpoint_ms),
-        "-i", video_path,
-        "-an", "-sn", "-dn",
-        "-vframes", "1",
-        "-vf", &vf,
-        "-pix_fmt", "yuvj420p",
-        "-q:v", "2",
+        "-ss",
+        &ms_to_ffmpeg_ts(midpoint_ms),
+        "-i",
+        video_path,
+        "-an",
+        "-sn",
+        "-dn",
+        "-vframes",
+        "1",
+        "-vf",
+        &vf,
+        "-pix_fmt",
+        "yuvj420p",
+        "-q:v",
+        "2",
     ]);
     cmd.arg(output_path.as_os_str());
 
-    let output = cmd.output().await.context("Failed to run ffmpeg for snapshot")?;
+    let output = cmd
+        .output()
+        .await
+        .context("Failed to run ffmpeg for snapshot")?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         anyhow::bail!("ffmpeg snapshot error: {}", stderr);
@@ -180,6 +199,7 @@ pub(crate) async fn extract_video_clip(
     preset: &str,
     video_bitrate: u32,
     audio_bitrate: u32,
+    audio_track_index: Option<usize>,
     ffmpeg_cmd: &str,
 ) -> Result<()> {
     let actual_start = (start_ms - pad_start_ms).max(0);
@@ -188,37 +208,57 @@ pub(crate) async fn extract_video_clip(
     let mut cmd = tokio::process::Command::new(ffmpeg_cmd);
     cmd.args([
         "-nostdin",
-        "-loglevel", "error",
+        "-loglevel",
+        "error",
         "-y",
-        "-ss", &ms_to_ffmpeg_ts(actual_start),
-        "-t", &ms_to_ffmpeg_ts(duration_ms),
-        "-i", video_path,
+        "-ss",
+        &ms_to_ffmpeg_ts(actual_start),
+        "-t",
+        &ms_to_ffmpeg_ts(duration_ms),
+        "-i",
+        video_path,
     ]);
+    if let Some(track_index) = audio_track_index {
+        let audio_map = format!("0:a:{}", track_index);
+        cmd.args(["-map", "0:v:0", "-map", audio_map.as_str()]);
+    }
 
     match codec {
         "h264" => {
             cmd.args([
-                "-c:v", "libx264",
-                "-preset", preset,
-                "-b:v", &format!("{}k", video_bitrate),
-                "-c:a", "aac",
-                "-b:a", &format!("{}k", audio_bitrate),
+                "-c:v",
+                "libx264",
+                "-preset",
+                preset,
+                "-b:v",
+                &format!("{}k", video_bitrate),
+                "-c:a",
+                "aac",
+                "-b:a",
+                &format!("{}k", audio_bitrate),
             ]);
         }
         _ => {
             // mpeg4
             cmd.args([
-                "-c:v", "mpeg4",
-                "-b:v", &format!("{}k", video_bitrate),
-                "-c:a", "mp3",
-                "-b:a", &format!("{}k", audio_bitrate),
+                "-c:v",
+                "mpeg4",
+                "-b:v",
+                &format!("{}k", video_bitrate),
+                "-c:a",
+                "mp3",
+                "-b:a",
+                &format!("{}k", audio_bitrate),
             ]);
         }
     }
 
     cmd.arg(output_path.as_os_str());
 
-    let output = cmd.output().await.context("Failed to run ffmpeg for video clip")?;
+    let output = cmd
+        .output()
+        .await
+        .context("Failed to run ffmpeg for video clip")?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         anyhow::bail!("ffmpeg video error: {}", stderr);
@@ -230,15 +270,15 @@ pub(crate) async fn normalize_audio(file_path: &Path, ffmpeg_cmd: &str) -> Resul
     let temp_path = file_path.with_extension("normalized.mp3");
 
     let mut cmd = tokio::process::Command::new(ffmpeg_cmd);
-    cmd.args([
-        "-y",
-        "-i",
-    ]);
+    cmd.args(["-y", "-i"]);
     cmd.arg(file_path.as_os_str());
     cmd.args([
-        "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
-        "-ar", "44100",
-        "-ac", "2",
+        "-af",
+        "loudnorm=I=-16:TP=-1.5:LRA=11",
+        "-ar",
+        "44100",
+        "-ac",
+        "2",
     ]);
     cmd.arg(temp_path.as_os_str());
 
@@ -250,4 +290,3 @@ pub(crate) async fn normalize_audio(file_path: &Path, ffmpeg_cmd: &str) -> Resul
     }
     Ok(())
 }
-

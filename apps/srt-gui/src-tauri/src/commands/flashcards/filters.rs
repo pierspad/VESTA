@@ -1,29 +1,22 @@
-use anyhow::{Context as _, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter, State};
-use tokio_util::sync::CancellationToken;
-use crate::state::AppFlashcardState;
+use std::collections::HashSet;
 
 use super::types::*;
-use super::parser::*;
-use super::matcher::*;
-
-use super::media::*;
-use super::export_tsv::*;
-use super::export_apkg::*;
 
 // ─── Filters ─────────────────────────────────────────────────────────────────
 
 pub(crate) fn apply_filters(lines: &mut [MatchedLine], filters: &SubtitleFilters) {
     let include_set: Option<Vec<String>> = filters.include_words.as_ref().map(|w| {
-        w.split(',').map(|s| s.trim().to_lowercase()).filter(|s| !s.is_empty()).collect()
+        w.split(',')
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect()
     });
 
     let exclude_set: Option<Vec<String>> = filters.exclude_words.as_ref().map(|w| {
-        w.split(',').map(|s| s.trim().to_lowercase()).filter(|s| !s.is_empty()).collect()
+        w.split(',')
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect()
     });
 
     // Collect texts for duplicate detection
@@ -32,7 +25,10 @@ pub(crate) fn apply_filters(lines: &mut [MatchedLine], filters: &SubtitleFilters
 
     // Actor filter
     let actor_filter: Option<Vec<String>> = filters.actor_filter.as_ref().map(|a| {
-        a.split(',').map(|s| s.trim().to_lowercase()).filter(|s| !s.is_empty()).collect()
+        a.split(',')
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect()
     });
 
     for line in lines.iter_mut() {
@@ -248,7 +244,11 @@ pub(crate) fn compute_context(lines: &mut Vec<MatchedLine>, ctx: &ContextConfig)
 
 // ─── Span Filter ─────────────────────────────────────────────────────────────
 
-pub(crate) fn apply_span(lines: &mut [MatchedLine], span_start: Option<i64>, span_end: Option<i64>) {
+pub(crate) fn apply_span(
+    lines: &mut [MatchedLine],
+    span_start: Option<i64>,
+    span_end: Option<i64>,
+) {
     for line in lines.iter_mut() {
         if let Some(start) = span_start {
             if line.subs1.end_ms < start {
@@ -262,4 +262,3 @@ pub(crate) fn apply_span(lines: &mut [MatchedLine], span_start: Option<i64>, spa
         }
     }
 }
-

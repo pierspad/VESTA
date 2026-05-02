@@ -1,19 +1,7 @@
 use anyhow::{Context as _, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter, State};
-use tokio_util::sync::CancellationToken;
-use crate::state::AppFlashcardState;
+use std::path::Path;
 
 use super::types::*;
-
-use super::matcher::*;
-use super::filters::*;
-use super::media::*;
-use super::export_tsv::*;
-use super::export_apkg::*;
 
 // ─── Subtitle Parsing ────────────────────────────────────────────────────────
 
@@ -127,7 +115,10 @@ pub(crate) fn parse_ass(content: &str) -> Result<Vec<SubEntry>> {
 
         if line.starts_with("Format:") {
             let fields_str = line.strip_prefix("Format:").unwrap_or("");
-            format_fields = fields_str.split(',').map(|f| f.trim().to_lowercase()).collect();
+            format_fields = fields_str
+                .split(',')
+                .map(|f| f.trim().to_lowercase())
+                .collect();
             continue;
         }
 
@@ -163,7 +154,10 @@ pub(crate) fn parse_ass(content: &str) -> Result<Vec<SubEntry>> {
                     String::new()
                 }
             } else {
-                parts.last().map(|s| s.trim().to_string()).unwrap_or_default()
+                parts
+                    .last()
+                    .map(|s| s.trim().to_string())
+                    .unwrap_or_default()
             };
 
             // Strip ASS formatting tags like {\b1}, {\an8}, etc.
@@ -265,10 +259,7 @@ pub(crate) fn parse_vtt(content: &str) -> Result<Vec<SubEntry>> {
         let end_ms = parse_vtt_timestamp(parts[1].split_whitespace().next().unwrap_or("").trim())?;
 
         let text = if timeline_idx + 1 < lines.len() {
-            lines[timeline_idx + 1..]
-                .join("\n")
-                .trim()
-                .to_string()
+            lines[timeline_idx + 1..].join("\n").trim().to_string()
         } else {
             String::new()
         };
@@ -362,4 +353,3 @@ pub(crate) fn parse_subtitle_file(path: &str) -> Result<(Vec<SubEntry>, &'static
 
     Ok((entries, format))
 }
-

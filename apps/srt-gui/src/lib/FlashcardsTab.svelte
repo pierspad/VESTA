@@ -33,6 +33,20 @@
   let mediaType = $state<"none" | "video" | "audio">("none");
   let outputDir = $state("");
 
+  interface AudioTrackInfo {
+    index: number;
+    stream_index: number;
+    codec: string | null;
+    language: string | null;
+    title: string | null;
+    channels: number | null;
+  }
+
+  let audioTracks = $state<AudioTrackInfo[]>([]);
+  let selectedAudioTrackIndex = $state<number | null>(null);
+  let audioTrackAutoSelected = $state(true);
+  let audioTracksLoading = $state(false);
+
   const OUTPUT_DIR_KEY = "vesta-last-output-dir";
   const NOTE_TYPE_LANGUAGE_KEY = "vesta-flashcards-note-type-language";
   const DEFAULT_FLASHCARDS_LANGUAGE_KEY = "vesta-default-flashcards-language";
@@ -578,6 +592,9 @@
     } else {
       mediaPath = "";
       mediaType = "none";
+      audioTracks = [];
+      selectedAudioTrackIndex = null;
+      audioTrackAutoSelected = true;
       generateSnapshots = false;
       generateVideoClips = false;
     }
@@ -1119,6 +1136,135 @@
     return null;
   }
 
+  const AUDIO_LANGUAGE_ALIASES: Record<string, string[]> = {
+    ar: ["ara", "arabic"],
+    ca: ["cat", "catalan"],
+    zh: ["chi", "zho", "cmn", "chinese", "mandarin"],
+    "zh-tw": ["chi", "zho", "cmn", "chinese", "mandarin", "traditional"],
+    cs: ["cze", "ces", "czech"],
+    da: ["dan", "danish"],
+    nl: ["dut", "nld", "dutch"],
+    en: ["eng", "english"],
+    fi: ["fin", "finnish"],
+    fr: ["fre", "fra", "french"],
+    de: ["ger", "deu", "german", "deutsch"],
+    el: ["gre", "ell", "greek"],
+    he: ["heb", "hebrew"],
+    hi: ["hin", "hindi"],
+    hu: ["hun", "hungarian"],
+    is: ["ice", "isl", "icelandic"],
+    id: ["ind", "indonesian"],
+    it: ["ita", "italian", "italiano"],
+    ja: ["jpn", "japanese"],
+    ko: ["kor", "korean"],
+    ms: ["may", "msa", "malay"],
+    no: ["nor", "norwegian"],
+    pl: ["pol", "polish"],
+    pt: ["por", "portuguese"],
+    "pt-br": ["por", "portuguese", "brazil"],
+    ro: ["rum", "ron", "romanian"],
+    ru: ["rus", "russian"],
+    es: ["spa", "spanish", "espanol", "español"],
+    sv: ["swe", "swedish"],
+    th: ["tha", "thai"],
+    tr: ["tur", "turkish"],
+    uk: ["ukr", "ukrainian"],
+    vi: ["vie", "vietnamese"],
+  };
+
+  function normalizeAudioLanguageText(value: string | null | undefined): string {
+    return (value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  }
+
+  function scoreAudioTrackForLanguage(track: AudioTrackInfo, languageCode: string): number {
+    if (!languageCode) return 0;
+    const lang = languages.find((item) => item.code === languageCode);
+    const candidates = [
+      languageCode,
+      languageCode.split("-")[0],
+      ...(AUDIO_LANGUAGE_ALIASES[languageCode] || []),
+      ...(AUDIO_LANGUAGE_ALIASES[languageCode.split("-")[0]] || []),
+      lang?.nameEn,
+      lang?.name,
+    ]
+      .filter(Boolean)
+      .map((value) => normalizeAudioLanguageText(String(value)))
+      .filter(Boolean);
+
+    const language = normalizeAudioLanguageText(track.language);
+    const title = normalizeAudioLanguageText(track.title);
+    let score = 0;
+
+    for (const candidate of candidates) {
+      if (language === candidate) score = Math.max(score, 100);
+      if (language && (language.startsWith(candidate) || candidate.startsWith(language))) {
+        score = Math.max(score, 75);
+      }
+      if (title.split(" ").includes(candidate)) score = Math.max(score, 60);
+      if (title.includes(candidate)) score = Math.max(score, 45);
+    }
+
+    return score;
+  }
+
+  function pickBestAudioTrackIndex(tracks: AudioTrackInfo[], languageCode: string): number | null {
+    if (tracks.length <= 1) return null;
+    let bestTrack = tracks[0];
+    let bestScore = -1;
+
+    for (const track of tracks) {
+      const score = scoreAudioTrackForLanguage(track, languageCode);
+      if (score > bestScore) {
+        bestScore = score;
+        bestTrack = track;
+      }
+    }
+
+    return bestTrack.index;
+  }
+
+  function formatAudioTrackLabel(track: AudioTrackInfo): string {
+    const parts = [`#${track.index + 1}`];
+    if (track.language) parts.push(track.language.toUpperCase());
+    if (track.title) parts.push(track.title);
+    if (track.codec) parts.push(track.codec);
+    if (track.channels) parts.push(`${track.channels} ch`);
+    return parts.join(" - ");
+  }
+
+  async function loadAudioTracksForMedia(path: string) {
+    audioTracks = [];
+    selectedAudioTrackIndex = null;
+    audioTrackAutoSelected = true;
+
+    if (detectMediaType(getFileName(path)) !== "video") return;
+
+    audioTracksLoading = true;
+    try {
+      const tracks = await invoke<AudioTrackInfo[]>("flashcard_list_audio_tracks", {
+        path,
+      });
+      audioTracks = tracks;
+      selectedAudioTrackIndex =
+        tracks.length > 1 ? pickBestAudioTrackIndex(tracks, noteTypeLanguage) : null;
+    } catch (e) {
+      addLog(`${t("flashcards.audioTracksError")}: ${e}`, "warning");
+    } finally {
+      audioTracksLoading = false;
+    }
+  }
+
+  $effect(() => {
+    if (audioTracks.length > 1 && audioTrackAutoSelected) {
+      selectedAudioTrackIndex = pickBestAudioTrackIndex(audioTracks, noteTypeLanguage);
+    }
+  });
+
   // ─── File Drag-and-Drop Handler ───────────────────────────────────────────
   function getFileExtension(path: string): string {
     return (path.split(".").pop() || "").toLowerCase();
@@ -1254,7 +1400,7 @@
 
       // Handle media files
       if (mediaFiles.length > 0) {
-        applyMediaSelection(mediaFiles[0]);
+        await applyMediaSelection(mediaFiles[0]);
       }
     }
   }
@@ -1483,6 +1629,7 @@
       continuation_chars: continuationChars,
       generate_audio: generateAudio,
       audio_bitrate: audioBitrate,
+      audio_track_index: selectedAudioTrackIndex,
       normalize_audio: normalizeAudio,
       audio_pad_start_ms: audioPadStart,
       audio_pad_end_ms: audioPadEnd,
@@ -1568,10 +1715,11 @@
     );
   }
 
-  function applyMediaSelection(path: string, autoSelected = false) {
+  async function applyMediaSelection(path: string, autoSelected = false) {
     mediaPath = path;
     const filename = mediaPath.split("/").pop() || "";
     mediaType = detectMediaType(filename);
+    await loadAudioTracksForMedia(path);
 
     if (mediaType === "video") {
       generateAudio = true;
@@ -1640,7 +1788,7 @@
         }
         return;
       }
-      applyMediaSelection(suggestedPath, true);
+      await applyMediaSelection(suggestedPath, true);
     } catch {
       // Best-effort suggestion only.
     }
@@ -1743,7 +1891,7 @@
         ],
       });
       if (selected) {
-        applyMediaSelection(selected as string);
+        await applyMediaSelection(selected as string);
       }
     } catch (e) {
       error = `${t("flashcards.errorSelectingFile")}: ${e}`;
@@ -1891,6 +2039,7 @@
           continuation_chars: continuationChars,
           generate_audio: ep.mediaPath ? generateAudio : false,
           audio_bitrate: audioBitrate,
+          audio_track_index: null,
           normalize_audio: normalizeAudio,
           audio_pad_start_ms: audioPadStart,
           audio_pad_end_ms: audioPadEnd,
@@ -2088,6 +2237,9 @@
     nativeSubsPath = "";
     mediaPath = "";
     mediaType = "none";
+    audioTracks = [];
+    selectedAudioTrackIndex = null;
+    audioTrackAutoSelected = true;
     targetSubsInfo = null;
     nativeSubsInfo = null;
     episodes = [];
@@ -2623,6 +2775,36 @@
                 </button>
               </div>
             </div>
+
+            {#if mediaType === "video" && (audioTracksLoading || audioTracks.length > 1)}
+              <div>
+                <span class="block text-xs text-gray-400 mb-1"
+                  >{t("flashcards.audioTrack")}</span
+                >
+                <span class="block text-[10px] text-gray-500 mb-1"
+                  >{t("flashcards.audioTrackDesc")}</span
+                >
+                {#if audioTracksLoading}
+                  <div class="input-modern text-xs text-gray-500">
+                    {t("flashcards.audioTracksLoading")}
+                  </div>
+                {:else}
+                  <select
+                    class="input-modern w-full text-xs"
+                    value={selectedAudioTrackIndex ?? ""}
+                    onchange={(event) => {
+                      const value = (event.currentTarget as HTMLSelectElement).value;
+                      selectedAudioTrackIndex = value === "" ? null : Number(value);
+                      audioTrackAutoSelected = false;
+                    }}
+                  >
+                    {#each audioTracks as track}
+                      <option value={track.index}>{formatAudioTrackLabel(track)}</option>
+                    {/each}
+                  </select>
+                {/if}
+              </div>
+            {/if}
 
             <div>
               <span class="block text-xs text-gray-400 mb-1">
