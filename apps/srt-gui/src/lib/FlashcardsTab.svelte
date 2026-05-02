@@ -834,6 +834,17 @@
   let onlyCjk = $state(false);
   let removeNoMatch = $state(false);
 
+  let timingFlashTimer: ReturnType<typeof setTimeout> | null = null;
+  let showTimingFlash = $state(false);
+
+  function triggerTimingFlash() {
+    showTimingFlash = true;
+    if (timingFlashTimer) clearTimeout(timingFlashTimer);
+    timingFlashTimer = setTimeout(() => {
+      showTimingFlash = false;
+    }, 3000);
+  }
+
   let contextLeading = $state(0);
   let contextTrailing = $state(0);
   let contextMaxGap = $state(15.0);
@@ -3085,7 +3096,10 @@
         <div class="flex items-center gap-2">
           <button
             onclick={() => {
-              if (hasAnyFiles) showSubtitleOptions = !showSubtitleOptions;
+              if (hasAnyFiles) {
+                showSubtitleOptions = !showSubtitleOptions;
+                if (showSubtitleOptions) triggerTimingFlash();
+              }
             }}
             class="flex-1 flex items-center justify-between text-sm font-semibold text-teal-400"
           >
@@ -3125,35 +3139,35 @@
         </div>
         {#if showSubtitleOptions}
           <div class="mt-3 space-y-2.5 animate-fade-in">
-            <div class="flex items-center gap-4">
-              <span class="text-xs text-gray-400"
-                >{t("flashcards.useTimingsFrom")}:</span
-              >
-              <label class="flex items-center gap-1.5">
-                <input
-                  type="radio"
-                  bind:group={useTimingsFrom}
-                  value="target"
-                  class="text-emerald-500"
-                />
-                <span class="text-xs text-gray-300"
-                  >{t("flashcards.timingsOriginal")}</span
-                >
-              </label>
-              <label class="flex items-center gap-1.5">
-                <input
-                  type="radio"
-                  bind:group={useTimingsFrom}
-                  value="native"
-                  class="text-emerald-500"
-                  disabled={!hasReferenceSubs}
-                />
-                <span
-                  class="text-xs text-gray-300 {!hasReferenceSubs
-                    ? 'opacity-50'
-                    : ''}">{t("flashcards.timingsReference")}</span
-                >
-              </label>
+            <div class="flex flex-col gap-2">
+              <span class="text-xs text-gray-400">{t("flashcards.useTimingsFrom")}</span>
+              <div class="flex gap-1 rounded-lg border border-white/10 bg-black/20 p-1">
+                <label class="flex-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    bind:group={useTimingsFrom}
+                    value="target"
+                    class="peer sr-only"
+                    onchange={triggerTimingFlash}
+                  />
+                  <div class="timing-source-choice {showTimingFlash && useTimingsFrom === 'target' ? 'timing-source-flash' : ''}">
+                    {t("flashcards.timingsOriginal")}
+                  </div>
+                </label>
+                <label class="flex-1 cursor-pointer { !hasReferenceSubs ? 'opacity-50 cursor-not-allowed' : '' }">
+                  <input
+                    type="radio"
+                    bind:group={useTimingsFrom}
+                    value="native"
+                    disabled={!hasReferenceSubs}
+                    class="peer sr-only"
+                    onchange={triggerTimingFlash}
+                  />
+                  <div class="timing-source-choice {showTimingFlash && useTimingsFrom === 'native' ? 'timing-source-flash' : ''}">
+                    {t("flashcards.timingsReference")}
+                  </div>
+                </label>
+              </div>
             </div>
 
             <div class="grid grid-cols-2 gap-2">
@@ -3212,11 +3226,11 @@
             </div>
 
             <div class="flex items-center gap-3 pt-1">
-              <label class="flex items-center gap-1.5">
+              <label class="vesta-check-row flex items-center gap-2">
                 <input
                   type="checkbox"
                   bind:checked={combineSentences}
-                  class="rounded text-emerald-500"
+                  class="vesta-check-input text-emerald-500"
                 />
                 <span class="text-xs text-gray-300"
                   >{t("flashcards.combineSentences")}</span
@@ -3323,30 +3337,30 @@
               />
             </div>
 
-            <div class="flex flex-wrap gap-3">
-              <label class="flex items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  bind:checked={excludeDuplicatesSubs1}
-                  class="rounded text-orange-500"
-                />
-                <span class="text-xs text-gray-300"
-                  >{t("flashcards.excludeDupSubs1")}</span
-                >
-              </label>
-              <label class="flex items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  bind:checked={excludeDuplicatesSubs2}
-                  class="rounded text-orange-500"
-                  disabled={!nativeSubsPath}
-                />
-                <span
-                  class="text-xs text-gray-300 {!nativeSubsPath
-                    ? 'opacity-50'
-                    : ''}">{t("flashcards.excludeDupSubs2")}</span
-                >
-              </label>
+            <div class="flex flex-col gap-2">
+              <div class="grid grid-cols-2 gap-1 rounded-lg border border-white/10 bg-black/20 p-1">
+                <label class="vesta-check-row justify-center">
+                  <input
+                    type="checkbox"
+                    bind:checked={excludeDuplicatesSubs1}
+                    class="vesta-check-input text-orange-500"
+                  />
+                  <span class="text-xs font-medium text-gray-300"
+                    >{t("flashcards.excludeDupSubs1")}</span
+                  >
+                </label>
+                <label class="vesta-check-row justify-center { !nativeSubsPath ? 'opacity-50 cursor-not-allowed' : '' }">
+                  <input
+                    type="checkbox"
+                    bind:checked={excludeDuplicatesSubs2}
+                    disabled={!nativeSubsPath}
+                    class="vesta-check-input text-orange-500"
+                  />
+                  <span
+                    class="text-xs font-medium text-gray-300">{t("flashcards.excludeDupSubs2")}</span
+                  >
+                </label>
+              </div>
             </div>
 
             <div class="grid grid-cols-2 gap-2">
@@ -3409,38 +3423,36 @@
               </div>
             </div>
 
-            <div class="space-y-1.5">
-              <label class="flex items-center gap-1.5">
+            <div class="grid gap-1.5">
+              <label class="vesta-check-row">
                 <input
                   type="checkbox"
                   bind:checked={excludeStyled}
-                  class="rounded text-orange-500"
+                  class="vesta-check-input text-orange-500"
                 />
                 <span class="text-xs text-gray-300"
                   >{t("flashcards.excludeStyled")}</span
                 >
               </label>
-              <label class="flex items-center gap-1.5">
+              <label class="vesta-check-row">
                 <input
                   type="checkbox"
                   bind:checked={onlyCjk}
-                  class="rounded text-orange-500"
+                  class="vesta-check-input text-orange-500"
                 />
                 <span class="text-xs text-gray-300"
                   >{t("flashcards.onlyCjk")}</span
                 >
               </label>
-              <label class="flex items-center gap-1.5">
+              <label class="vesta-check-row {!nativeSubsPath ? 'opacity-50 cursor-not-allowed' : ''}">
                 <input
                   type="checkbox"
                   bind:checked={removeNoMatch}
-                  class="rounded text-orange-500"
+                  class="vesta-check-input text-orange-500"
                   disabled={!nativeSubsPath}
                 />
                 <span
-                  class="text-xs text-gray-300 {!nativeSubsPath
-                    ? 'opacity-50'
-                    : ''}">{t("flashcards.removeNoMatch")}</span
+                  class="text-xs text-gray-300">{t("flashcards.removeNoMatch")}</span
                 >
               </label>
             </div>
@@ -4876,6 +4888,66 @@
 </div>
 
 <style>
+  .timing-source-choice {
+    border: 1px solid transparent;
+    border-radius: 7px;
+    color: rgb(156 163 175);
+    font-size: 0.75rem;
+    font-weight: 650;
+    line-height: 1.1;
+    min-height: 2rem;
+    padding: 0.5rem 0.65rem;
+    text-align: center;
+    transition:
+      background-color 0.16s ease,
+      border-color 0.16s ease,
+      box-shadow 0.16s ease,
+      color 0.16s ease;
+  }
+
+  input:checked + .timing-source-choice {
+    background: rgba(16, 185, 129, 0.14);
+    border-color: rgba(52, 211, 153, 0.26);
+    color: rgb(110 231 183);
+  }
+
+  label:hover .timing-source-choice {
+    color: rgb(209 213 219);
+  }
+
+  input:disabled + .timing-source-choice {
+    pointer-events: none;
+  }
+
+  .timing-source-flash {
+    animation: timing-source-flash 0.72s ease-in-out 4;
+  }
+
+  .vesta-check-row {
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    gap: 0.5rem;
+    min-height: 2.1rem;
+    padding: 0.4rem 0.55rem;
+    transition:
+      background-color 0.16s ease,
+      border-color 0.16s ease;
+  }
+
+  .vesta-check-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .vesta-check-input {
+    background: rgba(15, 23, 42, 0.85);
+    border-color: rgba(148, 163, 184, 0.34);
+    border-radius: 5px;
+  }
+
   :global(.timing-source-active) {
     border-color: rgba(52, 211, 153, 0.82) !important;
     box-shadow:
@@ -4889,6 +4961,21 @@
     box-shadow:
       0 0 0 1px rgba(251, 191, 36, 0.3),
       0 0 24px rgba(251, 191, 36, 0.24);
+  }
+
+  @keyframes timing-source-flash {
+    0%,
+    100% {
+      border-color: rgba(52, 211, 153, 0.22);
+      box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+    }
+
+    45% {
+      border-color: rgba(52, 211, 153, 0.95);
+      box-shadow:
+        0 0 0 2px rgba(52, 211, 153, 0.2),
+        0 0 18px rgba(52, 211, 153, 0.34);
+    }
   }
 
   @keyframes flashcard-requirement-pulse {

@@ -224,11 +224,6 @@
               <span class="mr-2">{option.icon}</span>
             {/if}
             <span>{option.label}</span>
-            {#if option.searchTerms && searchQuery}
-              <span class="text-gray-500 text-xs ml-2"
-                >({option.searchTerms})</span
-              >
-            {/if}
             {#if option.value === value}
               <svg
                 class="w-4 h-4 ml-auto text-indigo-400"
@@ -253,20 +248,23 @@
 
 <style lang="postcss">
   .searchable-select-input {
-    background: #1a1a2e !important;
+    background: linear-gradient(180deg, rgba(36, 37, 58, 0.98), rgba(24, 24, 42, 0.98)) !important;
     background-color: #1a1a2e !important;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 12px 40px 12px 16px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 10px;
+    padding: 11px 40px 11px 14px;
     color: white;
-    transition: all 0.3s ease;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
     font-size: 0.875rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
   .searchable-select-input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    border-color: rgba(129, 140, 248, 0.78);
+    box-shadow:
+      0 0 0 3px rgba(129, 140, 248, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
   .searchable-select-input::placeholder {
@@ -284,8 +282,8 @@
     overflow-x: hidden;
     background: #0d0d1a !important;
     background-color: #0d0d1a !important;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 10px;
     box-shadow:
       0 10px 40px rgba(0, 0, 0, 1),
       0 0 0 1px rgba(0, 0, 0, 1);
@@ -297,28 +295,30 @@
   .searchable-select-option {
     display: flex;
     align-items: center;
-    padding: 10px 16px;
+    min-height: 42px;
+    gap: 8px;
+    padding: 10px 14px;
     font-size: 0.875rem;
     transition: background-color 0.1s ease;
     cursor: pointer;
     border: none;
-    background: #0d0d1a !important;
-    background-color: #0d0d1a !important;
+    background: #10101f !important;
+    background-color: #10101f !important;
   }
 
   .searchable-select-option:hover {
-    background: #1e1e38 !important;
-    background-color: #1e1e38 !important;
+    background: #202038 !important;
+    background-color: #202038 !important;
   }
 
   .searchable-select-option.highlighted {
-    background: #2d2d5f !important;
-    background-color: #2d2d5f !important;
+    background: #2b2b55 !important;
+    background-color: #2b2b55 !important;
   }
 
   .searchable-select-option.selected {
-    background: #1a1a3e !important;
-    background-color: #1a1a3e !important;
+    background: #1d2445 !important;
+    background-color: #1d2445 !important;
   }
 
   .searchable-select-option:first-child {

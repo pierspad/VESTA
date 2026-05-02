@@ -985,6 +985,28 @@
     return modelId ? modelId.charAt(0).toUpperCase() + modelId.slice(1) : "";
   }
 
+  function whisperModelIconPath(modelId: string): string {
+    const paths: Record<string, string> = {
+      tiny: "M13 3L4 14h7l-1 7 9-12h-7l1-6z",
+      base: "M12 4a8 8 0 100 16 8 8 0 000-16zm0 3v5l3 2",
+      small: "M6 20V10m6 10V4m6 16v-7M4 10h4m2-6h4m2 9h4",
+      medium: "M4 13h3l2-6 4 12 2-6h5",
+      large: "M12 3l8 4-8 4-8-4 8-4zm-8 8l8 4 8-4M4 15l8 4 8-4",
+    };
+    return paths[modelId] || "M9 3h6m-7 4h8a3 3 0 013 3v7a3 3 0 01-3 3H8a3 3 0 01-3-3v-7a3 3 0 013-3zm4 3v4m-2-2h4";
+  }
+
+  function whisperModelAccent(modelId: string): string {
+    const accents: Record<string, string> = {
+      tiny: "from-amber-500/25 to-yellow-500/10 text-amber-200",
+      base: "from-sky-500/25 to-cyan-500/10 text-sky-200",
+      small: "from-emerald-500/25 to-teal-500/10 text-emerald-200",
+      medium: "from-indigo-500/25 to-violet-500/10 text-indigo-200",
+      large: "from-fuchsia-500/25 to-rose-500/10 text-fuchsia-200",
+    };
+    return accents[modelId] || "from-cyan-500/20 to-blue-500/10 text-cyan-200";
+  }
+
   $effect(() => {
     if (typeof window === "undefined") return;
     publishSettingsActionState(
@@ -1420,10 +1442,10 @@
       <button
         type="button"
         onclick={() => openSettingsSection("overview")}
-        class="py-2.5 pr-3 text-cyan-100 hover:text-white transition-colors flex items-center gap-2 text-sm font-semibold"
+        class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm font-semibold text-cyan-100 shadow-sm transition-colors hover:border-cyan-400/30 hover:bg-cyan-500/10 hover:text-white"
         title="Torna alla panoramica Settings"
       >
-        <span class="w-7 h-7 flex items-center justify-center">
+        <span class="flex h-6 w-6 items-center justify-center rounded-md bg-black/20">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
@@ -2317,26 +2339,18 @@
       {/if}
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
       <div class="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/25">
-        <p class="text-xs uppercase tracking-wide text-cyan-300/70 mb-1">{t("settings.status")}</p>
+        <p class="text-xs uppercase tracking-wide text-cyan-300/70 mb-1">{t("settings.modelsDownloadedLocally")}</p>
         <p class="text-2xl font-bold text-white">{downloadedWhisperCount}/{whisperModels.length}</p>
-        <p class="text-xs text-gray-400 mt-1">{t("settings.modelsDownloadedLocally")}</p>
       </div>
       <div class="p-4 rounded-xl bg-white/5 border border-white/10">
-        <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">{t("settings.activeDefault")}</p>
+        <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">{t("settings.default")}</p>
         <p class="text-2xl font-bold text-white">{defaultWhisperModel ? (t(`transcribe.model${defaultWhisperModel.charAt(0).toUpperCase()}${defaultWhisperModel.slice(1)}`) || defaultWhisperModel) : ""}</p>
-        <p class="text-xs text-gray-400 mt-1">{t("settings.usedByTranscriptionTab")}</p>
       </div>
       <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
         <p class="text-xs uppercase tracking-wide text-emerald-300/70 mb-1">{t("settings.ready")}</p>
         <p class="text-2xl font-bold text-white">{downloadedWhisperCount > 0 ? t("common.yes") : t("common.no")}</p>
-        <p class="text-xs text-gray-400 mt-1">{t("settings.atLeastOneModelRequired")}</p>
-      </div>
-      <div class="p-4 rounded-xl bg-white/5 border border-white/10">
-        <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">{t("settings.download")}</p>
-        <p class="text-2xl font-bold text-white">{isDownloading ? `${progress || 0}%` : whisperModels.length - downloadedWhisperCount}</p>
-        <p class="text-xs text-gray-400 mt-1">{isDownloading ? progressStage || t("settings.inProgress") : t("settings.missing")}</p>
       </div>
     </div>
 
@@ -2389,12 +2403,10 @@
               </button>
             {/if}
           </div>
-          <div class="mx-auto mb-2 w-9 h-9 rounded-lg flex items-center justify-center {model.downloaded ? 'bg-cyan-500/15 text-cyan-300' : 'bg-white/5 text-amber-300'}">
-            {#if model.downloaded}
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-            {:else}
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            {/if}
+          <div class="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br {whisperModelAccent(model.id)} shadow-sm">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={whisperModelIconPath(model.id)} />
+            </svg>
           </div>
           <div class="font-bold text-sm">
             {t(`transcribe.model${model.id.charAt(0).toUpperCase()}${model.id.slice(1)}`) || model.name}
