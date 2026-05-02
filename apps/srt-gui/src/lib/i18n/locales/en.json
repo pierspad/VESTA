@@ -446,7 +446,7 @@
   "flashcards.snapshotField": "4. Snapshot",
   "flashcards.videoField": "5. Video",
   "flashcards.exportFormat": "Export Format",
-  "flashcards.noteTypeLanguage": "Language",
+  "flashcards.noteTypeLanguage": "Language you study",
   "flashcards.noteTypeLanguagePlaceholder": "Select language...",
   "flashcards.exportTSV": "TSV + media files (subs2srs classic)",
   "flashcards.exportTSVDesc": "Generates a .tsv file + media folder. Import into Anki manually.",

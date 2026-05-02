@@ -7,8 +7,11 @@
   import { locale } from "./i18n";
   import {
     CARD_TEMPLATES_UPDATED_EVENT,
+    detectLanguageCode,
+    getLanguageSearchTerms,
     languages,
     loadCardTemplates,
+    scoreLanguageMatch,
   } from "./models";
   import PathPreviewModal from "./PathPreviewModal.svelte";
   import SearchableSelect from "./SearchableSelect.svelte";
@@ -50,6 +53,8 @@
   const OUTPUT_DIR_KEY = "vesta-last-output-dir";
   const NOTE_TYPE_LANGUAGE_KEY = "vesta-flashcards-note-type-language";
   const DEFAULT_FLASHCARDS_LANGUAGE_KEY = "vesta-default-flashcards-language";
+  const DEFAULT_NATIVE_LANGUAGE_KEY = "vesta-default-native-language";
+  const DEFAULT_TARGET_LANGUAGE_KEY = "vesta-default-target-language";
   const SERIES_MODE_KEY = "vesta-flashcards-series-mode";
   const ANKI_FIELDS_PANEL_OPEN_KEY = "vesta-flashcards-anki-fields-panel-open";
 
@@ -134,9 +139,26 @@
     "reference",
     "ref",
   ];
-  const KNOWN_LANGUAGE_CODES = new Set(
-    languages.map((lang) => lang.code.toLowerCase()),
-  );
+  const KNOWN_LANGUAGE_CODES = new Set(languages.map((lang) => lang.code.toLowerCase()));
+
+  function loadDefaultLanguage(key: string, fallback = ""): string {
+    try {
+      return localStorage.getItem(key) || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function getStudiedLanguagePreference(): string {
+    return noteTypeLanguage || loadDefaultLanguage(DEFAULT_FLASHCARDS_LANGUAGE_KEY);
+  }
+
+  function getNativeLanguagePreference(): string {
+    return (
+      loadDefaultLanguage(DEFAULT_NATIVE_LANGUAGE_KEY) ||
+      loadDefaultLanguage(DEFAULT_TARGET_LANGUAGE_KEY, "it")
+    );
+  }
 
   interface ParsedSeriesSubtitle {
     path: string;
@@ -171,7 +193,7 @@
     const suffixParts = stem.split(/[._-]+/).filter(Boolean);
     if (suffixParts.length > 1) {
       const lastPart = suffixParts[suffixParts.length - 1];
-      if (KNOWN_LANGUAGE_CODES.has(lastPart)) {
+      if (KNOWN_LANGUAGE_CODES.has(lastPart) || detectLanguageCode(lastPart)) {
         suffixParts.pop();
       }
     }
@@ -242,14 +264,34 @@
         : { target: paths[0], native: "" };
     }
 
+    const studiedLanguage = getStudiedLanguagePreference();
+    const nativeLanguage = getNativeLanguagePreference();
+    const byStudiedLanguage = studiedLanguage
+      ? parsed.find((item) => item.language === studiedLanguage)
+      : null;
+    const byNativeLanguage = nativeLanguage
+      ? parsed.find((item) => item.language === nativeLanguage)
+      : null;
+
     let targetCandidate =
+      (preferredRole === "auto" ? byStudiedLanguage : null) ||
       parsed.find((item) => item.roleHint === "original") ||
+      parsed.find((item) => item.path !== byNativeLanguage?.path) ||
       parsed[0];
 
     let nativeCandidate =
+      (preferredRole === "auto" && byNativeLanguage?.path !== targetCandidate.path
+        ? byNativeLanguage
+        : null) ||
       parsed.find(
         (item) =>
           item.path !== targetCandidate.path && item.roleHint === "reference",
+      ) ||
+      parsed.find(
+        (item) =>
+          item.path !== targetCandidate.path &&
+          item.language &&
+          item.language !== targetCandidate.language,
       ) ||
       parsed.find((item) => item.path !== targetCandidate.path) ||
       null;
@@ -1018,6 +1060,7 @@
   let unlisten: (() => void) | null = null;
   let unlistenDragDrop: (() => void) | null = null;
   let removeTemplateListener: (() => void) | null = null;
+  let removeLanguageDefaultsListener: (() => void) | null = null;
   let removeLayoutObserver: (() => void) | null = null;
   let isDraggingOver = $state(false);
 
@@ -1107,109 +1150,25 @@
   function inferLanguageFromPath(filePath: string): string | null {
     const filename = filePath.split("/").pop()?.toLowerCase() || "";
     const base = filename.replace(/\.[^/.]+$/, "");
-    const tokens = base.split(/[^a-z0-9-]+/).filter(Boolean);
-    const tokenSet = new Set(tokens);
-
-    for (const lang of languages) {
-      const code = lang.code.toLowerCase();
-      if (code.includes("-") && tokenSet.has(code)) return lang.code;
-    }
-
-    for (const lang of languages) {
-      const code = lang.code.toLowerCase();
-      if (code.length !== 2) continue;
-      const index = tokens.lastIndexOf(code);
-      if (index !== -1 && index >= tokens.length - 2) return lang.code;
-    }
-
-    const normalized = ` ${base.replace(/[^a-z0-9]+/g, " ")} `;
-    for (const lang of languages) {
-      const languageName = lang.nameEn
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, " ")
-        .trim();
-      if (languageName && normalized.includes(` ${languageName} `)) {
-        return lang.code;
-      }
-    }
-
-    return null;
+    const tokens = base.split(/[^a-z0-9-]+/i).filter(Boolean);
+    const suffixMatches = tokens
+      .slice(-3)
+      .reverse()
+      .map((token) => detectLanguageCode(token))
+      .filter(Boolean);
+    return suffixMatches[0] || detectLanguageCode(base);
   }
 
-  const AUDIO_LANGUAGE_ALIASES: Record<string, string[]> = {
-    ar: ["ara", "arabic"],
-    ca: ["cat", "catalan"],
-    zh: ["chi", "zho", "cmn", "chinese", "mandarin"],
-    "zh-tw": ["chi", "zho", "cmn", "chinese", "mandarin", "traditional"],
-    cs: ["cze", "ces", "czech"],
-    da: ["dan", "danish"],
-    nl: ["dut", "nld", "dutch"],
-    en: ["eng", "english"],
-    fi: ["fin", "finnish"],
-    fr: ["fre", "fra", "french"],
-    de: ["ger", "deu", "german", "deutsch"],
-    el: ["gre", "ell", "greek"],
-    he: ["heb", "hebrew"],
-    hi: ["hin", "hindi"],
-    hu: ["hun", "hungarian"],
-    is: ["ice", "isl", "icelandic"],
-    id: ["ind", "indonesian"],
-    it: ["ita", "italian", "italiano"],
-    ja: ["jpn", "japanese"],
-    ko: ["kor", "korean"],
-    ms: ["may", "msa", "malay"],
-    no: ["nor", "norwegian"],
-    pl: ["pol", "polish"],
-    pt: ["por", "portuguese"],
-    "pt-br": ["por", "portuguese", "brazil"],
-    ro: ["rum", "ron", "romanian"],
-    ru: ["rus", "russian"],
-    es: ["spa", "spanish", "espanol", "español"],
-    sv: ["swe", "swedish"],
-    th: ["tha", "thai"],
-    tr: ["tur", "turkish"],
-    uk: ["ukr", "ukrainian"],
-    vi: ["vie", "vietnamese"],
-  };
-
-  function normalizeAudioLanguageText(value: string | null | undefined): string {
-    return (value || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, " ")
-      .trim();
+  function getPreferredAudioLanguageCode(): string {
+    return inferLanguageFromPath(targetSubsPath) || noteTypeLanguage;
   }
 
   function scoreAudioTrackForLanguage(track: AudioTrackInfo, languageCode: string): number {
     if (!languageCode) return 0;
-    const lang = languages.find((item) => item.code === languageCode);
-    const candidates = [
-      languageCode,
-      languageCode.split("-")[0],
-      ...(AUDIO_LANGUAGE_ALIASES[languageCode] || []),
-      ...(AUDIO_LANGUAGE_ALIASES[languageCode.split("-")[0]] || []),
-      lang?.nameEn,
-      lang?.name,
-    ]
-      .filter(Boolean)
-      .map((value) => normalizeAudioLanguageText(String(value)))
-      .filter(Boolean);
-
-    const language = normalizeAudioLanguageText(track.language);
-    const title = normalizeAudioLanguageText(track.title);
-    let score = 0;
-
-    for (const candidate of candidates) {
-      if (language === candidate) score = Math.max(score, 100);
-      if (language && (language.startsWith(candidate) || candidate.startsWith(language))) {
-        score = Math.max(score, 75);
-      }
-      if (title.split(" ").includes(candidate)) score = Math.max(score, 60);
-      if (title.includes(candidate)) score = Math.max(score, 45);
-    }
-
-    return score;
+    return Math.max(
+      scoreLanguageMatch(track.language || "", languageCode),
+      Math.max(0, scoreLanguageMatch(track.title || "", languageCode) - 12),
+    );
   }
 
   function pickBestAudioTrackIndex(tracks: AudioTrackInfo[], languageCode: string): number | null {
@@ -1251,7 +1210,7 @@
       });
       audioTracks = tracks;
       selectedAudioTrackIndex =
-        tracks.length > 1 ? pickBestAudioTrackIndex(tracks, noteTypeLanguage) : null;
+        tracks.length > 1 ? pickBestAudioTrackIndex(tracks, getPreferredAudioLanguageCode()) : null;
     } catch (e) {
       addLog(`${t("flashcards.audioTracksError")}: ${e}`, "warning");
     } finally {
@@ -1261,7 +1220,7 @@
 
   $effect(() => {
     if (audioTracks.length > 1 && audioTrackAutoSelected) {
-      selectedAudioTrackIndex = pickBestAudioTrackIndex(audioTracks, noteTypeLanguage);
+      selectedAudioTrackIndex = pickBestAudioTrackIndex(audioTracks, getPreferredAudioLanguageCode());
     }
   });
 
@@ -1301,7 +1260,7 @@
     const parts = base.split(/[._-]/);
     if (parts.length > 1) {
       const lastPart = parts[parts.length - 1].toLowerCase();
-      if (KNOWN_LANGUAGE_CODES.has(lastPart)) {
+      if (KNOWN_LANGUAGE_CODES.has(lastPart) || detectLanguageCode(lastPart)) {
         parts.pop();
         base = parts.join(" ");
       } else {
@@ -1411,6 +1370,17 @@
     const handleCardTemplatesUpdated = () => {
       syncNoteTypeNameFromTemplates();
     };
+    const handleLanguageDefaultsUpdated = () => {
+      try {
+        const defaultNoteTypeLanguage = localStorage.getItem(DEFAULT_FLASHCARDS_LANGUAGE_KEY);
+        if (
+          defaultNoteTypeLanguage &&
+          languages.some((l) => l.code === defaultNoteTypeLanguage)
+        ) {
+          noteTypeLanguage = defaultNoteTypeLanguage;
+        }
+      } catch {}
+    };
 
     const updateLayoutWidth = () => {
       const hostWidth = layoutHostEl?.getBoundingClientRect().width;
@@ -1445,6 +1415,15 @@
       window.removeEventListener(
         CARD_TEMPLATES_UPDATED_EVENT,
         handleCardTemplatesUpdated,
+      );
+    window.addEventListener(
+      "vesta-language-defaults-updated",
+      handleLanguageDefaultsUpdated,
+    );
+    removeLanguageDefaultsListener = () =>
+      window.removeEventListener(
+        "vesta-language-defaults-updated",
+        handleLanguageDefaultsUpdated,
       );
 
     try {
@@ -1540,6 +1519,7 @@
     if (unlisten) unlisten();
     if (unlistenDragDrop) unlistenDragDrop();
     if (removeTemplateListener) removeTemplateListener();
+    if (removeLanguageDefaultsListener) removeLanguageDefaultsListener();
     if (removeLayoutObserver) removeLayoutObserver();
     if (requirementPulseTimer) clearTimeout(requirementPulseTimer);
   });
@@ -1695,14 +1675,6 @@
   async function loadNativeSubtitle(path: string) {
     nativeSubsPath = path;
     const filename = nativeSubsPath.split("/").pop() || "";
-
-    if (!noteTypeLanguage) {
-      const inferredLanguage = inferLanguageFromPath(nativeSubsPath);
-      if (inferredLanguage) {
-        noteTypeLanguage = inferredLanguage;
-        localStorage.setItem(NOTE_TYPE_LANGUAGE_KEY, inferredLanguage);
-      }
-    }
 
     const info = await invoke<any>("flashcard_load_subs", {
       path: nativeSubsPath,
@@ -2776,36 +2748,6 @@
               </div>
             </div>
 
-            {#if mediaType === "video" && (audioTracksLoading || audioTracks.length > 1)}
-              <div>
-                <span class="block text-xs text-gray-400 mb-1"
-                  >{t("flashcards.audioTrack")}</span
-                >
-                <span class="block text-[10px] text-gray-500 mb-1"
-                  >{t("flashcards.audioTrackDesc")}</span
-                >
-                {#if audioTracksLoading}
-                  <div class="input-modern text-xs text-gray-500">
-                    {t("flashcards.audioTracksLoading")}
-                  </div>
-                {:else}
-                  <select
-                    class="input-modern w-full text-xs"
-                    value={selectedAudioTrackIndex ?? ""}
-                    onchange={(event) => {
-                      const value = (event.currentTarget as HTMLSelectElement).value;
-                      selectedAudioTrackIndex = value === "" ? null : Number(value);
-                      audioTrackAutoSelected = false;
-                    }}
-                  >
-                    {#each audioTracks as track}
-                      <option value={track.index}>{formatAudioTrackLabel(track)}</option>
-                    {/each}
-                  </select>
-                {/if}
-              </div>
-            {/if}
-
             <div>
               <span class="block text-xs text-gray-400 mb-1">
                 {t("flashcards.outputDir")} <span class="text-red-400">*</span>
@@ -3599,7 +3541,34 @@
         {#if generateAudio && hasAudio}
           <div class="space-y-2 animate-fade-in">
             <div class="grid grid-cols-2 gap-2">
-              <div>
+              {#if mediaType === "video" && (audioTracksLoading || audioTracks.length > 1)}
+                <div>
+                  <span class="block text-xs text-gray-500 mb-1"
+                    >{t("flashcards.audioTrack")}</span
+                  >
+                  {#if audioTracksLoading}
+                    <div class="input-modern text-xs text-gray-500">
+                      {t("flashcards.audioTracksLoading")}
+                    </div>
+                  {:else}
+                    <SearchableSelect
+                      noResultsText={t("common.noResults")}
+                      options={audioTracks.map((track) => ({
+                        value: String(track.index),
+                        label: formatAudioTrackLabel(track),
+                      }))}
+                      value={selectedAudioTrackIndex === null ? "" : String(selectedAudioTrackIndex)}
+                      onchange={(value) => {
+                        selectedAudioTrackIndex = value === "" ? null : Number(value);
+                        audioTrackAutoSelected = false;
+                      }}
+                      placeholder={t("flashcards.audioTrack")}
+                    />
+                  {/if}
+                </div>
+              {/if}
+
+              <div class={mediaType === "video" && (audioTracksLoading || audioTracks.length > 1) ? "" : "col-span-2"}>
                 <span class="block text-xs text-gray-500 mb-1"
                   >{t("flashcards.bitrate")}</span
                 >
@@ -3617,20 +3586,8 @@
                   placeholder="Bitrate"
                 />
               </div>
-              <div class="flex items-end">
-                <label class="flex items-center gap-1.5">
-                  <input
-                    type="checkbox"
-                    bind:checked={normalizeAudio}
-                    class="rounded text-cyan-500"
-                  />
-                  <span class="text-xs text-gray-300"
-                    >{t("flashcards.normalizeAudio")}</span
-                  >
-                </label>
-              </div>
             </div>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-3 gap-2 items-end">
               <div>
                 <span class="block text-xs text-gray-500 mb-1"
                   >{t("flashcards.padStart")}</span
@@ -3656,6 +3613,20 @@
                   />
                   <span class="text-xs text-gray-500">ms</span>
                 </div>
+              </div>
+              <div class="flex justify-center">
+                <label
+                  class="min-h-[42px] w-full flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-2 text-center transition-colors hover:bg-white/10"
+                >
+                  <input
+                    type="checkbox"
+                    bind:checked={normalizeAudio}
+                    class="rounded text-cyan-500"
+                  />
+                  <span class="text-xs text-gray-300"
+                    >{t("flashcards.normalizeAudio")}</span
+                  >
+                </label>
               </div>
             </div>
           </div>
@@ -3957,7 +3928,7 @@
                 lang.nameEn === lang.name
                   ? lang.name
                   : `${lang.nameEn} — ${lang.name}`,
-              searchTerms: `${lang.nameEn} ${lang.name}`,
+              searchTerms: getLanguageSearchTerms(lang.code),
               icon: lang.flag,
             }))}
             value={noteTypeLanguage}

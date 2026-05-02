@@ -5,7 +5,7 @@
   import { guardedOpen, guardedSave } from "./dialogGuard";
   import { onDestroy, onMount } from "svelte";
   import { locale } from "./i18n";
-  import { languages as allLanguages } from "./models";
+  import { getLanguageSearchTerms, languages as allLanguages } from "./models";
   import PathPickerField from "./PathPickerField.svelte";
   import PathPreviewModal from "./PathPreviewModal.svelte";
   import SearchableSelect from "./SearchableSelect.svelte";
@@ -808,7 +808,7 @@
                   lang.nameEn === lang.name
                     ? lang.name
                     : `${lang.nameEn} — ${lang.name}`,
-                searchTerms: `${lang.nameEn} ${lang.name}`,
+                searchTerms: getLanguageSearchTerms(lang.code),
                 icon: lang.flag,
               }))}
               value={selectedLanguage}

@@ -20,6 +20,7 @@
     defaultCardTemplates,
     defaultFieldNames,
     getModelsForProvider,
+    getLanguageSearchTerms,
     languages,
     limitNoteTypeFieldValue,
     loadAndValidateApiKeys,
@@ -49,6 +50,8 @@
   const DEFAULT_TARGET_LANGUAGE_KEY = "vesta-default-target-language";
   const DEFAULT_TRANSCRIBE_LANGUAGE_KEY = "vesta-default-transcribe-language";
   const DEFAULT_FLASHCARDS_LANGUAGE_KEY = "vesta-default-flashcards-language";
+  const DEFAULT_NATIVE_LANGUAGE_KEY = "vesta-default-native-language";
+  const NOTE_TYPE_LANGUAGE_KEY = "vesta-flashcards-note-type-language";
   const ANKI_FIELD_PRESETS_KEY = "vesta-anki-field-presets";
   const ACTIVE_ANKI_FIELD_PRESET_KEY = "vesta-active-anki-field-preset";
 
@@ -105,6 +108,7 @@
   let defaultTargetLanguage = $state(loadStoredValue(DEFAULT_TARGET_LANGUAGE_KEY, "it"));
   let defaultTranscribeLanguage = $state(loadStoredValue(DEFAULT_TRANSCRIBE_LANGUAGE_KEY, "auto"));
   let defaultFlashcardsLanguage = $state(loadStoredValue(DEFAULT_FLASHCARDS_LANGUAGE_KEY, "it"));
+  let defaultNativeLanguage = $state(loadStoredValue(DEFAULT_NATIVE_LANGUAGE_KEY, "it"));
   let discoveredDefaultModels = $state<DiscoveredModel[]>([]);
   let isCheckingDefaultEndpoint = $state(false);
   let defaultEndpointStatus = $state<EndpointStatus>("idle");
@@ -158,6 +162,11 @@
       apiKeysHint: "Remote providers available for Translation. Local models do not need keys.",
       translationLanguage: "Translation language",
       translationLanguageHint: "Default language used when creating translations.",
+      studyingLanguage: "Language you study",
+      studyingLanguageHint: "Used for flashcard expressions and auto-selecting original subtitles.",
+      nativeLanguage: "Your language",
+      nativeLanguageHint: "Used for flashcard meanings and auto-selecting reference subtitles.",
+      transcriptionLanguageHint: "Spoken language to use when transcribing audio. Auto-detect remains available.",
       whisperHint: "Default local model used by the Transcription tab.",
       noteTypeHint: "Anki note type used by exported flashcards.",
       quickSetup: "Quick setup",
@@ -172,7 +181,7 @@
       setupLlmDesc: "Set the provider, key or default model to unlock the Translation tab.",
       interfaceLanguageDesc: "Choose the interface language.",
       defaultLanguages: "Default languages",
-      defaultLanguagesDesc: "Used when Translation, Flashcards and Transcription open. Tabs still remember the last choice.",
+      defaultLanguagesDesc: "Choose your study pair, translation target and transcription source. Tabs still remember the last choice.",
       addProviderKicker: "New configuration",
       addProviderTitle: "Add an LLM provider",
       addProviderDesc: "Save API keys or OpenAI-compatible endpoints for translation and remote models.",
@@ -211,6 +220,11 @@
       apiKeysHint: "Provider remoti disponibili per Traduzione. I modelli locali non richiedono chiavi.",
       translationLanguage: "Lingua traduzione",
       translationLanguageHint: "Lingua predefinita usata quando crei traduzioni.",
+      studyingLanguage: "Lingua che studi",
+      studyingLanguageHint: "Usata per le frasi delle flashcard e per selezionare i sottotitoli originali.",
+      nativeLanguage: "La tua lingua",
+      nativeLanguageHint: "Usata per i significati delle flashcard e per selezionare i sottotitoli di riferimento.",
+      transcriptionLanguageHint: "Lingua parlata da usare quando trascrivi audio. Resta disponibile il rilevamento automatico.",
       whisperHint: "Modello locale predefinito usato dalla tab Trascrizione.",
       noteTypeHint: "Tipo nota Anki usato dalle flashcard esportate.",
       quickSetup: "Setup rapido",
@@ -225,7 +239,7 @@
       setupLlmDesc: "Imposta provider, chiave o modello predefinito per sbloccare la tab Traduzione.",
       interfaceLanguageDesc: "Scegli la lingua dell'interfaccia.",
       defaultLanguages: "Lingue predefinite",
-      defaultLanguagesDesc: "Usate all'apertura di traduzione, flashcards e trascrizione. Le tab ricordano comunque l'ultima scelta.",
+      defaultLanguagesDesc: "Scegli coppia di studio, lingua di arrivo delle traduzioni e lingua sorgente della trascrizione. Le tab ricordano comunque l'ultima scelta.",
       addProviderKicker: "Nuova configurazione",
       addProviderTitle: "Aggiungi un provider LLM",
       addProviderDesc: "Salva API key o endpoint compatibili OpenAI per traduzione e modelli remoti.",
@@ -264,6 +278,11 @@
       apiKeysHint: "翻译可用的远程提供商。本地模型不需要 key。",
       translationLanguage: "翻译语言",
       translationLanguageHint: "创建翻译时使用的默认语言。",
+      studyingLanguage: "学习语言",
+      studyingLanguageHint: "用于闪卡例句，并自动选择原始字幕。",
+      nativeLanguage: "你的语言",
+      nativeLanguageHint: "用于闪卡释义，并自动选择参考字幕。",
+      transcriptionLanguageHint: "转录音频时使用的口语语言；仍可选择自动检测。",
       whisperHint: "转录标签页使用的默认本地模型。",
       noteTypeHint: "导出闪卡时使用的 Anki 笔记类型。",
       quickSetup: "快速设置",
@@ -278,7 +297,7 @@
       setupLlmDesc: "设置提供商、key 或默认模型以解锁翻译标签页。",
       interfaceLanguageDesc: "选择界面语言。",
       defaultLanguages: "默认语言",
-      defaultLanguagesDesc: "用于打开翻译、闪卡和转录标签页。各标签页仍会记住上一次选择。",
+      defaultLanguagesDesc: "选择学习语言组合、翻译目标语言和转录源语言。各标签页仍会记住上一次选择。",
       addProviderKicker: "新配置",
       addProviderTitle: "添加 LLM 提供商",
       addProviderDesc: "保存 API key 或 OpenAI 兼容端点，用于翻译和远程模型。",
@@ -330,7 +349,7 @@
       value: lang.code,
       label: lang.nameEn === lang.name ? lang.name : `${lang.nameEn} — ${lang.name}`,
       icon: lang.flag,
-      searchTerms: `${lang.nameEn} ${lang.name}`,
+      searchTerms: getLanguageSearchTerms(lang.code),
     })),
   );
   let configuredApiKeyCount = $derived(apiKeys.filter((key) => key.apiType !== "local").length);
@@ -1655,10 +1674,47 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-5">
         <div class="rounded-xl border border-white/10 bg-white/5 p-5">
           <div class="flex items-center justify-between gap-3 mb-4">
-            <span class="block text-sm font-semibold text-white">{s("translation")}</span>
+            <span class="block text-sm font-semibold text-white">{s("studyingLanguage")}</span>
+            <span class="text-4xl">{languages.find((lang) => lang.code === defaultFlashcardsLanguage)?.flag || "🌐"}</span>
+          </div>
+          <SearchableSelect
+            className="language-select"
+            noResultsText={t("common.noResults")}
+            options={defaultWorkflowLanguageOptions}
+            value={defaultFlashcardsLanguage}
+            onchange={(v) => {
+              defaultFlashcardsLanguage = v;
+              saveDefaultLanguage(DEFAULT_FLASHCARDS_LANGUAGE_KEY, v);
+              saveDefaultLanguage(NOTE_TYPE_LANGUAGE_KEY, v);
+            }}
+            placeholder={t("flashcards.noteTypeLanguagePlaceholder")}
+          />
+          <p class="mt-3 text-xs leading-relaxed text-gray-500">{s("studyingLanguageHint")}</p>
+        </div>
+        <div class="rounded-xl border border-white/10 bg-white/5 p-5">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <span class="block text-sm font-semibold text-white">{s("nativeLanguage")}</span>
+            <span class="text-4xl">{languages.find((lang) => lang.code === defaultNativeLanguage)?.flag || "🌐"}</span>
+          </div>
+          <SearchableSelect
+            className="language-select"
+            noResultsText={t("common.noResults")}
+            options={defaultWorkflowLanguageOptions}
+            value={defaultNativeLanguage}
+            onchange={(v) => {
+              defaultNativeLanguage = v;
+              saveDefaultLanguage(DEFAULT_NATIVE_LANGUAGE_KEY, v);
+            }}
+            placeholder={t("flashcards.noteTypeLanguagePlaceholder")}
+          />
+          <p class="mt-3 text-xs leading-relaxed text-gray-500">{s("nativeLanguageHint")}</p>
+        </div>
+        <div class="rounded-xl border border-white/10 bg-white/5 p-5">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <span class="block text-sm font-semibold text-white">{s("translationLanguage")}</span>
             <span class="text-4xl">{languages.find((lang) => lang.code === defaultTargetLanguage)?.flag || "🌐"}</span>
           </div>
           <SearchableSelect
@@ -1672,23 +1728,7 @@
             }}
             placeholder={t("translate.targetLang")}
           />
-        </div>
-        <div class="rounded-xl border border-white/10 bg-white/5 p-5">
-          <div class="flex items-center justify-between gap-3 mb-4">
-            <span class="block text-sm font-semibold text-white">{t("nav.flashcards")}</span>
-            <span class="text-4xl">{languages.find((lang) => lang.code === defaultFlashcardsLanguage)?.flag || "🌐"}</span>
-          </div>
-          <SearchableSelect
-            className="language-select"
-            noResultsText={t("common.noResults")}
-            options={defaultWorkflowLanguageOptions}
-            value={defaultFlashcardsLanguage}
-            onchange={(v) => {
-              defaultFlashcardsLanguage = v;
-              saveDefaultLanguage(DEFAULT_FLASHCARDS_LANGUAGE_KEY, v);
-            }}
-            placeholder={t("flashcards.noteTypeLanguagePlaceholder")}
-          />
+          <p class="mt-3 text-xs leading-relaxed text-gray-500">{s("translationLanguageHint")}</p>
         </div>
         <div class="rounded-xl border border-white/10 bg-white/5 p-5">
           <div class="flex items-center justify-between gap-3 mb-4">
@@ -1709,6 +1749,7 @@
             }}
             placeholder={t("transcribe.sourceLanguage")}
           />
+          <p class="mt-3 text-xs leading-relaxed text-gray-500">{s("transcriptionLanguageHint")}</p>
         </div>
       </div>
     </div>
