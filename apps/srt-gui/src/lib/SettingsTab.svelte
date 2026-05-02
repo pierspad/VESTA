@@ -11,6 +11,10 @@
   } from "./i18n";
   import SearchableSelect from "./SearchableSelect.svelte";
   import {
+    buildSettingsActionHash,
+    publishSettingsActionState,
+  } from "./settingsNotifications";
+  import {
     fetchModelsFromEndpoint,
     type DiscoveredModel,
   } from "./modelDiscovery";
@@ -54,8 +58,6 @@
   const NOTE_TYPE_LANGUAGE_KEY = "vesta-flashcards-note-type-language";
   const ANKI_FIELD_PRESETS_KEY = "vesta-anki-field-presets";
   const ACTIVE_ANKI_FIELD_PRESET_KEY = "vesta-active-anki-field-preset";
-  const SETTINGS_ACTION_REQUIRED_KEY = "vesta-settings-action-required";
-  const SETTINGS_ACTION_REQUIRED_EVENT = "vesta-settings-action-required-changed";
 
   type AnkiFieldKey = keyof FieldNamesConfig;
   type AnkiFieldPreset = {
@@ -985,9 +987,11 @@
 
   $effect(() => {
     if (typeof window === "undefined") return;
-    localStorage.setItem(SETTINGS_ACTION_REQUIRED_KEY, String(needsQuickSetup));
-    window.dispatchEvent(
-      new CustomEvent(SETTINGS_ACTION_REQUIRED_EVENT, { detail: needsQuickSetup }),
+    publishSettingsActionState(
+      buildSettingsActionHash({
+        needsWhisper: downloadedWhisperCount === 0,
+        needsLlm: !isDefaultLlmReady,
+      }),
     );
   });
 

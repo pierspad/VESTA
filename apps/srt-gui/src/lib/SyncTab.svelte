@@ -2120,7 +2120,7 @@
       tabindex="-1"
     >
       <div
-        class="absolute bg-gray-800 border border-white/20 rounded-lg shadow-xl py-1 min-w-[180px] animate-fade-in"
+        class="vesta-context-menu animate-fade-in"
         style="left: {subtitleContextMenu.x}px; top: {subtitleContextMenu.y}px;"
       >
         <button
@@ -2129,7 +2129,8 @@
               playSubtitleFromList(subtitleContextMenu.sub);
             closeSubtitleContextMenu();
           }}
-          class="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-indigo-500/20 hover:text-indigo-300 flex items-center gap-2 transition-colors"
+          class="vesta-context-menu-item"
+          style="justify-content: flex-start;"
         >
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"
             ><path d="M8 5v14l11-7z" /></svg
@@ -2142,7 +2143,8 @@
               goToSubtitleManual(subtitleContextMenu.sub);
             closeSubtitleContextMenu();
           }}
-          class="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-indigo-500/20 hover:text-indigo-300 flex items-center gap-2 transition-colors"
+          class="vesta-context-menu-item"
+          style="justify-content: flex-start;"
         >
           <svg
             class="w-4 h-4"

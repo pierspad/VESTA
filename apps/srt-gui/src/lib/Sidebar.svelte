@@ -3,6 +3,11 @@
   import { onMount } from "svelte";
   import fireplaceIcon from "../assets/fireplace.svg";
   import { locale } from "./i18n";
+  import {
+    getStoredSettingsActionState,
+    SETTINGS_ACTION_REQUIRED_EVENT,
+    type SettingsActionNotificationDetail,
+  } from "./settingsNotifications";
 
   interface Props {
     activeTab: "translate" | "sync" | "transcribe" | "align" | "flashcards" | "settings" | "notifications" | "shortcuts";
@@ -21,8 +26,6 @@
   let appLicense = $state("");
   const RELEASE_API_URL = "https://api.github.com/repos/pierspad/Vesta/releases/latest";
   const RELEASES_URL = "https://github.com/pierspad/Vesta/releases";
-  const SETTINGS_ACTION_REQUIRED_KEY = "vesta-settings-action-required";
-  const SETTINGS_ACTION_REQUIRED_EVENT = "vesta-settings-action-required-changed";
   type ReleaseStatus = "idle" | "checking" | "available" | "current" | "offline";
   let releaseStatus = $state<ReleaseStatus>("idle");
   let latestVersion = $state("");
@@ -100,10 +103,11 @@
   }
 
   onMount(() => {
-    hasSettingsActionNotification = localStorage.getItem(SETTINGS_ACTION_REQUIRED_KEY) === "true";
+    hasSettingsActionNotification = getStoredSettingsActionState().required;
 
     const handleSettingsActionRequired = (event: Event) => {
-      hasSettingsActionNotification = Boolean((event as CustomEvent<boolean>).detail);
+      const detail = (event as CustomEvent<SettingsActionNotificationDetail | boolean>).detail;
+      hasSettingsActionNotification = typeof detail === "boolean" ? detail : detail.required;
     };
 
     window.addEventListener(SETTINGS_ACTION_REQUIRED_EVENT, handleSettingsActionRequired);
@@ -159,7 +163,7 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'flashcards'
-        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/30'
+        ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("flashcards")}
       title={collapsed ? t("nav.flashcards") : undefined}
@@ -190,7 +194,7 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'translate'
-        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
+        ? 'bg-gradient-to-r from-fuchsia-600 to-rose-600 text-white shadow-lg shadow-fuchsia-500/30'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("translate")}
       title={collapsed ? t("nav.translate") : undefined}
@@ -221,7 +225,7 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'sync'
-        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
+        ? 'bg-gradient-to-r from-sky-500 to-cyan-500 text-white shadow-lg shadow-cyan-500/30'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("sync")}
       title={collapsed ? t("nav.sync") : undefined}
@@ -252,7 +256,7 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'align'
-        ? 'bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-lg shadow-teal-500/30'
+        ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/30'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("align")}
       title={collapsed ? t("nav.revision") : undefined}
@@ -273,7 +277,7 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'transcribe'
-        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
+        ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/30'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("transcribe")}
       title={collapsed ? t("nav.transcribe") : undefined}
@@ -308,9 +312,10 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'settings'
-        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
+        ? 'bg-gradient-to-r from-slate-600 to-zinc-600 text-white shadow-lg shadow-slate-500/30'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("settings")}
+      data-context-menu="settings-notifications"
       title={collapsed ? t("nav.settings") : undefined}
     >
       <div class="w-8 h-8 rounded-lg {activeTab === 'settings' ? 'bg-white/20' : 'bg-white/5'} flex items-center justify-center flex-shrink-0 relative">
@@ -389,7 +394,7 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'shortcuts'
-        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
+        ? 'bg-gradient-to-r from-lime-500 to-green-600 text-white shadow-lg shadow-lime-500/25'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("shortcuts")}
       title={collapsed ? t("nav.shortcuts") : undefined}
