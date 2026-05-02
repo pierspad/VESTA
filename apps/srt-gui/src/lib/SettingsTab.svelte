@@ -1420,10 +1420,10 @@
       <button
         type="button"
         onclick={() => openSettingsSection("overview")}
-        class="py-2.5 px-4 rounded-xl bg-slate-800/90 border border-cyan-500/30 text-cyan-100 hover:bg-cyan-500/15 hover:border-cyan-400/60 hover:text-white transition-all flex items-center gap-2 text-sm font-semibold shadow-lg shadow-cyan-950/20"
+        class="py-2.5 pr-3 text-cyan-100 hover:text-white transition-colors flex items-center gap-2 text-sm font-semibold"
         title="Torna alla panoramica Settings"
       >
-        <span class="w-7 h-7 rounded-lg bg-cyan-500/15 border border-cyan-400/20 flex items-center justify-center">
+        <span class="w-7 h-7 flex items-center justify-center">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
@@ -2548,19 +2548,17 @@
         <div class="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-4 mb-5">
           <div>
             <label for="anki-field-preset-select" class="block text-xs font-semibold text-gray-400 mb-2">{s("savedTemplate")}</label>
-            <select
-              id="anki-field-preset-select"
-              bind:value={selectedAnkiFieldPresetId}
-              onchange={(event) => {
-                const target = event.currentTarget;
-                if (target instanceof HTMLSelectElement) applyAnkiFieldPreset(target.value);
-              }}
-              class="input-modern w-full text-sm"
-            >
-              {#each allAnkiFieldPresets as preset}
-                <option value={preset.id}>{preset.name}</option>
-              {/each}
-            </select>
+            <SearchableSelect
+              className="settings-template-select"
+              noResultsText={t("common.noResults")}
+              options={allAnkiFieldPresets.map((preset) => ({
+                value: preset.id,
+                label: preset.name,
+              }))}
+              value={selectedAnkiFieldPresetId}
+              onchange={applyAnkiFieldPreset}
+              placeholder={s("savedTemplate")}
+            />
           </div>
           <div>
             <label for="anki-field-preset-name" class="block text-xs font-semibold text-gray-400 mb-2">{s("templateName")}</label>
@@ -2607,10 +2605,10 @@
         </div>
       </div>
 
-      <div class="rounded-xl border border-amber-500/20 bg-amber-500/10 p-5">
+      <div class="rounded-xl border border-white/10 bg-white/5 p-5">
         <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4 mb-4">
           <div>
-            <div class="flex items-center gap-2 text-amber-200/80">
+            <div class="flex items-center gap-2 text-cyan-300/80">
               <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
               </svg>
@@ -2625,7 +2623,7 @@
                 type="button"
                 onclick={() => (activeTemplateCodeTab = tab.id)}
                 title={tab.hint}
-                class="h-9 px-3 rounded-lg border text-xs font-semibold transition-colors {activeTemplateCodeTab === tab.id ? 'bg-amber-500/20 border-amber-400/40 text-amber-100' : 'bg-black/20 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}"
+                class="h-9 px-3 rounded-lg border text-xs font-semibold transition-colors {activeTemplateCodeTab === tab.id ? 'bg-cyan-500/20 border-cyan-400/40 text-cyan-100' : 'bg-black/20 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}"
               >
                 {tab.label}
               </button>
@@ -2644,7 +2642,7 @@
             <button
               type="button"
               onclick={() => (showResetConfirm = "style")}
-              class="h-9 px-3 rounded-lg border border-white/10 bg-white/5 text-gray-300 hover:text-amber-200 hover:border-amber-500/30 transition-colors text-xs font-semibold flex items-center gap-2"
+              class="h-9 px-3 rounded-lg border border-white/10 bg-white/5 text-gray-300 hover:text-cyan-200 hover:border-cyan-500/30 transition-colors text-xs font-semibold flex items-center gap-2"
               title="Ripristina ai valori di default di Vesta"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2666,7 +2664,7 @@
         <div class="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
           <div class="flex flex-col lg:flex-row lg:items-center gap-3">
             <div class="lg:w-48 shrink-0">
-              <p class="text-xs uppercase tracking-wide text-amber-200/80">{t("settings.availableVars")}</p>
+              <p class="text-xs uppercase tracking-wide text-cyan-300/80">{t("settings.availableVars")}</p>
               <p class="text-xs text-gray-500 mt-1">{s("clickToCopy")}</p>
             </div>
             <div class="flex flex-wrap gap-2 text-[11px] font-mono">

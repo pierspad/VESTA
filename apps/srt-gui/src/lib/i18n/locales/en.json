@@ -375,8 +375,8 @@
   "flashcards.generateAudioClips": "Add Audio to Flashcards",
   "flashcards.bitrate": "Bitrate",
   "flashcards.normalizeAudio": "Normalize audio",
-  "flashcards.padStart": "Pad start",
-  "flashcards.padEnd": "Pad end",
+  "flashcards.padStart": "Start margin",
+  "flashcards.padEnd": "End margin",
   "flashcards.generateSnapshots": "Add Snapshots to Flashcards",
   "flashcards.width": "Width",
   "flashcards.height": "Height",
@@ -757,5 +757,9 @@
   "settings.refreshStatus": "Refresh status",
   "settings.downloadNext": "Download next",
   "settings.remove": "Remove",
-  "settings.downloadAndSet": "Download and set"
+  "settings.downloadAndSet": "Download and set",
+  "flashcards.timingsOriginal": "Originals",
+  "flashcards.timingsReference": "Reference",
+  "flashcards.timeShiftOriginal": "Originals time shift",
+  "flashcards.timeShiftReference": "Reference time shift"
 }

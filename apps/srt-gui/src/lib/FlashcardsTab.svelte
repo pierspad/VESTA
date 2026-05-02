@@ -656,6 +656,10 @@
       : "cursor-not-allowed border-white/10 bg-white/5 text-gray-600 opacity-60";
   }
 
+  function timingSourceFieldClass(field: "target" | "native") {
+    return useTimingsFrom === field ? "timing-source-active" : "";
+  }
+
   function clearMovieFile(field: "target" | "native" | "media") {
     if (!canClearMovieFile(field)) return;
 
@@ -665,6 +669,7 @@
     } else if (field === "native") {
       nativeSubsPath = "";
       nativeSubsInfo = null;
+      if (useTimingsFrom === "native") useTimingsFrom = "target";
     } else {
       mediaPath = "";
       mediaType = "none";
@@ -769,10 +774,21 @@
   let hasAudio = $derived(hasMedia);
 
   let useTimingsFrom = $state<"target" | "native">("target");
+  let hasReferenceSubs = $derived(
+    seriesMode
+      ? episodes.some((ep) => ep.nativeSubsPath !== "")
+      : nativeSubsPath !== "",
+  );
   let spanStart = $state("");
   let spanEnd = $state("");
   let timeShiftTarget = $state(0);
   let timeShiftNative = $state(0);
+
+  $effect(() => {
+    if (!hasReferenceSubs && useTimingsFrom === "native") {
+      useTimingsFrom = "target";
+    }
+  });
 
   let showSubtitleOptions = $state(false);
   let showContextLines = $state(false);
@@ -827,8 +843,8 @@
 
   let generateAudio = $state(true);
   let audioBitrate = $state(128);
-  let audioPadStart = $state(250);
-  let audioPadEnd = $state(250);
+  let audioPadStart = $state(0);
+  let audioPadEnd = $state(0);
   let normalizeAudio = $state(false);
 
   let generateSnapshots = $state(true);
@@ -2629,7 +2645,7 @@
                   onclick={() => {
                     if (targetSubsPath) expandedPathField = "targetSubs";
                   }}
-                  class="input-modern flex-1 text-xs text-left transition-colors truncate {targetSubsPath
+                  class="input-modern flex-1 text-xs text-left transition-colors truncate {timingSourceFieldClass('target')} {targetSubsPath
                     ? 'cursor-pointer hover:bg-white/10'
                     : 'cursor-default hover:bg-transparent'}"
                   style="direction: rtl; text-align: left;"
@@ -2688,7 +2704,7 @@
                   onclick={() => {
                     if (nativeSubsPath) expandedPathField = "nativeSubs";
                   }}
-                  class="input-modern flex-1 text-xs text-left transition-colors truncate {nativeSubsPath
+                  class="input-modern flex-1 text-xs text-left transition-colors truncate {timingSourceFieldClass('native')} {nativeSubsPath
                     ? 'cursor-pointer hover:bg-white/10'
                     : 'cursor-default hover:bg-transparent'}"
                   style="direction: rtl; text-align: left;"
@@ -3121,7 +3137,7 @@
                   class="text-emerald-500"
                 />
                 <span class="text-xs text-gray-300"
-                  >{t("flashcards.subs1")}</span
+                  >{t("flashcards.timingsOriginal")}</span
                 >
               </label>
               <label class="flex items-center gap-1.5">
@@ -3130,12 +3146,12 @@
                   bind:group={useTimingsFrom}
                   value="native"
                   class="text-emerald-500"
-                  disabled={!nativeSubsPath}
+                  disabled={!hasReferenceSubs}
                 />
                 <span
-                  class="text-xs text-gray-300 {!nativeSubsPath
+                  class="text-xs text-gray-300 {!hasReferenceSubs
                     ? 'opacity-50'
-                    : ''}">{t("flashcards.subs2")}</span
+                    : ''}">{t("flashcards.timingsReference")}</span
                 >
               </label>
             </div>
@@ -3168,7 +3184,7 @@
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <span class="block text-xs text-gray-500 mb-1"
-                  >{t("flashcards.timeShift")} {t("flashcards.subs1")}</span
+                  >{t("flashcards.timeShiftOriginal")}</span
                 >
                 <div class="flex items-center gap-1">
                   <input
@@ -3181,14 +3197,14 @@
               </div>
               <div>
                 <span class="block text-xs text-gray-500 mb-1"
-                  >{t("flashcards.timeShift")} {t("flashcards.subs2")}</span
+                  >{t("flashcards.timeShiftReference")}</span
                 >
                 <div class="flex items-center gap-1">
                   <input
                     type="number"
                     bind:value={timeShiftNative}
                     class="input-modern w-full text-xs"
-                    disabled={!nativeSubsPath}
+                    disabled={!hasReferenceSubs}
                   />
                   <span class="text-xs text-gray-500">ms</span>
                 </div>
@@ -3709,7 +3725,6 @@
             onclick={() => {
               if (hasVideo) {
                 generateSnapshots = !generateSnapshots;
-                if (generateSnapshots) generateVideoClips = false;
               }
             }}
             class="w-10 h-5 rounded-full transition-all duration-200 relative
@@ -3803,7 +3818,6 @@
             onclick={() => {
               if (hasVideo) {
                 generateVideoClips = !generateVideoClips;
-                if (generateVideoClips) generateSnapshots = false;
               }
             }}
             class="w-10 h-5 rounded-full transition-all duration-200 relative
@@ -4862,6 +4876,13 @@
 </div>
 
 <style>
+  :global(.timing-source-active) {
+    border-color: rgba(52, 211, 153, 0.82) !important;
+    box-shadow:
+      0 0 0 2px rgba(52, 211, 153, 0.2),
+      0 0 18px rgba(52, 211, 153, 0.13);
+  }
+
   :global(.flashcard-requirement-pulse) {
     animation: flashcard-requirement-pulse 0.9s ease-in-out 2;
     border-color: rgba(251, 191, 36, 0.75) !important;

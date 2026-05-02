@@ -208,8 +208,8 @@
   "flashcards.generateAudioClips": "为闪卡添加音频",
   "flashcards.bitrate": "比特率",
   "flashcards.normalizeAudio": "标准化音频",
-  "flashcards.padStart": "开头填充",
-  "flashcards.padEnd": "结尾填充",
+  "flashcards.padStart": "开始余量",
+  "flashcards.padEnd": "结束余量",
   "flashcards.generateSnapshots": "为闪卡添加截图",
   "flashcards.width": "宽度",
   "flashcards.height": "高度",
@@ -753,5 +753,13 @@
   "settings.refreshStatus": "刷新状态",
   "settings.downloadNext": "下载下一个",
   "settings.remove": "移除",
-  "settings.downloadAndSet": "下载并设置"
+  "settings.downloadAndSet": "下载并设置",
+  "flashcards.timingsOriginal": "原文",
+  "flashcards.timingsReference": "参考",
+  "flashcards.timeShiftOriginal": "原文时间偏移",
+  "flashcards.timeShiftReference": "参考时间偏移",
+  "flashcards.audioTrack": "音轨",
+  "flashcards.audioTrackDesc": "用于音频剪辑和视频剪辑声音",
+  "flashcards.audioTracksLoading": "正在检测音轨...",
+  "flashcards.audioTracksError": "无法读取音轨"
 }

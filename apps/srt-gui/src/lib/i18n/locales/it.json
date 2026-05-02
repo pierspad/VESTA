@@ -389,12 +389,12 @@
   "flashcards.generateAudioClips": "Aggiungi Audio alle Flashcard",
   "flashcards.bitrate": "Bitrate audio",
   "flashcards.normalizeAudio": "Normalizza audio",
-  "flashcards.padStart": "Pad inizio",
-  "flashcards.padEnd": "Pad fine",
+  "flashcards.padStart": "Margine iniziale",
+  "flashcards.padEnd": "Margine finale",
   "flashcards.generateSnapshots": "Aggiungi Screenshot alle Flashcard",
   "flashcards.width": "Larghezza",
   "flashcards.height": "Altezza",
-  "flashcards.cropBottom": "Taglia basso",
+  "flashcards.cropBottom": "Ritaglio inferiore",
   "flashcards.generateVideoClips": "Aggiungi Video alle Flashcard",
   "flashcards.videoBitrate": "Bitrate video",
   "flashcards.audioBitrate": "Bitrate audio",
@@ -757,5 +757,9 @@
   "settings.refreshStatus": "Aggiorna stato",
   "settings.downloadNext": "Scarica prossimo",
   "settings.remove": "Rimuovi",
-  "settings.downloadAndSet": "Scarica e imposta"
+  "settings.downloadAndSet": "Scarica e imposta",
+  "flashcards.timingsOriginal": "Originali",
+  "flashcards.timingsReference": "Riferimento",
+  "flashcards.timeShiftOriginal": "Shift originali",
+  "flashcards.timeShiftReference": "Shift riferimento"
 }
