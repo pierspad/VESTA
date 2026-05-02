@@ -525,6 +525,9 @@ async fn perform_generation(
                 let audio_track_index = config.audio_track_index;
                 let pad_s = config.video_pad_start_ms;
                 let pad_e = config.video_pad_end_ms;
+                let w = config.snapshot_width;
+                let h = config.snapshot_height;
+                let crop = config.crop_bottom;
                 let ffmpeg = ffmpeg_cmd_arc.clone();
 
                 handles.push(tokio::spawn(async move {
@@ -540,6 +543,9 @@ async fn perform_generation(
                         vbr,
                         abr,
                         audio_track_index,
+                        w,
+                        h,
+                        crop,
                         &ffmpeg,
                     )
                     .await;

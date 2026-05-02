@@ -54,6 +54,8 @@
   const NOTE_TYPE_LANGUAGE_KEY = "vesta-flashcards-note-type-language";
   const ANKI_FIELD_PRESETS_KEY = "vesta-anki-field-presets";
   const ACTIVE_ANKI_FIELD_PRESET_KEY = "vesta-active-anki-field-preset";
+  const SETTINGS_ACTION_REQUIRED_KEY = "vesta-settings-action-required";
+  const SETTINGS_ACTION_REQUIRED_EVENT = "vesta-settings-action-required-changed";
 
   type AnkiFieldKey = keyof FieldNamesConfig;
   type AnkiFieldPreset = {
@@ -975,6 +977,20 @@
   let unlistenProgress: (() => void) | null = null;
   let defaultWhisperModel = $state("base");
 
+  function formatWhisperModelName(modelId: string): string {
+    const matchedModel = whisperModels.find((model) => model.id === modelId);
+    if (matchedModel?.name) return matchedModel.name;
+    return modelId ? modelId.charAt(0).toUpperCase() + modelId.slice(1) : "";
+  }
+
+  $effect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(SETTINGS_ACTION_REQUIRED_KEY, String(needsQuickSetup));
+    window.dispatchEvent(
+      new CustomEvent(SETTINGS_ACTION_REQUIRED_EVENT, { detail: needsQuickSetup }),
+    );
+  });
+
   onMount(async () => {
     defaultWhisperModel = localStorage.getItem("srt-default-whisper-model") || "base";
     await refreshModels();
@@ -1492,7 +1508,7 @@
 
     <div class="mt-6 grid grid-cols-1 {needsQuickSetup ? 'xl:grid-cols-[1.2fr_0.8fr]' : ''} gap-4">
       {#if needsQuickSetup}
-        <div class="glass-card p-5">
+        <div class="glass-card p-5 {needsQuickSetup ? 'settings-quick-setup-pulse' : ''}">
           <div class="flex items-center justify-between gap-4 mb-4">
             <div>
               <p class="text-xs uppercase tracking-wide text-gray-500">{s("quickSetup")}</p>
@@ -1591,7 +1607,7 @@
             <div class="flex items-start justify-between gap-3">
               <div>
                 <span class="block text-xs text-gray-500">{t("settings.whisperDefault")}</span>
-                <span class="mt-1 block text-xl font-bold text-white">{defaultWhisperModel}</span>
+                <span class="mt-1 block text-xl font-bold text-white">{formatWhisperModelName(defaultWhisperModel)}</span>
               </div>
               <span class="rounded-full bg-cyan-500/15 px-2 py-1 text-xs text-cyan-200">{downloadedWhisperCount}</span>
             </div>
@@ -3247,6 +3263,25 @@
 
   .group:hover > .settings-action-tooltip.right-0 {
     transform: translateY(0);
+  }
+
+  :global(.settings-quick-setup-pulse) {
+    animation: settings-quick-setup-pulse 1.45s ease-in-out infinite;
+  }
+
+  @keyframes settings-quick-setup-pulse {
+    0%,
+    100% {
+      border-color: rgba(251, 191, 36, 0.28);
+      box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+    }
+
+    50% {
+      border-color: rgba(249, 115, 22, 0.78);
+      box-shadow:
+        0 0 0 1px rgba(249, 115, 22, 0.32),
+        0 0 24px rgba(249, 115, 22, 0.24);
+    }
   }
 
 	  .ui-language-grid {

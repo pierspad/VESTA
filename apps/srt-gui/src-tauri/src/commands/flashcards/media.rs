@@ -200,10 +200,20 @@ pub(crate) async fn extract_video_clip(
     video_bitrate: u32,
     audio_bitrate: u32,
     audio_track_index: Option<usize>,
+    width: u32,
+    height: u32,
+    crop_bottom: u32,
     ffmpeg_cmd: &str,
 ) -> Result<()> {
     let actual_start = (start_ms - pad_start_ms).max(0);
     let duration_ms = (end_ms + pad_end_ms) - actual_start;
+
+    let mut vf_filters = Vec::new();
+    if crop_bottom > 0 {
+        vf_filters.push(format!("crop=in_w:in_h-{}:0:0", crop_bottom));
+    }
+    vf_filters.push(format!("scale={}:{}:flags=bicubic", width, height));
+    let vf = vf_filters.join(",");
 
     let mut cmd = tokio::process::Command::new(ffmpeg_cmd);
     cmd.args([
@@ -217,6 +227,8 @@ pub(crate) async fn extract_video_clip(
         &ms_to_ffmpeg_ts(duration_ms),
         "-i",
         video_path,
+        "-vf",
+        &vf,
     ]);
     if let Some(track_index) = audio_track_index {
         let audio_map = format!("0:a:{}", track_index);

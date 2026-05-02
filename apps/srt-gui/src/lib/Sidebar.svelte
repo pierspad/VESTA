@@ -21,12 +21,15 @@
   let appLicense = $state("");
   const RELEASE_API_URL = "https://api.github.com/repos/pierspad/Vesta/releases/latest";
   const RELEASES_URL = "https://github.com/pierspad/Vesta/releases";
+  const SETTINGS_ACTION_REQUIRED_KEY = "vesta-settings-action-required";
+  const SETTINGS_ACTION_REQUIRED_EVENT = "vesta-settings-action-required-changed";
   type ReleaseStatus = "idle" | "checking" | "available" | "current" | "offline";
   let releaseStatus = $state<ReleaseStatus>("idle");
   let latestVersion = $state("");
   let releaseUrl = $state(RELEASES_URL);
   let releaseCheckedAt = $state<Date | null>(null);
   let hasUpdateNotification = $derived(releaseStatus === "available");
+  let hasSettingsActionNotification = $state(false);
 
   function formatLicense(license: string): string {
     return license.replace(/-only$/i, "").trim();
@@ -97,6 +100,14 @@
   }
 
   onMount(() => {
+    hasSettingsActionNotification = localStorage.getItem(SETTINGS_ACTION_REQUIRED_KEY) === "true";
+
+    const handleSettingsActionRequired = (event: Event) => {
+      hasSettingsActionNotification = Boolean((event as CustomEvent<boolean>).detail);
+    };
+
+    window.addEventListener(SETTINGS_ACTION_REQUIRED_EVENT, handleSettingsActionRequired);
+
     invoke<{ version: string; name: string; license: string }>("get_app_info")
       .then((info) => {
         appVersionNum = `v${info.version}`;
@@ -109,6 +120,10 @@
         appVersionNum = "v0.1.0";
         appLicense = "GPL-3.0";
       });
+
+    return () => {
+      window.removeEventListener(SETTINGS_ACTION_REQUIRED_EVENT, handleSettingsActionRequired);
+    };
   });
 </script>
 
@@ -298,7 +313,7 @@
       onclick={() => onTabChange("settings")}
       title={collapsed ? t("nav.settings") : undefined}
     >
-      <div class="w-8 h-8 rounded-lg {activeTab === 'settings' ? 'bg-white/20' : 'bg-white/5'} flex items-center justify-center flex-shrink-0">
+      <div class="w-8 h-8 rounded-lg {activeTab === 'settings' ? 'bg-white/20' : 'bg-white/5'} flex items-center justify-center flex-shrink-0 relative">
         <svg
           class="w-5 h-5"
           fill="none"
@@ -318,6 +333,9 @@
             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
           />
         </svg>
+        {#if hasSettingsActionNotification}
+          <span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-gray-900 shadow-[0_0_10px_rgba(239,68,68,0.75)]"></span>
+        {/if}
       </div>
       {#if !collapsed}
         <div class="text-left">

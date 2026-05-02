@@ -57,6 +57,10 @@
   const DEFAULT_TARGET_LANGUAGE_KEY = "vesta-default-target-language";
   const SERIES_MODE_KEY = "vesta-flashcards-series-mode";
   const ANKI_FIELDS_PANEL_OPEN_KEY = "vesta-flashcards-anki-fields-panel-open";
+  const FLASHCARD_MEDIA_WIDTH_KEY = "vesta-flashcards-media-width";
+  const FLASHCARD_MEDIA_HEIGHT_KEY = "vesta-flashcards-media-height";
+  const DEFAULT_FLASHCARD_MEDIA_WIDTH = 240;
+  const DEFAULT_FLASHCARD_MEDIA_HEIGHT = 160;
 
   let smartFileMatchingEnabled = $state(true);
 
@@ -147,6 +151,20 @@
     } catch {
       return fallback;
     }
+  }
+
+  function loadStoredDimension(key: string, fallback: number): number {
+    try {
+      const value = Number.parseInt(localStorage.getItem(key) || "", 10);
+      return Number.isFinite(value) && value > 0 ? value : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function persistDimension(key: string, value: number) {
+    if (!Number.isFinite(value) || value <= 0) return;
+    localStorage.setItem(key, String(Math.round(value)));
   }
 
   function getStudiedLanguagePreference(): string {
@@ -624,7 +642,23 @@
     }
   }
 
+  function canClearMovieFile(field: "target" | "native" | "media") {
+    return field === "target"
+      ? !!targetSubsPath
+      : field === "native"
+        ? !!nativeSubsPath
+        : !!mediaPath;
+  }
+
+  function clearMovieFileButtonClass(field: "target" | "native" | "media") {
+    return canClearMovieFile(field)
+      ? "border-red-500/30 bg-red-500/10 text-red-300 hover:border-red-400/60 hover:bg-red-500/20"
+      : "cursor-not-allowed border-white/10 bg-white/5 text-gray-600 opacity-60";
+  }
+
   function clearMovieFile(field: "target" | "native" | "media") {
+    if (!canClearMovieFile(field)) return;
+
     if (field === "target") {
       targetSubsPath = "";
       targetSubsInfo = null;
@@ -798,8 +832,8 @@
   let normalizeAudio = $state(false);
 
   let generateSnapshots = $state(true);
-  let snapshotWidth = $state(384);
-  let snapshotHeight = $state(216);
+  let snapshotWidth = $state(loadStoredDimension(FLASHCARD_MEDIA_WIDTH_KEY, DEFAULT_FLASHCARD_MEDIA_WIDTH));
+  let snapshotHeight = $state(loadStoredDimension(FLASHCARD_MEDIA_HEIGHT_KEY, DEFAULT_FLASHCARD_MEDIA_HEIGHT));
   let cropBottom = $state(0);
 
   let generateVideoClips = $state(false);
@@ -809,6 +843,14 @@
   let videoAudioBitrate = $state(128);
   let videoPadStart = $state(250);
   let videoPadEnd = $state(50);
+
+  $effect(() => {
+    persistDimension(FLASHCARD_MEDIA_WIDTH_KEY, snapshotWidth);
+  });
+
+  $effect(() => {
+    persistDimension(FLASHCARD_MEDIA_HEIGHT_KEY, snapshotHeight);
+  });
 
   let exportFormat = $state<"tsv" | "apkg">("apkg");
 
@@ -2621,7 +2663,8 @@
                 <button
                   type="button"
                   onclick={() => clearMovieFile("target")}
-                  class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 transition-colors hover:border-red-400/60 hover:bg-red-500/20 {targetSubsPath ? '' : 'invisible'}"
+                  disabled={!canClearMovieFile("target")}
+                  class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border transition-colors {clearMovieFileButtonClass('target')}"
                   title="Rimuovi file"
                   aria-label="Rimuovi file"
                 >
@@ -2679,7 +2722,8 @@
                 <button
                   type="button"
                   onclick={() => clearMovieFile("native")}
-                  class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 transition-colors hover:border-red-400/60 hover:bg-red-500/20 {nativeSubsPath ? '' : 'invisible'}"
+                  disabled={!canClearMovieFile("native")}
+                  class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border transition-colors {clearMovieFileButtonClass('native')}"
                   title="Rimuovi file"
                   aria-label="Rimuovi file"
                 >
@@ -2737,7 +2781,8 @@
                 <button
                   type="button"
                   onclick={() => clearMovieFile("media")}
-                  class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 transition-colors hover:border-red-400/60 hover:bg-red-500/20 {mediaPath ? '' : 'invisible'}"
+                  disabled={!canClearMovieFile("media")}
+                  class="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border transition-colors {clearMovieFileButtonClass('media')}"
                   title="Rimuovi file"
                   aria-label="Rimuovi file"
                 >
@@ -3775,6 +3820,34 @@
 
         {#if generateVideoClips && hasVideo}
           <div class="space-y-2 animate-fade-in">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <span class="block text-xs text-gray-500 mb-1"
+                  >{t("flashcards.width")}</span
+                >
+                <div class="flex items-center gap-1">
+                  <input
+                    type="number"
+                    bind:value={snapshotWidth}
+                    class="input-modern w-full text-xs"
+                  />
+                  <span class="text-xs text-gray-500">px</span>
+                </div>
+              </div>
+              <div>
+                <span class="block text-xs text-gray-500 mb-1"
+                  >{t("flashcards.height")}</span
+                >
+                <div class="flex items-center gap-1">
+                  <input
+                    type="number"
+                    bind:value={snapshotHeight}
+                    class="input-modern w-full text-xs"
+                  />
+                  <span class="text-xs text-gray-500">px</span>
+                </div>
+              </div>
+            </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <span class="block text-xs text-gray-500 mb-1"
