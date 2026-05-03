@@ -163,7 +163,7 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'flashcards'
-        ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30'
+        ? 'bg-gradient-to-r from-slate-700 to-zinc-600 text-white shadow-lg shadow-slate-500/20'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("flashcards")}
       title={collapsed ? t("nav.flashcards") : undefined}
@@ -194,7 +194,7 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'translate'
-        ? 'bg-gradient-to-r from-fuchsia-600 to-rose-600 text-white shadow-lg shadow-fuchsia-500/30'
+        ? 'bg-gradient-to-r from-fuchsia-700 to-rose-700 text-white shadow-lg shadow-fuchsia-500/20'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("translate")}
       title={collapsed ? t("nav.translate") : undefined}
@@ -225,7 +225,7 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'sync'
-        ? 'bg-gradient-to-r from-sky-500 to-cyan-500 text-white shadow-lg shadow-cyan-500/30'
+        ? 'bg-gradient-to-r from-sky-700 to-cyan-700 text-white shadow-lg shadow-cyan-500/20'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("sync")}
       title={collapsed ? t("nav.sync") : undefined}
@@ -256,7 +256,7 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'align'
-        ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/30'
+        ? 'bg-gradient-to-r from-violet-700 to-indigo-700 text-white shadow-lg shadow-violet-500/20'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("align")}
       title={collapsed ? t("nav.revision") : undefined}
@@ -277,7 +277,7 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'transcribe'
-        ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/30'
+        ? 'bg-gradient-to-r from-teal-700 to-emerald-700 text-white shadow-lg shadow-teal-500/20'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("transcribe")}
       title={collapsed ? t("nav.transcribe") : undefined}
@@ -312,7 +312,7 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'settings'
-        ? 'bg-gradient-to-r from-slate-600 to-zinc-600 text-white shadow-lg shadow-slate-500/30'
+        ? 'bg-gradient-to-r from-slate-700 to-zinc-600 text-white shadow-lg shadow-slate-500/20'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("settings")}
       data-context-menu="settings-notifications"
@@ -394,7 +394,7 @@
     <button
       class="w-full flex items-center gap-3 {collapsed ? 'px-2 justify-center' : 'px-4'} py-3 rounded-xl transition-all duration-300 {activeTab ===
       'shortcuts'
-        ? 'bg-gradient-to-r from-lime-500 to-green-600 text-white shadow-lg shadow-lime-500/25'
+        ? 'bg-gradient-to-r from-lime-700 to-green-700 text-white shadow-lg shadow-lime-500/18'
         : 'text-gray-400 hover:bg-white/5 hover:text-white'}"
       onclick={() => onTabChange("shortcuts")}
       title={collapsed ? t("nav.shortcuts") : undefined}

@@ -173,7 +173,6 @@
       onkeydown={handleKeydown}
       {placeholder}
       class="searchable-select-input w-full"
-      style="background-color: #1a1a2e;"
       autocomplete="off"
     />
     <div
@@ -201,7 +200,6 @@
     <div
       bind:this={dropdownElement}
       class="searchable-select-dropdown"
-      style="background-color: #0d0d1a; opacity: 1;"
     >
       {#if filteredOptions.length === 0}
         <div class="px-4 py-3 text-gray-500 text-sm text-center">
@@ -248,8 +246,7 @@
 
 <style lang="postcss">
   .searchable-select-input {
-    background: linear-gradient(180deg, rgba(36, 37, 58, 0.98), rgba(24, 24, 42, 0.98)) !important;
-    background-color: #1a1a2e !important;
+    background: linear-gradient(180deg, rgba(36, 37, 58, 0.98), rgba(24, 24, 42, 0.98));
     border: 1px solid rgba(148, 163, 184, 0.18);
     border-radius: 10px;
     padding: 11px 40px 11px 14px;
@@ -280,13 +277,12 @@
     max-height: 280px;
     overflow-y: auto;
     overflow-x: hidden;
-    background: #0d0d1a !important;
-    background-color: #0d0d1a !important;
+    background: rgba(15, 23, 42, 0.98);
     border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 10px;
     box-shadow:
-      0 10px 40px rgba(0, 0, 0, 1),
-      0 0 0 1px rgba(0, 0, 0, 1);
+      0 18px 48px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(15, 23, 42, 0.8);
     z-index: 9999;
     opacity: 1 !important;
     isolation: isolate;
@@ -302,23 +298,31 @@
     transition: background-color 0.1s ease;
     cursor: pointer;
     border: none;
-    background: #10101f !important;
-    background-color: #10101f !important;
+    background: rgba(15, 23, 42, 0.98);
   }
 
   .searchable-select-option:hover {
-    background: #202038 !important;
-    background-color: #202038 !important;
+    background: rgba(30, 41, 59, 0.98);
   }
 
   .searchable-select-option.highlighted {
-    background: #2b2b55 !important;
-    background-color: #2b2b55 !important;
+    background: rgba(67, 56, 202, 0.32);
   }
 
   .searchable-select-option.selected {
-    background: #1d2445 !important;
-    background-color: #1d2445 !important;
+    background: rgba(79, 70, 229, 0.22);
+  }
+
+  :global(.compact-select) .searchable-select-input {
+    min-height: 42px;
+    padding: 10px 38px 10px 12px;
+    font-size: 0.75rem;
+  }
+
+  :global(.compact-select) .searchable-select-option {
+    min-height: 38px;
+    padding: 9px 12px;
+    font-size: 0.75rem;
   }
 
   .searchable-select-option:first-child {

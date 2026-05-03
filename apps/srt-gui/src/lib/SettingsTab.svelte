@@ -1442,10 +1442,10 @@
       <button
         type="button"
         onclick={() => openSettingsSection("overview")}
-        class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm font-semibold text-cyan-100 shadow-sm transition-colors hover:border-cyan-400/30 hover:bg-cyan-500/10 hover:text-white"
+        class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm font-semibold text-cyan-100 shadow-sm transition-colors hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
         title="Torna alla panoramica Settings"
       >
-        <span class="flex h-6 w-6 items-center justify-center rounded-md bg-black/20">
+        <span class="flex h-6 w-6 items-center justify-center rounded-md">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>

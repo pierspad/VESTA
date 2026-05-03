@@ -3339,22 +3339,22 @@
 
             <div class="flex flex-col gap-2">
               <div class="grid grid-cols-2 gap-1 rounded-lg border border-white/10 bg-black/20 p-1">
-                <label class="vesta-check-row justify-center">
+                <label class="filter-pill-check justify-center">
                   <input
                     type="checkbox"
                     bind:checked={excludeDuplicatesSubs1}
-                    class="vesta-check-input text-orange-500"
+                    class="sr-only"
                   />
                   <span class="text-xs font-medium text-gray-300"
                     >{t("flashcards.excludeDupSubs1")}</span
                   >
                 </label>
-                <label class="vesta-check-row justify-center { !nativeSubsPath ? 'opacity-50 cursor-not-allowed' : '' }">
+                <label class="filter-pill-check justify-center { !nativeSubsPath ? 'opacity-50 cursor-not-allowed' : '' }">
                   <input
                     type="checkbox"
                     bind:checked={excludeDuplicatesSubs2}
                     disabled={!nativeSubsPath}
-                    class="vesta-check-input text-orange-500"
+                    class="sr-only"
                   />
                   <span
                     class="text-xs font-medium text-gray-300">{t("flashcards.excludeDupSubs2")}</span
@@ -3689,12 +3689,12 @@
               </div>
               <div class="flex justify-center">
                 <label
-                  class="min-h-[42px] w-full flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-2 text-center transition-colors hover:bg-white/10"
+                  class="normalize-audio-toggle min-h-[42px] w-full flex items-center justify-center gap-1.5 rounded-xl border px-2 text-center transition-colors"
                 >
                   <input
                     type="checkbox"
                     bind:checked={normalizeAudio}
-                    class="rounded text-cyan-500"
+                    class="sr-only"
                   />
                   <span class="text-xs text-gray-300"
                     >{t("flashcards.normalizeAudio")}</span
@@ -3880,6 +3880,7 @@
                   >{t("flashcards.videoCodec")}</span
                 >
                 <SearchableSelect
+                  className="compact-select"
                   noResultsText={t("common.noResults")}
                   options={[
                     { value: "h264", label: "H.264 (MP4)" },
@@ -3895,6 +3896,7 @@
                   >{t("flashcards.h264Preset")}</span
                 >
                 <SearchableSelect
+                  className="compact-select"
                   noResultsText={t("common.noResults")}
                   options={[
                     { value: "ultrafast", label: "Ultrafast" },
@@ -3928,6 +3930,7 @@
                   >{t("flashcards.audioBitrate")}</span
                 >
                 <SearchableSelect
+                  className="compact-select"
                   noResultsText={t("common.noResults")}
                   options={[
                     { value: "64", label: "64 kb/s" },
@@ -4906,9 +4909,9 @@
   }
 
   input:checked + .timing-source-choice {
-    background: rgba(16, 185, 129, 0.14);
-    border-color: rgba(52, 211, 153, 0.26);
-    color: rgb(110 231 183);
+    background: rgba(148, 163, 184, 0.11);
+    border-color: rgba(148, 163, 184, 0.18);
+    color: rgb(229 231 235);
   }
 
   label:hover .timing-source-choice {
@@ -4923,9 +4926,38 @@
     animation: timing-source-flash 0.72s ease-in-out 4;
   }
 
+  .filter-pill-check {
+    align-items: center;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 7px;
+    cursor: pointer;
+    display: flex;
+    min-height: 2.15rem;
+    padding: 0.48rem 0.65rem;
+    text-align: center;
+    transition:
+      background-color 0.16s ease,
+      border-color 0.16s ease,
+      color 0.16s ease;
+  }
+
+  .filter-pill-check:hover {
+    background: rgba(148, 163, 184, 0.08);
+    border-color: rgba(148, 163, 184, 0.28);
+  }
+
+  .filter-pill-check:has(input:checked) {
+    background: rgba(99, 102, 241, 0.14);
+    border-color: rgba(129, 140, 248, 0.4);
+  }
+
+  .filter-pill-check:has(input:checked) span {
+    color: rgb(199 210 254);
+  }
+
   .vesta-check-row {
     align-items: center;
-    border: 1px solid transparent;
+    border: 1px solid rgba(148, 163, 184, 0.12);
     border-radius: 8px;
     cursor: pointer;
     display: flex;
@@ -4938,14 +4970,65 @@
   }
 
   .vesta-check-row:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(148, 163, 184, 0.07);
+    border-color: rgba(148, 163, 184, 0.22);
+  }
+
+  .vesta-check-row:has(.vesta-check-input:checked) {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: rgba(129, 140, 248, 0.32);
   }
 
   .vesta-check-input {
+    appearance: none;
     background: rgba(15, 23, 42, 0.85);
-    border-color: rgba(148, 163, 184, 0.34);
+    border: 1px solid rgba(148, 163, 184, 0.38);
     border-radius: 5px;
+    display: grid;
+    height: 0.95rem;
+    margin: 0;
+    place-content: center;
+    width: 0.95rem;
+  }
+
+  .vesta-check-input::before {
+    background: rgb(199 210 254);
+    clip-path: polygon(14% 44%, 0 60%, 40% 100%, 100% 16%, 84% 0, 38% 62%);
+    content: "";
+    height: 0.55rem;
+    opacity: 0;
+    transform: scale(0.75);
+    transition: opacity 0.12s ease, transform 0.12s ease;
+    width: 0.55rem;
+  }
+
+  .vesta-check-input:checked {
+    background: rgba(79, 70, 229, 0.35);
+    border-color: rgba(165, 180, 252, 0.72);
+  }
+
+  .vesta-check-input:checked::before {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .normalize-audio-toggle {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .normalize-audio-toggle:hover {
+    background: rgba(148, 163, 184, 0.1);
+    border-color: rgba(148, 163, 184, 0.25);
+  }
+
+  .normalize-audio-toggle:has(input:checked) {
+    background: rgba(14, 116, 144, 0.22);
+    border-color: rgba(34, 211, 238, 0.38);
+  }
+
+  .normalize-audio-toggle:has(input:checked) span {
+    color: rgb(165 243 252);
   }
 
   :global(.timing-source-active) {
